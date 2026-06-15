@@ -1,0 +1,12 @@
+---
+# Tier 2 lab: break-glass operator (incident-correlated logs + JIT expiry)
+bastion_operators_break_glass_lab:
+  - name: breakglass-lab
+    email: breakglass-lab@mtglobal.team
+    pubkey: "{{ lookup('file', lab_keys_dir + '/breakglass-lab.lab.pub') }}"
+    mfa_secret: BRKGLASSBRKGLASSBRKGLASSBRKGLASSB
+    access: shell
+    break_glass: true
+    incident_id: INC-LAB-BREAKGLASS-01
+    valid_from: "2020-01-01T00:00:00+00:00"
+    valid_until: "2099-12-31T23:59:59+00:00"

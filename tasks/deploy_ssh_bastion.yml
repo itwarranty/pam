@@ -50,6 +50,15 @@
     bastion_container_volumes: "{{ bastion_container_volumes + [bastion_home + '/.ssh_config/trusted_user_ca.pub:/etc/ssh/trusted_user_ca.pub:ro,Z'] }}"
   when: bastion_trusted_user_ca_file | default('') | length > 0
 
+- name: Добавление тома shell command denylist
+  ansible.builtin.set_fact:
+    bastion_container_volumes: >-
+      {{
+        bastion_container_volumes
+        + [bastion_home + '/command_policy/command_denylist:/etc/bastion/command_denylist:ro,Z']
+      }}
+  when: bastion_shell_command_policy_enabled | default(true) | bool
+
 - name: Загрузка доверенного образа бастиона из локального архива (Air Gap)
   containers.podman.podman_load:
     input: "{{ bastion_image_tar }}"

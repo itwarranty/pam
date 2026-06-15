@@ -1,0 +1,4 @@
+# MT Bastion shell command denylist (extended regex per line). Managed by Ansible.
+{% for pattern in bastion_shell_command_denylist %}
+{{ pattern }}
+{% endfor %}

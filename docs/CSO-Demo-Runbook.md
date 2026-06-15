@@ -293,4 +293,82 @@ ansible-playbook -i inventory/qa-mtglobal.yml site.yml
 
 ---
 
-*MT Global — MT: Bastion CSO Demo v1.4 (Tier 1 complete)*
+## Блок 12 — Incident log naming (Tier 2 Phase A, 1 мин)
+
+**Что сказать CSO:** «Лог сессии привязан к тикету INC — имя файла содержит номер инцидента для SIEM и WORM.»
+
+```bash
+ssh -p 2222 engineer-shell@127.0.0.1
+# exit после входа
+ls -la /var/log/bastion_sessions/session_INC-LAB-SHELL-01_*
+```
+
+**Ожидание:** basename `session_INC-LAB-SHELL-01_engineer-shell_*.log` + `.sha256` + `.meta` с `INCIDENT=INC-LAB-SHELL-01`.
+
+> После изменения wrapper/policy/audit scripts: `./trusted_download.sh` и redeploy.
+
+---
+
+## Блок 13 — Command denylist (Tier 2 Phase B, 1 мин)
+
+**Что сказать CSO:** «Опасные команды в shell-сессии блокируются политикой CSO, отказ пишется в syslog.»
+
+```bash
+ssh -p 2222 engineer-shell@127.0.0.1
+rm -rf /
+# ожидается отказ, сессия продолжается
+exit
+journalctl -t mt-bastion-deny --since "5 min ago" | tail -5
+```
+
+**Ожидание:** сообщение об отказе в PTY; запись в journal с тегом `mt-bastion-deny`.
+
+---
+
+## Блок 14 — Audit readonly (Tier 2 Phase C, 1 мин)
+
+**Что сказать CSO:** «Аудитор читает session logs без jump и без записи на диск.»
+
+```bash
+ssh -p 2222 engineer-audit@127.0.0.1
+ls /var/log/bastion_sessions/
+less /var/log/bastion_sessions/session_INC-LAB-SHELL-01_engineer-shell_*.log
+cat /etc/passwd
+# ожидается отказ
+exit
+```
+
+**Ожидание:** `ls`/`less` на session logs — OK; `cat /etc/passwd` — denied.
+
+---
+
+## Блок 15 — SSH rate limit (Tier 2 Phase D, опционально, 1 мин)
+
+**Что сказать CSO:** «Brute-force на SSH-порт ограничивается firewalld (по умолчанию выкл. в lab).»
+
+```bash
+# В group_vars: bastion_ssh_rate_limit_enabled: true
+firewall-cmd --list-rich-rules | grep limit
+./scripts/bastion-compliance-verify.sh
+```
+
+**Ожидание:** rich rule с `limit value`; compliance verify — `rate_limit` PASS при включённой опции.
+
+---
+
+## Блок 16 — Break-glass (Tier 2 Phase E, 1 мин)
+
+**Что сказать CSO:** «Аварийный доступ — только с тикетом, коротким окном JIT и усиленным аудитом.»
+
+```bash
+ssh -p 2222 breakglass-lab@127.0.0.1
+exit
+ausearch -k mt_bastion_break_glass_session 2>/dev/null | tail -3
+journalctl -t mt-bastion-break-glass --since "5 min ago" | tail -3
+```
+
+**Ожидание:** syslog/journal с маркером break-glass; auditd key `mt_bastion_break_glass_session` при `bastion_break_glass_audit_enabled: true`.
+
+---
+
+*MT Global — MT: Bastion CSO Demo v1.5 (Tier 2 complete)*

@@ -34,7 +34,7 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 | [Whitepaper](docs/MT-Bastion-Whitepaper.md) | Техпаспорт для CSO |
 | [Troubleshooting Workflow](docs/MT-Bastion-Troubleshooting-Workflow.md) | Регламент инцидента |
 | [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | 10-мин пресейл |
-| [OpenSpec: Tier 1 specs](openspec/specs/) | GA specs: JIT, SIEM, verify, User CA |
+| [OpenSpec: Tier 1 + Tier 2 specs](openspec/specs/) | GA specs: JIT, SIEM, command policy, audit, break-glass |
 | [OpenSpec archive](openspec/changes/archive/) | Completed change history |
 
 ## Prod deploy
@@ -46,14 +46,15 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 
 Отзыв доступа: удалите оператора из `bastion_operators` и перевыпустите плейбук (`purge_revoked_operators.yml`).
 
-## Releases (Tier 1)
+## Releases
 
 | Tag | Content |
 | :--- | :--- |
-| `v0.2.0` | Phase A — compliance, tamper logs, source IP, SIEM |
-| `v0.4.0` | Phase B + C — JIT, SSH User CA policy (current) |
+| `v0.2.0` | Tier 1 Phase A — compliance, tamper logs, source IP, SIEM |
+| `v0.4.0` | Tier 1 Phase B + C — JIT, SSH User CA policy |
+| `v0.5.0` | Tier 2 Phases A–E — incident naming, denylist, audit, rate limit, break-glass (current) |
 
-Tier 1 features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
+Tier 1 and Tier 2 Free features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
 
 ## CI
 

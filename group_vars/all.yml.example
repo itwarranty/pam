@@ -33,6 +33,27 @@ bastion_operators:
 # bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
 # Signing: scripts/sign-operator-cert.sh.example (offline, CA private key never on bastion)
 
+# Tier 2 Free — CSO optional controls (openspec/specs/)
+# bastion_shell_command_policy_enabled: true
+# bastion_shell_command_denylist:
+#   - '^rm\s+-rf\s+/'
+#   - '^iptables\s+-F'
+# bastion_ssh_rate_limit_enabled: true
+# bastion_ssh_rate_limit_method: firewalld   # firewalld | fail2ban
+# bastion_ssh_rate_limit_rate: "30/m"
+# bastion_break_glass_enabled: false
+# bastion_break_glass_max_hours: 4
+# Operator break-glass example:
+#   - name: emergency-lead
+#     access: shell
+#     break_glass: true
+#     incident_id: "INC-2026-9999"
+#     valid_from: "2026-06-15T09:00:00+03:00"
+#     valid_until: "2026-06-15T12:00:00+03:00"
+# Operator audit example:
+#   - name: auditor1
+#     access: audit
+
 # Tier 1 Free — CSO optional controls (openspec/specs/)
 # bastion_require_source_ip: true       # prod: каждый operator MUST have allowed_sources
 # bastion_allowed_source_cidrs: ["203.0.113.0/24"]

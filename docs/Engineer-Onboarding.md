@@ -140,6 +140,7 @@ TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 | Новая фича | `git checkout -b feature/...` → PR в `main` |
 | Синтаксис playbook | `ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml` |
 | Lab-образ с nullok (только dev) | `BASTION_LAB_MODE=1 MFA_STRICT=0 ./trusted_download.sh` |
+| Пересборка после Tier 2 scripts | `./trusted_download.sh` (wrapper, command-policy, audit-shell) → redeploy |
 
 Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только по согласованию с lead / CSO.
 
@@ -148,9 +149,11 @@ Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только п�
 ## Troubleshooting
 
 - Инциденты и four-eyes: [MT-Bastion-Troubleshooting-Workflow.md](./MT-Bastion-Troubleshooting-Workflow.md)
+- Command denylist: см. Workflow §5.4; проверьте `bastion_shell_command_policy_enabled` и mount `/etc/bastion/command_denylist`
+- Break-glass: см. Workflow §5.5; preflight требует `incident_id`, `valid_until`, окно ≤ `bastion_break_glass_max_hours`
 - Lima VM: `tests/README.md`, `limactl shell mt-bastion-prod`
 - Preflight fail: проверьте Rocky 9, Enforcing, whitelist, `bastion_operators`
 
 ---
 
-*MT Global — Engineer Onboarding v1.2*
+*MT Global — Engineer Onboarding v1.3*

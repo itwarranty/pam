@@ -35,10 +35,16 @@ TrustedUserCAKeys /etc/ssh/trusted_user_ca.pub
 
 {% for operator in bastion_operators_effective | default(bastion_operators) %}
 Match User {{ operator.name }}
+{%   if operator.break_glass | default(false) | bool %}
+    SetEnv MT_BASTION_BREAK_GLASS=1
+{%   endif %}
 {%   if operator.incident_id | default('') | length > 0 %}
     SetEnv MT_BASTION_INCIDENT_ID={{ operator.incident_id }}
 {%   endif %}
-{%   if operator.access | default('jump') == 'shell' %}
+{%   if operator.access | default('jump') == 'audit' %}
+    ForceCommand /usr/local/bin/bastion-audit-shell-wrapper.sh
+    AllowTcpForwarding no
+{%   elif operator.access | default('jump') == 'shell' %}
     ForceCommand /usr/local/bin/bastion-shell-wrapper.sh
     AllowTcpForwarding no
 {%   else %}

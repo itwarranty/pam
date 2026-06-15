@@ -167,6 +167,22 @@ check_firewall_port() {
   fi
 }
 
+check_rate_limit() {
+  [[ "${BASTION_SSH_RATE_LIMIT_ENABLED:-false}" != "true" ]] && return 0
+  local method="${BASTION_SSH_RATE_LIMIT_METHOD:-firewalld}"
+  if [[ "${method}" == "firewalld" ]]; then
+    if firewall-cmd --list-rich-rules 2>/dev/null | grep -q 'limit value'; then
+      log_pass "rate_limit — firewalld limit rule present"
+    else
+      log_fail "rate_limit — firewalld limit rule missing"
+    fi
+  elif systemctl is-active --quiet fail2ban 2>/dev/null; then
+    log_pass "rate_limit — fail2ban active"
+  else
+    log_fail "rate_limit — fail2ban not active"
+  fi
+}
+
 main() {
   printf '=== MT Bastion compliance verify ===\n\n'
   check_os
@@ -180,6 +196,7 @@ main() {
   check_service firewalld
   check_session_log_dir
   check_firewall_port
+  check_rate_limit
 
   printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"
   if [[ "${FAIL}" -gt 0 ]]; then

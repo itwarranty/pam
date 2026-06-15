@@ -20,3 +20,4 @@ bastion_operators_lab:
     pubkey: "{{ lookup('file', lab_keys_dir + '/engineer-shell.lab.pub') }}"
     mfa_secret: 4EQHJGRNNM66OR5BEFLYABHOF6S47A3Q
     access: shell
+    incident_id: INC-LAB-SHELL-01

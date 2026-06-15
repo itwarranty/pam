@@ -118,3 +118,87 @@
     - not (bastion_ssh_user_ca_qa_complete | default(false) | bool)
     - not (bastion_allow_raw_pubkey_prod | default(false) | bool)
     - not (is_commercial_pam | bool)
+
+- name: "[CSO] Допустимые значения access (jump|shell|audit)"
+  ansible.builtin.assert:
+    that:
+      - item.access | default('jump') in ['jump', 'shell', 'audit']
+    fail_msg: >
+      Оператор «{{ item.name }}»: access={{ item.access | default('jump') }} недопустим.
+      Разрешены: jump, shell, audit.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (is_commercial_pam | bool)
+
+- name: "[CSO] access: audit запрещён в ветке commercial PAM"
+  ansible.builtin.assert:
+    that:
+      - item.access | default('jump') != 'audit'
+    fail_msg: >
+      Оператор «{{ item.name }}» с access: audit не поддерживается при is_commercial_pam=true.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: is_commercial_pam | bool
+
+- name: "[CSO] Break-glass без gate flag"
+  ansible.builtin.assert:
+    that:
+      - not (item.break_glass | default(false) | bool)
+    fail_msg: >
+      Оператор «{{ item.name }}»: break_glass=true, но bastion_break_glass_enabled=false.
+      Включите gate в group_vars или уберите break_glass.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - not (bastion_break_glass_enabled | default(false) | bool)
+    - not (is_commercial_pam | bool)
+
+- name: "[CSO] Break-glass требует incident_id и valid_until"
+  ansible.builtin.assert:
+    that:
+      - item.incident_id | default('') | length > 0
+      - item.valid_until | default('') | length > 0
+    fail_msg: >
+      Оператор «{{ item.name }}» (break_glass): обязательны incident_id и valid_until.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - item.break_glass | default(false) | bool
+    - not (is_commercial_pam | bool)
+
+- name: "[CSO] Break-glass максимальное окно (часы)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    python3 <<'PY'
+    import json, os, sys
+    from datetime import datetime
+
+    op = json.loads(os.environ["OP"])
+    max_h = float(os.environ["MAX_H"])
+    vf = op.get("valid_from") or ""
+    vu = op.get("valid_until") or ""
+
+    def parse(ts):
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+    end = parse(vu)
+    start = parse(vf) if vf else datetime.now().astimezone()
+    hours = (end - start).total_seconds() / 3600.0
+    if hours > max_h:
+        print(f"window {hours:.1f}h > max {max_h}h", file=sys.stderr)
+        sys.exit(1)
+    PY
+  environment:
+    OP: "{{ item | to_json }}"
+    MAX_H: "{{ bastion_break_glass_max_hours | string }}"
+  changed_when: false
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - item.break_glass | default(false) | bool
+    - not (is_commercial_pam | bool)

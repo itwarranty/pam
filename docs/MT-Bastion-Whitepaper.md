@@ -2,20 +2,21 @@
 
 ## Архитектура и защитные контроли шлюза удаленного доступа «MT: Bastion»
 
-**Версия документа:** 1.3  
-**Статус:** Релиз (Tier 1 Free complete в репозитории; live PKI QA — org)  
-**Продукт (git tags):** `v0.4.0` — см. § «Версии релиза»  
+**Версия документа:** 1.4  
+**Статус:** Релиз (Tier 2 Free complete в репозитории)  
+**Продукт (git tags):** `v0.5.0` — см. § «Версии релиза»  
 **Разработчик:** MT Global  
 
 ---
 
-## Версии релиза (Tier 1 Free)
+## Версии релиза (Tier 1 + Tier 2 Free)
 
 | Git tag | Содержание | Статус |
 | :--- | :--- | :--- |
 | **v0.1** | Baseline: Policy Gate, MFA, declarative revoke, test-repo-key | ✅ |
 | **v0.2.0** | **Phase A:** compliance verify, tamper-evident logs, source IP, SIEM forward, WORM | ✅ |
-| **v0.4.0** | **Phase B + C:** JIT windows, SSH User CA prod policy, OpenSpec → `openspec/specs/` | ✅ |
+| **v0.4.0** | **Tier 1 Phase B + C:** JIT windows, SSH User CA prod policy | ✅ |
+| **v0.5.0** | **Tier 2 Phases A–E:** incident log naming, command denylist, audit role, SSH rate limit, break-glass | ✅ |
 | **GA (будущее)** | Live PKI QA + `bastion_ssh_user_ca_qa_complete: true` | ⏳ org |
 
 Спецификации: `openspec/specs/`. История changes: `openspec/changes/archive/`.
@@ -27,6 +28,16 @@
 | **A** | `verify_compliance_cso.yml`, `bastion-shell-wrapper.sh` (`.sha256`/`.meta`), `from=`, SIEM, WORM |
 | **B** | `jit_filter_operators.yml`, `--tags jit_purge`, `configure_jit_timer.yml` (opt-in) |
 | **C** | `bastion_allow_raw_pubkey_prod`, preflight, `sign-operator-cert.sh.example`, QA `.example` |
+
+### Tier 2 — что реализовано в репозитории
+
+| Фаза | Реализация |
+| :--- | :--- |
+| **A** | `incident_id` в basename session log (`bastion-shell-wrapper.sh`) |
+| **B** | `bastion-command-policy.sh`, `command_denylist` mount, DEBUG trap denylist |
+| **C** | `access: audit`, `bastion-audit-shell-wrapper.sh`, preflight enum |
+| **D** | `configure_ssh_brute_force.yml` (firewalld / opt-in fail2ban), compliance verify |
+| **E** | `break_glass: true`, preflight max window, auditd key, syslog `BREAK_GLASS=1` |
 
 ### Вне репозитория (организационно)
 
@@ -83,6 +94,11 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 18 | **WORM archive session logs** | Копирование закрытых `.log` + sidecars на WORM mount | `tasks/archive_session_logs_worm.yml` |
 | 19 | **JIT access windows** | `valid_from` / `valid_until` + auto-purge; опц. systemd timer | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
 | 20 | **SSH User CA prod (Free)** | Certificates ≤72h; raw pubkey blocked без waiver | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
+| 21 | **Incident log naming (Tier 2)** | `incident_id` в basename `session_<INCIDENT>_<USER>_…` | `build/files/bastion-shell-wrapper.sh` |
+| 22 | **Shell command denylist (Tier 2)** | DEBUG trap; denylist RO mount `/etc/bastion/command_denylist` | `bastion-command-policy.sh`, `tasks/configure_shell_command_policy.yml` |
+| 23 | **Audit readonly role (Tier 2)** | `access: audit` — чтение `/var/log/bastion_sessions` без jump | `bastion-audit-shell-wrapper.sh`, `templates/sshd_config.j2` |
+| 24 | **SSH brute-force protection (Tier 2)** | firewalld rate limit (default) или opt-in fail2ban | `tasks/configure_ssh_brute_force.yml` |
+| 25 | **Break-glass emergency access (Tier 2)** | `break_glass: true` + JIT window ≤ max hours; auditd + syslog markers | `preflight_cso.yml`, `templates/auditd-bastion.rules.j2` |
 
 ---
 
@@ -145,6 +161,11 @@ Rocky Linux 9 — единственная утверждённая платфо
 | **WORM archive (Tier 1, опц.)** | Копирование закрытых логов на client WORM mount. | `tasks/archive_session_logs_worm.yml` |
 | **JIT access windows (Tier 1)** | `valid_from`/`valid_until` → filter + purge; timer `jit_purge`. | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
 | **SSH User CA prod policy (Tier 1)** | Preflight blocks raw pubkey; cert renewal SOP. | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
+| **Incident log naming (Tier 2)** | Sanitized `incident_id` в basename session log; sidecars следуют basename. | `build/files/bastion-shell-wrapper.sh` |
+| **Shell command policy (Tier 2)** | Configurable denylist для `access: shell`; syslog `mt-bastion-deny`. | `bastion-command-policy.sh`, `templates/command_denylist.j2` |
+| **Audit readonly role (Tier 2)** | `access: audit` — PTY без TCP forward; path guard на session logs. | `bastion-audit-shell-wrapper.sh`, `templates/sshd_config.j2` |
+| **SSH rate limiting (Tier 2)** | firewalld rich rule `limit value` или opt-in fail2ban jail. | `tasks/configure_ssh_brute_force.yml` |
+| **Break-glass access (Tier 2)** | Opt-in emergency profile; preflight gate; `mt_bastion_break_glass_session` auditd key. | `preflight_cso.yml`, `templates/auditd-bastion.rules.j2` |
 
 ---
 

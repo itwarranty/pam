@@ -1,0 +1,5 @@
+# Fail2ban filter — OpenSSH auth failures (host or forwarded container log).
+[Definition]
+failregex = ^.*sshd(?:\[.*\])?: .*Failed (?:publickey|keyboard-interactive|password) for .* from <HOST>.*$
+            ^.*sshd(?:\[.*\])?: .*Connection closed by authenticating user .* <HOST>.*\[preauth\]$
+ignoreregex =

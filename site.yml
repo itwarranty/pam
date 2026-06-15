@@ -41,6 +41,12 @@
       ansible.builtin.systemd:
         daemon_reload: true
 
+    - name: Restart fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
+      when: bastion_ssh_rate_limit_enabled | default(false) | bool
+
   tasks:
     - name: "[CSO] Preflight — обязательные проверки платформы и политики"
       ansible.builtin.include_tasks: tasks/preflight_cso.yml
@@ -63,6 +69,13 @@
 
         - name: SIEM syslog forward (опционально)
           ansible.builtin.include_tasks: tasks/configure_rsyslog_siem.yml
+
+        - name: Shell command denylist (Tier 2)
+          ansible.builtin.include_tasks: tasks/configure_shell_command_policy.yml
+
+        - name: SSH rate limit / fail2ban (Tier 2, опционально)
+          ansible.builtin.include_tasks: tasks/configure_ssh_brute_force.yml
+          when: bastion_ssh_rate_limit_enabled | default(false) | bool
 
         - name: Provisioning операторов (SSH-ключи + TOTP)
           ansible.builtin.include_tasks: tasks/provision_operators.yml

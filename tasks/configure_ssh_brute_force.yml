@@ -1,0 +1,62 @@
+---
+# SSH brute-force / rate protection on bastion_ssh_port (host firewalld or fail2ban).
+- name: SSH rate limit — firewalld rich rule (global)
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="ipv4" source address="0.0.0.0/0" port port="{{ bastion_ssh_port }}"
+      protocol="tcp" limit value="{{ bastion_ssh_rate_limit_rate }}" accept
+    permanent: true
+    state: enabled
+    immediate: true
+  when:
+    - bastion_ssh_rate_limit_enabled | bool
+    - bastion_ssh_rate_limit_method | default('firewalld') == 'firewalld'
+    - bastion_allowed_source_cidrs | default([]) | length == 0
+
+- name: SSH rate limit — firewalld per-CIDR (with source restriction)
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="ipv4" source address="{{ item }}" port port="{{ bastion_ssh_port }}"
+      protocol="tcp" limit value="{{ bastion_ssh_rate_limit_rate }}" accept
+    permanent: true
+    state: enabled
+    immediate: true
+  loop: "{{ bastion_allowed_source_cidrs }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - bastion_ssh_rate_limit_enabled | bool
+    - bastion_ssh_rate_limit_method | default('firewalld') == 'firewalld'
+    - bastion_allowed_source_cidrs | default([]) | length > 0
+
+- name: Установка fail2ban (опционально)
+  ansible.builtin.package:
+    name: fail2ban
+    state: present
+  when:
+    - bastion_ssh_rate_limit_enabled | bool
+    - bastion_ssh_rate_limit_method == 'fail2ban'
+
+- name: Fail2ban jail MT Bastion SSH
+  ansible.builtin.template:
+    src: fail2ban-mt-bastion.conf.j2
+    dest: /etc/fail2ban/jail.d/mt-bastion.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - bastion_ssh_rate_limit_enabled | bool
+    - bastion_ssh_rate_limit_method == 'fail2ban'
+  notify: Restart fail2ban
+
+- name: Fail2ban filter MT Bastion SSH
+  ansible.builtin.template:
+    src: fail2ban-mt-bastion-filter.conf.j2
+    dest: /etc/fail2ban/filter.d/mt-bastion-ssh.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - bastion_ssh_rate_limit_enabled | bool
+    - bastion_ssh_rate_limit_method == 'fail2ban'
+  notify: Restart fail2ban

@@ -7,7 +7,7 @@ cd "${ROOT}"
 
 ensure_lab_keys() {
   mkdir -p lab/keys
-  for u in engineer-jump engineer-shell; do
+  for u in engineer-jump engineer-shell engineer-audit breakglass-lab; do
     if [[ ! -f "lab/keys/${u}.lab" ]]; then
       echo "[dev-up] Generating lab/keys/${u}.lab ..."
       ssh-keygen -t ed25519 -f "lab/keys/${u}.lab" -N "" -C "${u}@mtglobal.team"
@@ -60,4 +60,6 @@ echo ""
 echo "[dev-up] SSH bastion (порт 2222, после деплоя):"
 echo "  ssh -p 2222 -i lab/keys/engineer-jump.lab engineer-jump@127.0.0.1"
 echo "  ssh -p 2222 -i lab/keys/engineer-shell.lab engineer-shell@127.0.0.1"
+echo "  ssh -p 2222 -i lab/keys/engineer-audit.lab engineer-audit@127.0.0.1"
+echo "  ssh -p 2222 -i lab/keys/breakglass-lab.lab breakglass-lab@127.0.0.1"
 echo "TOTP: см. otpauth URI в group_vars/dev/lab.yml"

@@ -9,14 +9,16 @@ Completed changes moved here after specs merged to `openspec/specs/`.
 | **v0.1** | test-repo-key, baseline CSO | До Tier 1 |
 | **v0.2.0** | Phase A only | compliance, tamper logs, source IP, SIEM, WORM |
 | **v0.4.0** | Phase B + C + archive | JIT, User CA policy, specs merged |
+| **v0.5.0** | Tier 2 Phases A–E + archive | incident naming, denylist, audit, rate limit, break-glass |
 
-> Отдельных тегов `v0.2.1` / `v0.3.0` нет: Phase B и C выпущены одним релизом **v0.4.0**.
+> Отдельных тегов `v0.2.1` / `v0.3.0` нет: Phase B и C выпущены одним релизом **v0.4.0**. Tier 2 — одним релизом **v0.5.0**.
 
 ## Архив changes
 
 | Archive | Release | Notes |
 | :--- | :--- | :--- |
 | [2026-06-bastion-free-tier1-cso](./2026-06-bastion-free-tier1-cso/) | v0.2.0–v0.4.0 | Tier 1 Free Phases A–C — **все пункты tasks.md [x]** |
+| [2026-06-bastion-free-tier2-cso](./2026-06-bastion-free-tier2-cso/) | v0.5.0 | Tier 2 Free Phases A–E — **все пункты tasks.md [x]** |
 | [2026-06-ssh-user-ca-qa-mtglobal](./2026-06-ssh-user-ca-qa-mtglobal/) | v0.4.0 (templates) | Live PKI QA — **§3–5, 6.2 ещё [ ]** (нужен org CA) |
 
 ## Статус «всё реализовано?»
@@ -24,6 +26,7 @@ Completed changes moved here after specs merged to `openspec/specs/`.
 | Область | В репо | Вне репо |
 | :--- | :---: | :---: |
 | Tier 1 код + Ansible + доки | ✅ | — |
+| Tier 2 код + Ansible + доки | ✅ | — |
 | Opt-in: JIT timer, SIEM, WORM | ✅ (выкл. по умолчанию) | клиент включает в group_vars |
 | SSH User CA **policy** + signing example | ✅ | — |
 | SSH User CA **live QA** на Rocky 9 | templates only | CA pubkey, deploy, acceptance |

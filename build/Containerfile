@@ -25,8 +25,14 @@ RUN apk add --no-cache \
 
 COPY build/files/bastion-shell-wrapper.sh /usr/local/bin/bastion-shell-wrapper.sh
 COPY build/files/bastion-entrypoint.sh /usr/local/bin/bastion-entrypoint.sh
+COPY build/files/bastion-command-policy.sh /usr/local/bin/bastion-command-policy.sh
+COPY build/files/bastion-command-policy-rc.sh /usr/local/bin/bastion-command-policy-rc.sh
+COPY build/files/bastion-audit-shell-wrapper.sh /usr/local/bin/bastion-audit-shell-wrapper.sh
+COPY build/files/bastion-audit-shell.sh /usr/local/bin/bastion-audit-shell.sh
 
 RUN chmod 0755 /usr/local/bin/bastion-shell-wrapper.sh /usr/local/bin/bastion-entrypoint.sh \
+    /usr/local/bin/bastion-command-policy.sh /usr/local/bin/bastion-command-policy-rc.sh \
+    /usr/local/bin/bastion-audit-shell-wrapper.sh /usr/local/bin/bastion-audit-shell.sh \
     && if [ "${MFA_STRICT}" = "1" ]; then \
          printf '%s\n' '#%PAM-1.0' \
            'auth required pam_google_authenticator.so' \

@@ -55,6 +55,24 @@ bastion_allow_raw_pubkey_prod: false
 bastion_cert_max_validity_hours: 72
 bastion_ssh_user_ca_qa_complete: false
 
+# Tier 2 Free (v0.5): incident logs, command policy, audit role, rate limit, break-glass
+bastion_shell_command_policy_enabled: true
+bastion_shell_command_denylist:
+  - 'rm\s+-rf\s+/'
+  - 'iptables\s+-F'
+  - 'mkfs\.'
+  - 'dd\s+if='
+  - ':(){ :|:& };:'
+bastion_ssh_rate_limit_enabled: false
+bastion_ssh_rate_limit_method: firewalld
+bastion_ssh_rate_limit_rate: "30/m"
+bastion_fail2ban_maxretry: 5
+bastion_fail2ban_bantime: 3600
+bastion_fail2ban_logpath: /var/log/secure
+bastion_break_glass_enabled: false
+bastion_break_glass_max_hours: 4
+bastion_break_glass_audit_enabled: true
+
 # Локальный доверенный образ (Air Gap)
 bastion_image_name: mt_bastion_secure
 bastion_image_tag: latest

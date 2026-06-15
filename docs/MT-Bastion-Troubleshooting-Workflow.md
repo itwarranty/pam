@@ -246,7 +246,39 @@ Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет �
    less /var/log/bastion_sessions/session_engineer_support_20260615_143022.log
    ```
 
-6. События **auditd** (ключи `mt_bastion_session_logs`, `mt_bastion_ssh_connect`) направляются в SIEM через rsyslog LOCAL6 при `bastion_siem_forward_enabled: true` (см. Whitepaper §6).
+6. События **auditd** (ключи `mt_bastion_session_logs`, `mt_bastion_ssh_connect`, `mt_bastion_break_glass_session`) направляются в SIEM через rsyslog LOCAL6 при `bastion_siem_forward_enabled: true` (см. Whitepaper §6).
+
+### 5.4 Shell command policy (Tier 2)
+
+При `bastion_shell_command_policy_enabled: true` опасные интерактивные команды в shell-сессии блокируются denylist (`/etc/bastion/command_denylist`).
+
+1. Отказ фиксируется в syslog/journal с тегом `mt-bastion-deny`.
+2. Сессия **не** прерывается — оператор получает сообщение об отказе.
+3. Denylist редактируется только через Ansible (`bastion_shell_command_denylist`), не вручную в контейнере.
+4. Jump-операторы (`access: jump`) не затрагиваются.
+
+**Диагностика:**
+
+```bash
+journalctl -t mt-bastion-deny --since "1 hour ago"
+podman exec mt_ssh_bastion cat /etc/bastion/command_denylist
+```
+
+### 5.5 Break-glass emergency access (Tier 2)
+
+Аварийный профиль включается только при `bastion_break_glass_enabled: true` и обязательных полях оператора:
+
+- `break_glass: true`
+- непустой `incident_id`
+- `valid_until` (и опционально `valid_from`) — окно ≤ `bastion_break_glass_max_hours` (по умолчанию 4 ч)
+
+При входе:
+
+1. Shell wrapper выставляет `MT_BASTION_BREAK_GLASS=1` и пишет syslog `mt-bastion-break-glass`.
+2. auditd (при `bastion_break_glass_audit_enabled`) логирует ключ `mt_bastion_break_glass_session`.
+3. Маркер `.mt-bastion-break-glass` в каталоге оператора на хосте.
+
+**Закрытие окна:** по истечении `valid_until` — `jit_purge` удаляет оператора (как Tier 1 JIT).
 
 ---
 
@@ -309,4 +341,4 @@ Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет �
 
 ---
 
-*MT Global — MT: Bastion Troubleshooting Workflow v1.2.*
+*MT Global — MT: Bastion Troubleshooting Workflow v1.3.*

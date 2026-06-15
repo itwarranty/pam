@@ -1,8 +1,10 @@
 ---
-# Слияние lab + test + JIT lab операторов
+# Слияние lab + test + JIT + Tier 2 lab операторов
 bastion_operators: >-
   {{
     bastion_operators_lab
     + (bastion_operators_test | default([]))
     + (bastion_operators_jit_lab | default([]))
+    + (bastion_operators_audit_lab | default([]))
+    + (bastion_operators_break_glass_lab | default([]))
   }}

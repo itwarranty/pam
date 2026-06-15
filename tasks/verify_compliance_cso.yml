@@ -194,6 +194,46 @@
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
+- name: "[Verify] SSH rate limit (firewalld)"
+  ansible.builtin.shell: firewall-cmd --list-rich-rules | grep -q 'limit value'
+  register: verify_rate_limit_fw
+  changed_when: false
+  failed_when: false
+  when:
+    - bastion_ssh_rate_limit_enabled | default(false) | bool
+    - bastion_ssh_rate_limit_method | default('firewalld') == 'firewalld'
+  tags: [verify_compliance]
+
+- name: "[Verify] SSH rate limit firewalld state"
+  ansible.builtin.assert:
+    that:
+      - verify_rate_limit_fw.rc == 0
+    fail_msg: "FAIL:rate_limit — firewalld limit rule not found"
+  when:
+    - bastion_ssh_rate_limit_enabled | default(false) | bool
+    - bastion_ssh_rate_limit_method | default('firewalld') == 'firewalld'
+  tags: [verify_compliance]
+
+- name: "[Verify] SSH rate limit (fail2ban)"
+  ansible.builtin.systemd:
+    name: fail2ban
+  register: verify_fail2ban
+  check_mode: true
+  when:
+    - bastion_ssh_rate_limit_enabled | default(false) | bool
+    - bastion_ssh_rate_limit_method == 'fail2ban'
+  tags: [verify_compliance]
+
+- name: "[Verify] fail2ban active"
+  ansible.builtin.assert:
+    that:
+      - verify_fail2ban.status.ActiveState == 'active'
+    fail_msg: "FAIL:rate_limit — fail2ban not active"
+  when:
+    - bastion_ssh_rate_limit_enabled | default(false) | bool
+    - bastion_ssh_rate_limit_method == 'fail2ban'
+  tags: [verify_compliance]
+
 - name: "[Verify] Compliance summary"
   ansible.builtin.debug:
     msg: "PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist, auditd, firewalld, session logs)"
