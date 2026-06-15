@@ -10,6 +10,7 @@ Security-as-a-Code jump host for Rocky Linux 9 (Rootless Podman, CSO Policy Gate
 
 ## Documentation
 
+- [Engineer Onboarding](docs/Engineer-Onboarding.md) — доступ к repo + первый dev-стенд
 - [Whitepaper](docs/MT-Bastion-Whitepaper.md)
 - [CSO Demo Runbook](docs/CSO-Demo-Runbook.md)
 - [OpenSpec: SSH User CA QA](openspec/changes/ssh-user-ca-qa-mtglobal/)

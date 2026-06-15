@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Install collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Syntax check playbook
+        run: ansible-playbook --syntax-check site.yml
+
+      - name: Syntax check (dev inventory)
+        run: ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml
