@@ -32,6 +32,16 @@ bastion_mfa_secrets_output_dir: "{{ playbook_dir }}/generated/mfa"
 # Операторы prod — через Vault; dev — `group_vars/dev/` (lab keys)
 bastion_operators: []
 
+# Tier 1 Free (v0.2): source IP, SIEM, WORM archive
+bastion_require_source_ip: false
+bastion_allowed_source_cidrs: []
+bastion_siem_forward_enabled: false
+bastion_siem_server: ""
+bastion_siem_port: 514
+bastion_siem_protocol: tcp
+bastion_worm_archive_dir: ""
+bastion_worm_archive_min_age_minutes: 5
+
 # Локальный доверенный образ (Air Gap)
 bastion_image_name: mt_bastion_secure
 bastion_image_tag: latest

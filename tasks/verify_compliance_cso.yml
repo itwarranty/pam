@@ -1,0 +1,195 @@
+---
+# Post-deploy compliance verify (tag: verify_compliance). Mirrors scripts/bastion-compliance-verify.sh.
+- name: "[Verify] UID bastion-пользователя"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ bastion_user }}"
+  tags: [verify_compliance]
+
+- name: "[Verify] Rocky Linux 9.x"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == bastion_required_os
+      - ansible_facts['distribution_major_version'] == bastion_required_os_major
+    fail_msg: "FAIL:os — expected {{ bastion_required_os }} {{ bastion_required_os_major }}.x"
+  tags: [verify_compliance]
+
+- name: "[Verify] Architecture x86_64"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] == bastion_required_arch
+    fail_msg: "FAIL:arch — expected {{ bastion_required_arch }}"
+  tags: [verify_compliance]
+
+- name: "[Verify] SELinux Enforcing"
+  ansible.builtin.command: getenforce
+  register: verify_selinux
+  changed_when: false
+  when: bastion_selinux_enforcing | bool
+  tags: [verify_compliance]
+
+- name: "[Verify] SELinux mode"
+  ansible.builtin.assert:
+    that:
+      - verify_selinux.stdout == 'Enforcing'
+    fail_msg: "FAIL:selinux — {{ verify_selinux.stdout }}"
+  when: bastion_selinux_enforcing | bool
+  tags: [verify_compliance]
+
+- name: "[Verify] mt_ssh_bastion container running"
+  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' mt_ssh_bastion
+  register: verify_container_running
+  changed_when: false
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Container state"
+  ansible.builtin.assert:
+    that:
+      - verify_container_running.stdout == 'true'
+    fail_msg: "FAIL:container — mt_ssh_bastion not running"
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Image MFA strict label"
+  ansible.builtin.command: >-
+    podman image inspect {{ bastion_image_name }}:{{ bastion_image_tag }}
+    --format '{{ "{{" }} index .Config.Labels "mt.global.mfa.strict" {{ "}}" }}'
+  register: verify_mfa_label
+  changed_when: false
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_mfa_enforce | bool
+  tags: [verify_compliance]
+
+- name: "[Verify] MFA label value"
+  ansible.builtin.assert:
+    that:
+      - verify_mfa_label.stdout == bastion_required_image_mfa_strict
+    fail_msg: "FAIL:mfa_label — expected {{ bastion_required_image_mfa_strict }}, got {{ verify_mfa_label.stdout }}"
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_mfa_enforce | bool
+  tags: [verify_compliance]
+
+- name: "[Verify] Whitelist PermitOpen non-empty"
+  ansible.builtin.assert:
+    that:
+      - bastion_permitted_targets | length > 0
+    fail_msg: "FAIL:whitelist — bastion_permitted_targets is empty"
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_allow_tcp_forwarding | bool
+  tags: [verify_compliance]
+
+- name: "[Verify] Declared operator names"
+  ansible.builtin.set_fact:
+    bastion_operator_names: "{{ bastion_operators | map(attribute='name') | list }}"
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Orphan container /home users"
+  ansible.builtin.shell: |
+    set -e
+    allowed=" {{ bastion_operator_names | join(' ') }} "
+    orphans=""
+    for u in $(podman exec mt_ssh_bastion sh -c 'ls -1 /home 2>/dev/null || true'); do
+      case "${allowed}" in
+        *" ${u} "*) ;;
+        *) orphans="${orphans} ${u}" ;;
+      esac
+    done
+    printf '%s' "${orphans# }"
+  register: verify_orphan_users
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] No orphan users"
+  ansible.builtin.assert:
+    that:
+      - verify_orphan_users.stdout | trim | length == 0
+    fail_msg: "FAIL:orphan_users — unexpected /home users: {{ verify_orphan_users.stdout }}"
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] auditd active"
+  ansible.builtin.systemd:
+    name: auditd
+  register: verify_auditd
+  check_mode: true
+  tags: [verify_compliance]
+
+- name: "[Verify] auditd running"
+  ansible.builtin.assert:
+    that:
+      - verify_auditd.status.ActiveState == 'active'
+    fail_msg: "FAIL:auditd — not active"
+  tags: [verify_compliance]
+
+- name: "[Verify] firewalld active"
+  ansible.builtin.systemd:
+    name: firewalld
+  register: verify_firewalld
+  check_mode: true
+  tags: [verify_compliance]
+
+- name: "[Verify] firewalld running"
+  ansible.builtin.assert:
+    that:
+      - verify_firewalld.status.ActiveState == 'active'
+    fail_msg: "FAIL:firewalld — not active"
+  tags: [verify_compliance]
+
+- name: "[Verify] Session log directory"
+  ansible.builtin.stat:
+    path: "{{ audit_log_dir }}"
+  register: verify_session_log_dir
+  tags: [verify_compliance]
+
+- name: "[Verify] Session log dir owner and mode"
+  ansible.builtin.assert:
+    that:
+      - verify_session_log_dir.stat.exists
+      - verify_session_log_dir.stat.isdir
+      - verify_session_log_dir.stat.pw_name == bastion_user
+      - verify_session_log_dir.stat.mode == '0750'
+    fail_msg: >-
+      FAIL:session_log_dir — expected {{ audit_log_dir }} dir 0750 owner {{ bastion_user }}
+  tags: [verify_compliance]
+
+- name: "[Verify] Bastion SSH port open in firewalld"
+  ansible.builtin.command: firewall-cmd --query-port={{ bastion_ssh_port }}/tcp
+  register: verify_fw_port
+  changed_when: false
+  failed_when: false
+  when: bastion_allowed_source_cidrs | default([]) | length == 0
+  tags: [verify_compliance]
+
+- name: "[Verify] Firewalld port or rich rules"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (bastion_allowed_source_cidrs | default([]) | length > 0)
+        or (verify_fw_port.stdout == 'yes')
+    fail_msg: "FAIL:firewall_port — {{ bastion_ssh_port }}/tcp not allowed"
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Compliance summary"
+  ansible.builtin.debug:
+    msg: "PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist, auditd, firewalld, session logs)"
+  tags: [verify_compliance]

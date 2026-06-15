@@ -49,6 +49,11 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 11 | Роль `access: shell` — только по согласованию CSO заказчика | Организационно |
 | 12 | **SSH User CA** (`bastion_trusted_user_ca_file`, operator `certificate`) | Реализовано; prod rollout — OpenSpec `openspec/changes/ssh-user-ca-qa-mtglobal/` |
 | 13 | **Declarative revoke операторов** | Удаление из `bastion_operators` → purge каталогов, MFA, Unix-учёток в контейнере + restart | `tasks/purge_revoked_operators.yml` |
+| 14 | **Source IP restriction** (`allowed_sources`, опц. `bastion_allowed_source_cidrs`) | Per-operator `from=`; strict mode: `bastion_require_source_ip` | `templates/authorized_keys.j2`, `tasks/configure_source_firewall.yml` |
+| 15 | **Tamper-evident session logs** | SHA-256 sidecar + `.meta` при закрытии shell-сессии | `build/files/bastion-shell-wrapper.sh` |
+| 16 | **SIEM syslog forward** | auditd → LOCAL6 → rsyslog → client SIEM (opt-in) | `tasks/configure_rsyslog_siem.yml` |
+| 17 | **Compliance verify** | Post-deploy checks (Rocky 9, SELinux, container, auditd…) | `scripts/bastion-compliance-verify.sh`, `tasks/verify_compliance_cso.yml` |
+| 18 | **WORM archive session logs** | Копирование закрытых `.log` + sidecars на WORM mount | `tasks/archive_session_logs_worm.yml` |
 
 ---
 
@@ -104,6 +109,11 @@ Rocky Linux 9 — единственная утверждённая платфо
 | **Declarative revoke (JIT offboarding)** | Операторы вне `bastion_operators` удаляются с хоста, из `generated/mfa/`, из контейнера (`deluser`); handler перезапускает `mt_ssh_bastion`. Entrypoint дублирует purge при старте. | `tasks/purge_revoked_operators.yml`, `site.yml` (handler), `bastion-entrypoint.sh` |
 | **Hot reload конфигурации** | Изменения `sshd_config`, ключей или TOTP → `podman restart mt_ssh_bastion` без полного redeploy. | `tasks/deploy_ssh_bastion.yml`, `tasks/provision_operator_item.yml` |
 | **Контроль целостности бастиона** | Мониторинг записи в каталог логов и сетевых connect-событий на уровне ядра хоста. | `templates/auditd-bastion.rules.j2` |
+| **Source IP restriction (Tier 1)** | Per-operator `from="CIDR,..."` в `authorized_keys`; опционально firewalld rich rules. | `templates/authorized_keys.j2`, `tasks/configure_source_firewall.yml`, `tasks/preflight_cso.yml` |
+| **Tamper-evident session logs (Tier 1)** | При закрытии shell-сессии: GNU `.sha256` для `sha256sum -c` + `.meta` (UTC, USER, INCIDENT, CLIENT). | `build/files/bastion-shell-wrapper.sh` |
+| **SIEM syslog export (Tier 1)** | auditd plugin LOCAL6 + rsyslog drop-in → client SIEM (TCP/UDP/RELP). | `tasks/configure_rsyslog_siem.yml`, `templates/rsyslog-bastion-siem.conf.j2` |
+| **Compliance verify (Tier 1)** | Автоматическая проверка post-deploy; exit 0/non-zero для аудита и мониторинга. | `scripts/bastion-compliance-verify.sh`, tag `verify_compliance` |
+| **WORM archive (Tier 1, опц.)** | Копирование закрытых логов на client WORM mount. | `tasks/archive_session_logs_worm.yml` |
 
 ---
 
@@ -170,6 +180,24 @@ TOTP-секреты генерируются плейбуком и переда�
 - интеграцию хостового `auditd` и syslog с корпоративной SIEM;
 - политику долгосрочного хранения (retention) файлов аудита сессий на внешних WORM-хранилищах;
 - сетевую сегментацию DMZ и мониторинг исходящих соединений с бастиона.
+
+### SIEM forwarder (Tier 1 Free, опционально)
+
+При `bastion_siem_forward_enabled: true` плейбук разворачивает:
+
+1. **auditd plugin** → syslog facility `LOCAL6` (`/etc/audit/plugins.d/syslog.conf`).
+2. **rsyslog drop-in** → `@@<bastion_siem_server>:514` (`templates/rsyslog-bastion-siem.conf.j2`).
+
+Переменные: `bastion_siem_server`, `bastion_siem_port`, `bastion_siem_protocol` (`tcp` | `udp` | `relp`).
+
+Нормализация в CEF/JSON — **на стороне SIEM заказчика** (см. OpenSpec `bastion-siem-syslog-export`). MT: Bastion не отправляет данные в облако MT Global.
+
+Проверка после деплоя:
+
+```bash
+ansible-playbook site.yml --tags verify_compliance
+./scripts/bastion-compliance-verify.sh
+```
 
 ---
 
@@ -280,6 +308,8 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | 2 | Список целей `PermitOpen` согласован с владельцами систем (формат `host:port`, без CIDR) |
 | 3 | Маршрутизация с бастиона до целевых хостов проверена (`nc -zv target 22`) |
 | 4 | SIEM-команда клиента уведомлена о правилах `auditd` (`mt_bastion_session_logs`, `mt_bastion_ssh_connect`) |
+| 5 | При SIEM forward: `bastion_siem_server` доступен по TCP/RELP из DMZ |
+| 6 | Compliance verify: `./scripts/bastion-compliance-verify.sh` exit 0 после деплоя |
 
 ### Dev / lab (инженеры MT Global)
 
@@ -329,12 +359,17 @@ mt-bastion/
 ├── lab/keys/                      # gitignored lab SSH keys
 ├── scripts/
 │   ├── dev-up.sh                  # one-shot dev stand
+│   ├── bastion-compliance-verify.sh  # Tier 1 post-deploy checks
 │   ├── test-repo-key.sh           # test access + bastion onboarding
 │   └── repo-access.sh
-├── openspec/                      # OpenSpec (SSH User CA QA, …)
+├── openspec/                      # OpenSpec (SSH User CA QA, Tier 1 Free, …)
 ├── tasks/
 │   ├── preflight_cso.yml
 │   ├── prepare_os.yml
+│   ├── verify_compliance_cso.yml  # tag: verify_compliance
+│   ├── configure_rsyslog_siem.yml
+│   ├── configure_source_firewall.yml
+│   ├── archive_session_logs_worm.yml
 │   ├── provision_operators.yml
 │   ├── provision_operator_item.yml
 │   ├── purge_revoked_operators.yml

@@ -1,0 +1,22 @@
+---
+# Optional firewalld source CIDR restriction (defense in depth with authorized_keys from=).
+- name: Удаление общего правила порта при CIDR-restriction
+  ansible.posix.firewalld:
+    port: "{{ bastion_ssh_port }}/tcp"
+    permanent: true
+    state: disabled
+    immediate: true
+  when: bastion_allowed_source_cidrs | default([]) | length > 0
+
+- name: Rich rules — bastion_ssh_port только из разрешённых CIDR
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="ipv4" source address="{{ item }}" port port="{{ bastion_ssh_port }}"
+      protocol="tcp" accept
+    permanent: true
+    state: enabled
+    immediate: true
+  loop: "{{ bastion_allowed_source_cidrs }}"
+  loop_control:
+    label: "{{ item }}"
+  when: bastion_allowed_source_cidrs | default([]) | length > 0

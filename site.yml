@@ -25,6 +25,18 @@
       changed_when: true
       when: not (is_commercial_pam | bool)
 
+    - name: Restart rsyslog
+      ansible.builtin.service:
+        name: rsyslog
+        state: restarted
+      when: bastion_siem_forward_enabled | default(false) | bool
+
+    - name: Restart auditd for SIEM
+      ansible.builtin.service:
+        name: auditd
+        state: restarted
+      when: bastion_siem_forward_enabled | default(false) | bool
+
   tasks:
     - name: "[CSO] Preflight — обязательные проверки платформы и политики"
       ansible.builtin.include_tasks: tasks/preflight_cso.yml
@@ -41,8 +53,24 @@
         - name: Подготовка ОС и создание бесправного пользователя
           ansible.builtin.include_tasks: tasks/prepare_os.yml
 
+        - name: Ограничение источника на firewalld (опционально)
+          ansible.builtin.include_tasks: tasks/configure_source_firewall.yml
+          when: bastion_allowed_source_cidrs | default([]) | length > 0
+
+        - name: SIEM syslog forward (опционально)
+          ansible.builtin.include_tasks: tasks/configure_rsyslog_siem.yml
+
         - name: Provisioning операторов (SSH-ключи + TOTP)
           ansible.builtin.include_tasks: tasks/provision_operators.yml
 
         - name: Запуск ssh_bastion в Rootless Podman
           ansible.builtin.include_tasks: tasks/deploy_ssh_bastion.yml
+
+        - name: WORM archive session logs (опционально)
+          ansible.builtin.include_tasks: tasks/archive_session_logs_worm.yml
+          tags: [worm_archive]
+
+    - name: "[CSO] Compliance verify (post-deploy)"
+      ansible.builtin.include_tasks: tasks/verify_compliance_cso.yml
+      tags: [verify_compliance]
+      when: not (is_commercial_pam | bool)

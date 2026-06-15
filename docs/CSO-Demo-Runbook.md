@@ -143,6 +143,20 @@ limactl shell mt-bastion-prod -- sudo lsattr /var/log/bastion_sessions/*.log
 
 **Ожидание:** файл `session_engineer-shell_*.log`, атрибут `a` (append-only). Каталог — `0750`, владелец `mt_bastion`.
 
+### 4.2a Tamper-evident sidecar (Tier 1)
+
+После `exit` из shell-сессии:
+
+```bash
+limactl shell mt-bastion-prod -- sudo ls -la /var/log/bastion_sessions/*.sha256 /var/log/bastion_sessions/*.meta
+limactl shell mt-bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/session_engineer-shell_*.log.sha256
+limactl shell mt-bastion-prod -- sudo cat /var/log/bastion_sessions/session_engineer-shell_*.log.meta
+```
+
+**Ожидание:** `sha256sum -c` → OK; `.meta` содержит `SHA256=`, `UTC=`, `USER=`, `CLIENT=`.
+
+> После изменения `bastion-shell-wrapper.sh` пересоберите образ: `./trusted_download.sh` и redeploy.
+
 ### 4.3 auditd
 
 ```bash
@@ -195,7 +209,8 @@ limactl shell mt-bastion-prod -- sudo -u mt_bastion podman exec mt_ssh_bastion p
 - [ ] `./trusted_download.sh` — label `mt.global.mfa.strict=1`
 - [ ] Preflight pass, deploy complete
 - [ ] Jump: direct shell fail, ProxyJump pass/fail по whitelist
-- [ ] Shell: log file + `chattr +a`
+- [ ] Shell: log file + `chattr +a` + `.sha256` / `.meta` sidecars (после rebuild образа)
+- [ ] Compliance verify: `--tags verify_compliance` или `bastion-compliance-verify.sh`
 - [ ] MFA без TOTP — fail
 - [ ] Declarative revoke (опционально): `test-repo-key.sh revoke … --apply`
 - [ ] [Whitepaper](./MT-Bastion-Whitepaper.md) · [Workflow](./MT-Bastion-Troubleshooting-Workflow.md)
@@ -215,4 +230,33 @@ limactl shell mt-bastion-prod -- sudo -u mt_bastion podman exec mt_ssh_bastion p
 
 ---
 
-*MT Global — MT: Bastion CSO Demo v1.2*
+## Блок 8 — Compliance verify (Tier 1, 1 мин)
+
+**Что сказать CSO:** «Периодический аудит состояния бастиона — одной командой, exit code для мониторинга.»
+
+```bash
+ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
+# или на хосте:
+limactl shell mt-bastion-prod -- sudo bash -c 'cd /path/to/mt-bastion && ./scripts/bastion-compliance-verify.sh'
+```
+
+**Ожидание:** все checks PASS, exit 0. При deliberate drift (например `podman stop mt_ssh_bastion`) — FAIL.
+
+---
+
+## Блок 9 — Source IP restriction (Tier 1, опционально, 1 мин)
+
+**Что сказать CSO:** «Per-operator `from=` в authorized_keys; опционально firewalld CIDR.»
+
+```bash
+# Пример prod: allowed_sources в bastion_operators
+grep from= /home/mt_bastion/operators/*/.ssh/authorized_keys
+```
+
+**Демо отказа:** задайте `allowed_sources: ["203.0.113.0/24"]` (без 127.0.0.0/8) → SSH с localhost получит `Permission denied (publickey)` до MFA.
+
+Strict mode: `bastion_require_source_ip: true` — preflight fail без `allowed_sources` у каждого оператора.
+
+---
+
+*MT Global — MT: Bastion CSO Demo v1.3 (Tier 1 Phase A)*

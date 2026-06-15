@@ -1,0 +1,40 @@
+---
+# Host-level rsyslog forwarder for client SIEM (auditd keys → local6).
+- name: Установка rsyslog для SIEM forward
+  ansible.builtin.package:
+    name:
+      - rsyslog
+    state: present
+  when: bastion_siem_forward_enabled | bool
+
+- name: auditd → syslog LOCAL6 для SIEM pipeline
+  ansible.builtin.copy:
+    dest: /etc/audit/plugins.d/syslog.conf
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      active = yes
+      direction = out
+      path = builtin_syslog
+      type = always
+      args = LOG_LOCAL6
+  when: bastion_siem_forward_enabled | bool
+  notify: Restart auditd for SIEM
+
+- name: Drop-in rsyslog — forward local6 to client SIEM
+  ansible.builtin.template:
+    src: rsyslog-bastion-siem.conf.j2
+    dest: /etc/rsyslog.d/99-mt-bastion-siem.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: bastion_siem_forward_enabled | bool
+  notify: Restart rsyslog
+
+- name: Удаление SIEM drop-in при отключённом forward
+  ansible.builtin.file:
+    path: /etc/rsyslog.d/99-mt-bastion-siem.conf
+    state: absent
+  when: not (bastion_siem_forward_enabled | bool)
+  notify: Restart rsyslog

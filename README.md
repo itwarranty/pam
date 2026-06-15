@@ -16,6 +16,10 @@
 ./scripts/test-repo-key.sh revoke <name> --apply      # declarative purge + restart
 ./scripts/test-repo-key.sh apply-dev
 
+# Compliance verify (Tier 1 — post-deploy)
+./scripts/bastion-compliance-verify.sh
+ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
+
 # Доступ по GitHub-аккаунту
 ./scripts/repo-access.sh grant <github_user>
 ./scripts/repo-access.sh revoke <github_user>

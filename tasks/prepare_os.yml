@@ -75,3 +75,4 @@
     permanent: true
     state: enabled
     immediate: true
+  when: bastion_allowed_source_cidrs | default([]) | length == 0

@@ -1,0 +1,32 @@
+---
+# Optional WORM archive: copy closed session logs + integrity sidecars (mtime stable).
+- name: WORM archive — каталог назначения
+  ansible.builtin.file:
+    path: "{{ bastion_worm_archive_dir }}"
+    state: directory
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0750"
+  when: bastion_worm_archive_dir | default('') | length > 0
+
+- name: WORM archive — закрытые session logs (mtime стабилен)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    archive="{{ bastion_worm_archive_dir }}"
+    min_age="{{ bastion_worm_archive_min_age_minutes | default(5) }}"
+    now=$(date +%s)
+    for log in {{ audit_log_dir }}/session_*.log; do
+      [ -f "$log" ] || continue
+      age_min=$(( (now - $(stat -c %Y "$log")) / 60 ))
+      [ "$age_min" -ge "$min_age" ] || continue
+      base=$(basename "$log")
+      install -m 0640 -o {{ bastion_user }} -g {{ bastion_user }} "$log" "${archive}/${base}"
+      for ext in sha256 meta; do
+        [ -f "${log}.${ext}" ] && install -m 0640 -o {{ bastion_user }} -g {{ bastion_user }} \
+          "${log}.${ext}" "${archive}/${base}.${ext}"
+      done
+    done
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: bastion_worm_archive_dir | default('') | length > 0

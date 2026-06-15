@@ -48,6 +48,19 @@ Product scope is forwarder configuration and documentation only.
 |:---|:---|:---|
 | auditd | `mt_bastion_session_logs` | Alert on unexpected delete/rename in session log dir |
 | auditd | `mt_bastion_ssh_connect` | Correlate outbound connections from bastion UID |
-| sidecar `.sha256` | `SHA256`, `USER`, `INCIDENT` | Ticket attachment integrity verification (manual or client parser) |
+| sidecar `.sha256` | GNU hash line | `sha256sum -c` before ticket attach |
+| sidecar `.meta` | `SHA256`, `USER`, `INCIDENT`, `CLIENT` | Ticket metadata / client parser |
+| rsyslog | `local6.*` | Route auditd plugin events to client SIEM receiver |
+
+### CEF mapping (client SIEM — not embedded in MT: Bastion)
+
+| CEF extension | Source | Example value |
+|:---|:---|:---|
+| `deviceVendor` | static | `MT Global` |
+| `deviceProduct` | static | `MT Bastion` |
+| `deviceEventClassId` | audit key | `mt_bastion_session_logs` |
+| `name` | audit syscall | `write session log` |
+| `sourceUserName` | audit uid | operator Unix name |
+| `fileHash` | `.meta` sidecar | SHA256 hex |
 
 CEF conversion SHALL be performed by client SIEM vendor rules — not embedded in MT: Bastion.

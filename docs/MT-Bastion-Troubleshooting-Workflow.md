@@ -218,20 +218,24 @@ Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет �
 ### 5.3 Формирование отчёта для CSO и SIEM
 
 1. Лог-файл сессии закрывается. **auditd** фиксирует операции записи и доступа к каталогу.
-2. Контрольная сумма SHA-256 лог-файла включается в тикет `INC-2026-8942`:
+2. **Tamper-evident sidecar** (Tier 1): при выходе из shell `bastion-shell-wrapper.sh` создаёт:
+   - `<session>.log.sha256` — GNU-формат для `sha256sum -c`;
+   - `<session>.log.meta` — `SHA256=`, `UTC=`, `USER=`, `INCIDENT=`, `CLIENT=`.
+3. Контрольная сумма включается в тикет `INC-2026-8942`:
 
    ```bash
-   sha256sum /var/log/bastion_sessions/session_engineer_support_20260615_143022.log
+   sha256sum -c /var/log/bastion_sessions/session_engineer-shell_20260615_143022.log.sha256
+   cat /var/log/bastion_sessions/session_engineer-shell_20260615_143022.log.meta
    ```
 
-3. Текстовый лог прикладывается к тикету как доказательство выполненных работ.
-4. Офицер безопасности Заказчика может воспроизвести сессию посимвольно:
+4. Текстовый лог прикладывается к тикету как доказательство выполненных работ.
+5. Офицер безопасности Заказчика может воспроизвести сессию посимвольно:
 
    ```bash
    less /var/log/bastion_sessions/session_engineer_support_20260615_143022.log
    ```
 
-5. События **auditd** и syslog направляются в SIEM Заказчика (настройка — зона ответственности клиента, см. Whitepaper §6).
+6. События **auditd** (ключи `mt_bastion_session_logs`, `mt_bastion_ssh_connect`) направляются в SIEM через rsyslog LOCAL6 при `bastion_siem_forward_enabled: true` (см. Whitepaper §6).
 
 ---
 
@@ -269,7 +273,7 @@ Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет �
 | 2.1 SSH User CA (опц.) | `bastion_trusted_user_ca_file`, operator `certificate` | `templates/sshd_config.j2`, `templates/authorized_keys.j2` |
 | 5.2 JIT-отзыв | `purge_revoked_operators` + restart контейнера | `tasks/purge_revoked_operators.yml`, `site.yml` |
 | 4.3 Kill-switch | `podman stop mt_ssh_bastion` | Runbook §7 Whitepaper |
-| 5.3 Аудит | auditd + session logs | `auditd-bastion.rules.j2` |
+| 5.3 Аудит | auditd + session logs + SHA-256 sidecar | `auditd-bastion.rules.j2`, `bastion-shell-wrapper.sh` |
 
 ---
 

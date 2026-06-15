@@ -1,11 +1,23 @@
+{% macro ssh_key_prefix(op) -%}
+{%- set parts = [] -%}
+{%- if op.allowed_sources | default([]) | length > 0 -%}
+{%-   set _ = parts.append('from="' + (op.allowed_sources | join(',')) + '"') -%}
+{%- endif -%}
+{%- if op.access | default('jump') == 'jump' -%}
+{%-   set _ = parts.append('restrict') -%}
+{%-   set _ = parts.append('port-forwarding') -%}
+{%-   for target in op.permit_open | default(bastion_permitted_targets) -%}
+{%-     set _ = parts.append('permitopen="' + target + '"') -%}
+{%-   endfor -%}
+{%- endif -%}
+{{ parts | join(',') }}
+{%- endmacro %}
 {% if operator.certificate | default('') | length > 0 %}
-{%   if operator.access | default('jump') == 'jump' %}
-restrict,port-forwarding{% for target in operator.permit_open | default(bastion_permitted_targets) %},permitopen="{{ target }}"{% endfor %} {{ operator.certificate }}
-{%   else %}
-{{ operator.certificate }}
-{%   endif %}
+{%   set prefix = ssh_key_prefix(operator) %}
+{%   if prefix | length > 0 %}{{ prefix }} {% endif %}{{ operator.certificate }}
 {% elif operator.access | default('jump') == 'jump' %}
-restrict,port-forwarding{% for target in operator.permit_open | default(bastion_permitted_targets) %},permitopen="{{ target }}"{% endfor %} {{ operator.pubkey }}
+{%   set prefix = ssh_key_prefix(operator) %}{{ prefix }} {{ operator.pubkey }}
 {% else %}
-{{ operator.pubkey }}
+{%   set prefix = ssh_key_prefix(operator) %}
+{%   if prefix | length > 0 %}{{ prefix }} {% endif %}{{ operator.pubkey }}
 {% endif %}

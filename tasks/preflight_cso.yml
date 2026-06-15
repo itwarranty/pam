@@ -68,3 +68,25 @@
     fail_msg: >
       bastion_operators пуст. Бастион без явного списка операторов не разворачивается.
   when: not (is_commercial_pam | bool)
+
+- name: "[CSO] Source IP обязателен для каждого оператора (strict mode)"
+  ansible.builtin.assert:
+    that:
+      - item.allowed_sources | default([]) | length > 0
+    fail_msg: >
+      bastion_require_source_ip=true: оператор «{{ item.name }}» не имеет allowed_sources.
+      Задайте CIDR/IP в bastion_operators или отключите strict mode.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - bastion_require_source_ip | default(false) | bool
+    - not (is_commercial_pam | bool)
+
+- name: "[CSO] SIEM forward требует bastion_siem_server"
+  ansible.builtin.assert:
+    that:
+      - bastion_siem_server | default('') | length > 0
+    fail_msg: >
+      bastion_siem_forward_enabled=true, но bastion_siem_server пуст.
+  when: bastion_siem_forward_enabled | default(false) | bool

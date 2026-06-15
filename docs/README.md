@@ -29,10 +29,13 @@ Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
 | Declarative revoke | `tasks/purge_revoked_operators.yml` |
 | Hot reload | handler `Restart ssh bastion container` в `site.yml` |
 | SELinux `container_file_t` | `tasks/provision_operator_item.yml` |
+| Compliance verify (Tier 1 Phase A) | `scripts/bastion-compliance-verify.sh`, tag `verify_compliance` |
+| Source IP / SIEM / WORM (Tier 1) | `tasks/configure_source_firewall.yml`, `configure_rsyslog_siem.yml`, `archive_session_logs_worm.yml` |
+| Tamper-evident logs | `build/files/bastion-shell-wrapper.sh` (`.sha256` + `.meta`) |
 
 ## Спеки (OpenSpec)
 
 | Change | Содержание |
 | :--- | :--- |
-| [bastion-free-tier1-cso](../openspec/changes/bastion-free-tier1-cso/) | **Tier 1 Free:** JIT, SIEM, source IP, tamper-evident logs, compliance verify, SSH User CA prod |
+| [bastion-free-tier1-cso](../openspec/changes/bastion-free-tier1-cso/) | **Tier 1 Free:** Phase A ✅ verify, source IP, tamper logs, SIEM; Phase B JIT; Phase C User CA prod |
 | [ssh-user-ca-qa-mtglobal](../openspec/changes/ssh-user-ca-qa-mtglobal/) | SSH User CA QA (prerequisite для Tier 1) |
