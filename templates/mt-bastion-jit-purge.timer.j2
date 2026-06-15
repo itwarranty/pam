@@ -1,0 +1,10 @@
+[Unit]
+Description=MT Bastion JIT purge timer (valid_until expiry)
+
+[Timer]
+OnCalendar={{ bastion_jit_timer_schedule }}
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

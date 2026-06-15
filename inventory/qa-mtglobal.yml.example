@@ -1,0 +1,12 @@
+---
+# QA SSH User CA inventory — copy to inventory/qa-mtglobal.yml
+
+all:
+  children:
+    bastion_servers:
+      children:
+        qa_mtglobal:
+          hosts:
+            bastion-qa.mtglobal.team:
+              ansible_host: 10.0.0.50
+              ansible_user: ansible

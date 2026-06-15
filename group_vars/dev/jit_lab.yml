@@ -1,0 +1,14 @@
+---
+# JIT lab fixture: jit-expired-test удаляется при каждом playbook (valid_until в прошлом).
+# Проверка: после site.yml каталог operators/jit-expired-test отсутствует.
+
+bastion_operators_jit_lab:
+  - name: jit-expired-test
+    email: jit-expired-test@mtglobal.team
+    pubkey: "{{ lookup('file', lab_keys_dir + '/jit-expired-test.lab.pub') }}"
+    mfa_secret: JITEXPIREDJITEXPIREDJITEXPIREDJIT
+    access: jump
+    valid_until: "2020-01-01T00:00:00+00:00"
+    incident_id: INC-JIT-LAB-EXPIRED
+    permit_open:
+      - "10.0.1.10:22"

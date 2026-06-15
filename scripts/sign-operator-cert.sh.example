@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# MT Bastion — offline SSH user certificate signing (EXAMPLE).
+# Private User CA key NEVER on bastion — run on admin workstation / HSM jump.
+#
+# Usage:
+#   export MT_BASTION_USER_CA_KEY=/secure/path/mtglobal.team-user-ca
+#   ./scripts/sign-operator-cert.sh.example engineer-jump ~/.ssh/engineer-jump.key 72
+
+set -euo pipefail
+
+NAME="${1:?operator name (Unix account)}"
+PRIV="${2:?path to operator private key}"
+HOURS="${3:-72}"
+DOMAIN="${MT_BASTION_CERT_DOMAIN:-mtglobal.team}"
+CA_KEY="${MT_BASTION_USER_CA_KEY:?set MT_BASTION_USER_CA_KEY to User CA private key path}"
+
+[[ "${HOURS}" -le 72 ]] || printf '[sign-operator-cert] WARN: %sh > 72h CSO default\n' "${HOURS}" >&2
+
+PUB="${PRIV}.pub"
+[[ -f "${PUB}" ]] || ssh-keygen -y -f "${PRIV}" > "${PUB}"
+
+VALIDITY="+${HOURS}h"
+OUT="$(dirname "${PRIV}")/${NAME}-cert.pub"
+
+ssh-keygen -s "${CA_KEY}" -I "${NAME}@${DOMAIN}" -n "${NAME}" -V "${VALIDITY}" \
+  -z "$(date +%s)" "${PUB}"
+mv -f "${PUB}-cert.pub" "${OUT}"
+
+printf '[sign-operator-cert] %s (validity %s)\n' "${OUT}" "${VALIDITY}"
+printf 'Ansible: certificate: "{{ lookup('"'"'file'"'"', playbook_dir + '"'"'/lab/certs/%s'"'"') }}"\n' "${NAME}-cert.pub"

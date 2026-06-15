@@ -42,6 +42,19 @@ bastion_siem_protocol: tcp
 bastion_worm_archive_dir: ""
 bastion_worm_archive_min_age_minutes: 5
 
+# Tier 1 Phase B (v0.3): JIT access windows
+bastion_jit_timer_enabled: false
+bastion_jit_timer_schedule: hourly
+bastion_jit_purge_script_path: /usr/local/bin/mt-bastion-jit-purge.sh
+bastion_jit_playbook_command: >-
+  /usr/bin/ansible-playbook -i /opt/mt-bastion/inventory/hosts.yml
+  /opt/mt-bastion/site.yml --tags jit_purge
+
+# Tier 1 Phase C (v0.4): SSH User CA prod policy
+bastion_allow_raw_pubkey_prod: false
+bastion_cert_max_validity_hours: 72
+bastion_ssh_user_ca_qa_complete: false
+
 # Локальный доверенный образ (Air Gap)
 bastion_image_name: mt_bastion_secure
 bastion_image_tag: latest

@@ -90,3 +90,31 @@
     fail_msg: >
       bastion_siem_forward_enabled=true, но bastion_siem_server пуст.
   when: bastion_siem_forward_enabled | default(false) | bool
+
+- name: "[CSO] Prod: raw pubkey без certificate запрещён"
+  ansible.builtin.assert:
+    that:
+      - item.certificate | default('') | length > 0
+    fail_msg: >
+      bastion_allow_raw_pubkey_prod=false: оператор «{{ item.name }}» использует raw pubkey.
+      Подпишите SSH user certificate (≤ {{ bastion_cert_max_validity_hours }}h) или задайте
+      bastion_allow_raw_pubkey_prod=true с formal CSO waiver.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - not (bastion_allow_raw_pubkey_prod | default(false) | bool)
+    - not (is_commercial_pam | bool)
+    - item.pubkey | default('') | length > 0
+    - item.certificate | default('') | length == 0
+
+- name: "[CSO] SSH User CA prod: QA sign-off рекомендуется"
+  ansible.builtin.debug:
+    msg: >
+      ВНИМАНИЕ: bastion_ssh_user_ca_qa_complete=false — prod certificate mode не прошёл QA
+      (openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal). Raw pubkey waiver активен только
+      при bastion_allow_raw_pubkey_prod=true.
+  when:
+    - not (bastion_ssh_user_ca_qa_complete | default(false) | bool)
+    - not (bastion_allow_raw_pubkey_prod | default(false) | bool)
+    - not (is_commercial_pam | bool)

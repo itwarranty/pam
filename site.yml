@@ -37,6 +37,10 @@
         state: restarted
       when: bastion_siem_forward_enabled | default(false) | bool
 
+    - name: Reload JIT systemd timer
+      ansible.builtin.systemd:
+        daemon_reload: true
+
   tasks:
     - name: "[CSO] Preflight — обязательные проверки платформы и политики"
       ansible.builtin.include_tasks: tasks/preflight_cso.yml
@@ -69,6 +73,15 @@
         - name: WORM archive session logs (опционально)
           ansible.builtin.include_tasks: tasks/archive_session_logs_worm.yml
           tags: [worm_archive]
+
+        - name: JIT systemd timer (valid_until auto-purge)
+          ansible.builtin.include_tasks: tasks/configure_jit_timer.yml
+          when: bastion_jit_timer_enabled | default(false) | bool
+
+    - name: JIT expiry purge (standalone — tag jit_purge)
+      ansible.builtin.include_tasks: tasks/jit_purge.yml
+      tags: [jit_purge]
+      when: not (is_commercial_pam | bool)
 
     - name: "[CSO] Compliance verify (post-deploy)"
       ansible.builtin.include_tasks: tasks/verify_compliance_cso.yml

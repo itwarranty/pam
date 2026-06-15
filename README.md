@@ -34,8 +34,8 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 | [Whitepaper](docs/MT-Bastion-Whitepaper.md) | Техпаспорт для CSO |
 | [Troubleshooting Workflow](docs/MT-Bastion-Troubleshooting-Workflow.md) | Регламент инцидента |
 | [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | 10-мин пресейл |
-| [OpenSpec: SSH User CA QA](openspec/changes/ssh-user-ca-qa-mtglobal/) | QA user certificates |
-| [OpenSpec: Tier 1 Free (CSO)](openspec/changes/bastion-free-tier1-cso/) | Roadmap: JIT, SIEM, source IP, log hashes, verify |
+| [OpenSpec: Tier 1 specs](openspec/specs/) | GA specs: JIT, SIEM, verify, User CA |
+| [OpenSpec archive](openspec/changes/archive/) | Completed change history |
 
 ## Prod deploy
 

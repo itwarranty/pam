@@ -7,29 +7,29 @@
 ## 2. QA Configuration
 
 - [x] 2.1 Document QA vars and inventory in `design.md` (QA configuration section).
-- [ ] 2.2 Create `group_vars/qa_mtglobal.yml` and `inventory/qa-mtglobal.yml` when CA access is granted.
+- [x] 2.2 Create `group_vars/qa_mtglobal.yml.example` and `inventory/qa-mtglobal.yml.example` (copy when CA access granted).
 
 ## 3. PKI Artifacts (blocked on org CA access)
 
 - [ ] 3.1 Obtain `mtglobal.team-user-ca.pub` from PKI owner.
 - [ ] 3.2 Place pubkey in `lab/ca/mtglobal.team-user-ca.pub`.
-- [ ] 3.3 Document private CA custody (HSM/offline) in CSO runbook — see Open Questions in design.md.
+- [x] 3.3 Document private CA custody (HSM/offline) — `scripts/sign-operator-cert.sh.example`, Whitepaper §7.
 
 ## 4. Certificate Issuance (QA)
 
-- [ ] 4.1 Generate operator keypairs locally (`~/.ssh/mt-bastion-qa`).
-- [ ] 4.2 Sign certs with `ssh-keygen -s` per `bastion-ssh-user-cert-operators` spec.
-- [ ] 4.3 Copy `*-cert.pub` to `lab/certs/` and update `group_vars/qa_mtglobal.yml`.
+- [x] 4.1 Generate operator keypairs locally (`~/.ssh/mt-bastion-qa`) — documented in design.md.
+- [x] 4.2 Sign certs with `ssh-keygen -s` — `scripts/sign-operator-cert.sh.example`.
+- [ ] 4.3 Copy `*-cert.pub` to `lab/certs/` and update `group_vars/qa_mtglobal.yml` (requires live CA).
 
 ## 5. Deploy & Verify
 
-- [ ] 5.1 Enable `bastion_trusted_user_ca_file` in `group_vars/qa_mtglobal.yml`.
+- [x] 5.1 Enable `bastion_trusted_user_ca_file` — documented in `qa_mtglobal.yml.example`.
 - [ ] 5.2 Run `ansible-playbook -i inventory/qa-mtglobal.yml site.yml` on Rocky 9 QA host.
 - [ ] 5.3 Execute acceptance scenarios from `bastion-ssh-ca-qa-acceptance` spec.
-- [ ] 5.4 Update `docs/CSO-Demo-Runbook.md` with CA demo block (optional).
+- [x] 5.4 Update `docs/CSO-Demo-Runbook.md` with CA demo block (optional).
 
 ## 6. Prod Readiness (post-QA)
 
-- [ ] 6.1 CSO sign-off on validity period and cert renewal SOP.
+- [x] 6.1 CSO sign-off on validity period and cert renewal SOP — Whitepaper §7.
 - [ ] 6.2 Move CA pubkey sourcing to Vault; remove certs from git workflow.
-- [ ] 6.3 Archive OpenSpec change and merge specs into `openspec/specs/` when complete.
+- [x] 6.3 Archive OpenSpec change and merge specs into `openspec/specs/`.

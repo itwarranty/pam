@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# MT Bastion — host-side JIT purge wrapper (copy to bastion, adjust paths).
+# Installed by Ansible as {{ bastion_jit_purge_script_path }} when bastion_jit_timer_enabled.
+#
+# Prerequisites on bastion host:
+#   - ansible-playbook, repo at /opt/mt-bastion (or set MT_BASTION_ROOT)
+#   - inventory/hosts.yml with prod operators
+#
+# Manual run:
+#   ./scripts/jit-purge-host.sh.example
+
+set -euo pipefail
+
+ROOT="${MT_BASTION_ROOT:-/opt/mt-bastion}"
+INV="${MT_BASTION_INVENTORY:-${ROOT}/inventory/hosts.yml}"
+
+exec ansible-playbook -i "${INV}" "${ROOT}/site.yml" --tags jit_purge "$@"

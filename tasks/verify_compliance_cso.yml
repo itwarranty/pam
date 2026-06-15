@@ -92,7 +92,12 @@
 
 - name: "[Verify] Declared operator names"
   ansible.builtin.set_fact:
-    bastion_operator_names: "{{ bastion_operators | map(attribute='name') | list }}"
+    bastion_operator_names: >-
+      {{
+        (bastion_operators_effective | default(bastion_operators))
+        | map(attribute='name')
+        | list
+      }}
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 

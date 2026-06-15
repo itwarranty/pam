@@ -31,23 +31,23 @@
 
 ## 5. JIT access windows (Phase B)
 
-- [ ] 5.1 Schema: `valid_from`, `valid_until`, `incident_id` on operators.
-- [ ] 5.2 Ansible filter task: compute expired operators before provision; merge with purge.
-- [ ] 5.3 Extend `purge_revoked_operators.yml` OR new `tasks/jit_expire_operators.yml`.
-- [ ] 5.4 systemd timer + service template for periodic `ansible-playbook site.yml --tags jit_purge` (document client must install timer).
-- [ ] 5.5 Update Troubleshooting Workflow §5.2 with automatic expiry path.
-- [ ] 5.6 Lab test: operator with `valid_until` in past → removed on playbook run.
+- [x] 5.1 Schema: `valid_from`, `valid_until`, `incident_id` on operators.
+- [x] 5.2 Ansible filter task: compute expired operators before provision; merge with purge.
+- [x] 5.3 Extend `purge_revoked_operators.yml` OR new `tasks/jit_expire_operators.yml`.
+- [x] 5.4 systemd timer + service template for periodic `ansible-playbook site.yml --tags jit_purge` (document client must install timer).
+- [x] 5.5 Update Troubleshooting Workflow §5.2 with automatic expiry path.
+- [x] 5.6 Lab test: operator with `valid_until` in past → removed on playbook run.
 
 ## 6. SSH User CA prod Free (Phase C — depends on ssh-user-ca-qa-mtglobal)
 
-- [ ] 6.1 Complete QA tasks in `ssh-user-ca-qa-mtglobal` (PKI access required).
-- [ ] 6.2 Add preflight warning when prod uses raw `pubkey` without CSO waiver flag.
-- [ ] 6.3 Add `bastion_allow_raw_pubkey_prod: false` default in `group_vars/all.yml`.
-- [ ] 6.4 Document cert renewal SOP in Whitepaper §7.
-- [ ] 6.5 Optional: `scripts/sign-operator-cert.sh.example` (offline signing helper, no private key in repo).
+- [x] 6.1 Complete QA tasks in `ssh-user-ca-qa-mtglobal` (PKI access required).
+- [x] 6.2 Add preflight warning when prod uses raw `pubkey` without CSO waiver flag.
+- [x] 6.3 Add `bastion_allow_raw_pubkey_prod: false` default in `group_vars/all.yml`.
+- [x] 6.4 Document cert renewal SOP in Whitepaper §7.
+- [x] 6.5 Optional: `scripts/sign-operator-cert.sh.example` (offline signing helper, no private key in repo).
 
 ## 7. Documentation & archive
 
 - [x] 7.1 Update `docs/README.md` with Tier 1 roadmap link.
 - [x] 7.2 Update Whitepaper Policy Gate table (items 14–18).
-- [ ] 7.3 After all phases: merge specs to `openspec/specs/` and archive change.
+- [x] 7.3 After all phases: merge specs to `openspec/specs/` and archive change.

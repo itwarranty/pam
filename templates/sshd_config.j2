@@ -33,7 +33,7 @@ AuthenticationMethods publickey,keyboard-interactive
 TrustedUserCAKeys /etc/ssh/trusted_user_ca.pub
 {% endif %}
 
-{% for operator in bastion_operators %}
+{% for operator in bastion_operators_effective | default(bastion_operators) %}
 Match User {{ operator.name }}
 {%   if operator.incident_id | default('') | length > 0 %}
     SetEnv MT_BASTION_INCIDENT_ID={{ operator.incident_id }}

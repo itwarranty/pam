@@ -1,0 +1,12 @@
+[Unit]
+Description=MT Bastion JIT operator expiry purge
+Documentation=https://github.com/MT-Global-Team/mt-bastion
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ bastion_jit_purge_script_path }}
+User=root
+
+[Install]
+WantedBy=multi-user.target

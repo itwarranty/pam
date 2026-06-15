@@ -198,11 +198,22 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 ### 5.2 Just-in-Time блокировка
 
-По истечении утверждённого временного окна доступа **обязательно**:
+По истечении утверждённого временного окна доступа **обязательно** одно из:
 
-1. удалить учётные записи инженеров из `bastion_operators` (prod) или из dev/test YAML (lab);
-2. перевыпустить `ansible-playbook site.yml`;
-3. зафиксировать закрытие окна в ITSM.
+**A. Автоматический путь (рекомендуется):**
+
+1. Задать `valid_until` в `bastion_operators` (ISO8601 с timezone).
+2. Включить timer: `bastion_jit_timer_enabled: true` **или** периодически:
+   ```bash
+   ansible-playbook site.yml --tags jit_purge
+   ```
+3. Плейбук выполняет `jit_filter_operators.yml` → операторы с `valid_until` в прошлом исключаются из effective списка → `purge_revoked_operators.yml`.
+
+**B. Ручной путь:**
+
+1. Удалить учётные записи из `bastion_operators` (prod) или dev/test YAML (lab);
+2. `ansible-playbook site.yml`;
+3. Зафиксировать закрытие окна в ITSM.
 
 **Технический контроль:** `tasks/purge_revoked_operators.yml` автоматически:
 
@@ -271,7 +282,7 @@ Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет �
 | 2.2 TOTP | PAM, `MFA_STRICT=1` | `build/Containerfile`, preflight |
 | 3.2 Append-only лог | `script` + `chattr +a` на `.log`; каталог `0750` | `bastion-shell-wrapper.sh`, `bastion-entrypoint.sh`, `prepare_os.yml` |
 | 2.1 SSH User CA (опц.) | `bastion_trusted_user_ca_file`, operator `certificate` | `templates/sshd_config.j2`, `templates/authorized_keys.j2` |
-| 5.2 JIT-отзыв | `purge_revoked_operators` + restart контейнера | `tasks/purge_revoked_operators.yml`, `site.yml` |
+| 5.2 JIT-отзыв | `valid_until` + jit_filter + purge + timer | `tasks/jit_filter_operators.yml`, `tasks/jit_purge.yml` |
 | 4.3 Kill-switch | `podman stop mt_ssh_bastion` | Runbook §7 Whitepaper |
 | 5.3 Аудит | auditd + session logs + SHA-256 sidecar | `auditd-bastion.rules.j2`, `bastion-shell-wrapper.sh` |
 

@@ -1,3 +1,8 @@
 ---
-# Слияние lab + test операторов (test — scripts/test-repo-key.sh)
-bastion_operators: "{{ bastion_operators_lab + (bastion_operators_test | default([])) }}"
+# Слияние lab + test + JIT lab операторов
+bastion_operators: >-
+  {{
+    bastion_operators_lab
+    + (bastion_operators_test | default([]))
+    + (bastion_operators_jit_lab | default([]))
+  }}

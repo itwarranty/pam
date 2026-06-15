@@ -1,0 +1,59 @@
+---
+# JIT access windows: filter bastion_operators → bastion_operators_active (purge-only v1).
+- name: JIT — epoch на хосте бастиона
+  ansible.builtin.command: date +%s
+  register: bastion_jit_now_cmd
+  changed_when: false
+
+- name: JIT — классификация операторов по valid_from / valid_until
+  ansible.builtin.shell: |
+    set -euo pipefail
+    python3 <<'PY'
+    import json, os
+    from datetime import datetime
+
+    ops = json.loads(os.environ["OPS"])
+
+    def parse_ts(ts):
+        if not ts:
+            return None
+        return int(datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp())
+
+    now = int(datetime.now().astimezone().timestamp())
+    active, revoked, reasons = [], [], {}
+
+    for op in ops:
+        name = op["name"]
+        vf = parse_ts(op.get("valid_from") or "")
+        vu = parse_ts(op.get("valid_until") or "")
+        if vu is not None and now >= vu:
+            revoked.append(name)
+            reasons[name] = "expired"
+        elif vf is not None and now < vf:
+            revoked.append(name)
+            reasons[name] = "not_yet_active"
+        else:
+            active.append(op)
+
+    print(json.dumps({"active": active, "revoked": revoked, "reasons": reasons}))
+    PY
+  environment:
+    OPS: "{{ bastion_operators | to_json }}"
+  register: bastion_jit_filter
+  changed_when: false
+
+- name: JIT — эффективный список операторов
+  ansible.builtin.set_fact:
+    bastion_operators_active: "{{ (bastion_jit_filter.stdout | from_json).active }}"
+    bastion_jit_revoked_names: "{{ (bastion_jit_filter.stdout | from_json).revoked }}"
+    bastion_jit_revoke_reasons: "{{ (bastion_jit_filter.stdout | from_json).reasons }}"
+    bastion_operators_effective: "{{ (bastion_jit_filter.stdout | from_json).active }}"
+
+- name: JIT — отозванные по окну доступа
+  ansible.builtin.debug:
+    msg: >-
+      JIT purge: {{ item }} ({{ bastion_jit_revoke_reasons[item] }})
+  loop: "{{ bastion_jit_revoked_names }}"
+  loop_control:
+    label: "{{ item }}"
+  when: bastion_jit_revoked_names | length > 0

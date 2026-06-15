@@ -1,8 +1,13 @@
 ---
-# Удаление операторов, отсутствующих в bastion_operators (declarative sync / CSO revoke).
+# Удаление операторов, отсутствующих в effective списке (declarative sync + JIT expiry).
 - name: Декларированный список имён операторов
   ansible.builtin.set_fact:
-    bastion_operator_names: "{{ bastion_operators | map(attribute='name') | list }}"
+    bastion_operator_names: >-
+      {{
+        (bastion_operators_effective | default(bastion_operators))
+        | map(attribute='name')
+        | list
+      }}
 
 - name: Каталоги операторов на хосте
   ansible.builtin.find:

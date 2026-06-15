@@ -47,13 +47,15 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 9 | Jump-оператор: **restrict + port-forwarding** в `authorized_keys` | Обязательно |
 | 10 | Образ: OCI-label **mt.global.mfa.strict=1** (verify после load) | Обязательно |
 | 11 | Роль `access: shell` — только по согласованию CSO заказчика | Организационно |
-| 12 | **SSH User CA** (`bastion_trusted_user_ca_file`, operator `certificate`) | Реализовано; prod rollout — OpenSpec `openspec/changes/ssh-user-ca-qa-mtglobal/` |
+| 12 | **SSH User CA** (`bastion_trusted_user_ca_file`, operator `certificate`) | Prod policy: `bastion_allow_raw_pubkey_prod`; signing offline — `scripts/sign-operator-cert.sh.example` |
 | 13 | **Declarative revoke операторов** | Удаление из `bastion_operators` → purge каталогов, MFA, Unix-учёток в контейнере + restart | `tasks/purge_revoked_operators.yml` |
 | 14 | **Source IP restriction** (`allowed_sources`, опц. `bastion_allowed_source_cidrs`) | Per-operator `from=`; strict mode: `bastion_require_source_ip` | `templates/authorized_keys.j2`, `tasks/configure_source_firewall.yml` |
 | 15 | **Tamper-evident session logs** | SHA-256 sidecar + `.meta` при закрытии shell-сессии | `build/files/bastion-shell-wrapper.sh` |
 | 16 | **SIEM syslog forward** | auditd → LOCAL6 → rsyslog → client SIEM (opt-in) | `tasks/configure_rsyslog_siem.yml` |
 | 17 | **Compliance verify** | Post-deploy checks (Rocky 9, SELinux, container, auditd…) | `scripts/bastion-compliance-verify.sh`, `tasks/verify_compliance_cso.yml` |
 | 18 | **WORM archive session logs** | Копирование закрытых `.log` + sidecars на WORM mount | `tasks/archive_session_logs_worm.yml` |
+| 19 | **JIT access windows** | `valid_from` / `valid_until` + auto-purge; опц. systemd timer | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
+| 20 | **SSH User CA prod (Free)** | Certificates ≤72h; raw pubkey blocked без waiver | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
 
 ---
 
@@ -114,6 +116,8 @@ Rocky Linux 9 — единственная утверждённая платфо
 | **SIEM syslog export (Tier 1)** | auditd plugin LOCAL6 + rsyslog drop-in → client SIEM (TCP/UDP/RELP). | `tasks/configure_rsyslog_siem.yml`, `templates/rsyslog-bastion-siem.conf.j2` |
 | **Compliance verify (Tier 1)** | Автоматическая проверка post-deploy; exit 0/non-zero для аудита и мониторинга. | `scripts/bastion-compliance-verify.sh`, tag `verify_compliance` |
 | **WORM archive (Tier 1, опц.)** | Копирование закрытых логов на client WORM mount. | `tasks/archive_session_logs_worm.yml` |
+| **JIT access windows (Tier 1)** | `valid_from`/`valid_until` → filter + purge; timer `jit_purge`. | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
+| **SSH User CA prod policy (Tier 1)** | Preflight blocks raw pubkey; cert renewal SOP. | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
 
 ---
 
@@ -220,6 +224,36 @@ ansible-playbook site.yml --tags verify_compliance
    - перезапускает `mt_ssh_bastion` (handler `Restart ssh bastion container`).
 
 **Dev shortcut:** `./scripts/test-repo-key.sh revoke <name> --apply`
+
+### JIT access windows (valid_until)
+
+Оператору можно задать временное окно в `bastion_operators`:
+
+```yaml
+valid_from: "2026-06-15T09:00:00+03:00"
+valid_until: "2026-06-15T18:00:00+03:00"
+incident_id: "INC-2026-8942"
+```
+
+При каждом `ansible-playbook site.yml` (или `--tags jit_purge`) плейбук:
+
+1. Фильтрует истёкших / ещё не активных операторов (`tasks/jit_filter_operators.yml`).
+2. Выполняет purge + restart контейнера (как при ручном отзыве).
+
+**Автоматизация на хосте:** `bastion_jit_timer_enabled: true` — systemd timer (hourly по умолчанию).  
+Скрипт: `scripts/jit-purge-host.sh.example` → `bastion_jit_playbook_command`.
+
+> Активная SSH-сессия может сохраняться до disconnect; новые логины блокируются после purge.
+
+### Ротация SSH User CA certificates (prod)
+
+1. Сгенерировать ключ оператора локально (`ssh-keygen -t ed25519`).
+2. Подписать на **offline** станции: `scripts/sign-operator-cert.sh.example` (≤ `bastion_cert_max_validity_hours`, default 72).
+3. Положить `*-cert.pub` в secure path; обновить `operator.certificate` в Vault/group_vars.
+4. `ansible-playbook site.yml` — hot reload через handler.
+5. После QA: `bastion_ssh_user_ca_qa_complete: true`, `bastion_allow_raw_pubkey_prod: false`.
+
+**Rollback:** убрать `bastion_trusted_user_ca_file`, вернуть `pubkey`, redeploy — без пересборки образа.
 
 ### Ротация ключей и TOTP
 
@@ -359,14 +393,21 @@ mt-bastion/
 ├── lab/keys/                      # gitignored lab SSH keys
 ├── scripts/
 │   ├── dev-up.sh                  # one-shot dev stand
-│   ├── bastion-compliance-verify.sh  # Tier 1 post-deploy checks
-│   ├── test-repo-key.sh           # test access + bastion onboarding
+│   ├── bastion-compliance-verify.sh
+│   ├── jit-purge-host.sh.example
+│   ├── sign-operator-cert.sh.example
+│   ├── test-repo-key.sh
 │   └── repo-access.sh
-├── openspec/                      # OpenSpec (SSH User CA QA, Tier 1 Free, …)
+├── openspec/
+│   ├── specs/                     # GA Tier 1 specs
+│   └── changes/archive/
 ├── tasks/
 │   ├── preflight_cso.yml
+│   ├── jit_filter_operators.yml
+│   ├── jit_purge.yml
+│   ├── configure_jit_timer.yml
 │   ├── prepare_os.yml
-│   ├── verify_compliance_cso.yml  # tag: verify_compliance
+│   ├── verify_compliance_cso.yml
 │   ├── configure_rsyslog_siem.yml
 │   ├── configure_source_firewall.yml
 │   ├── archive_session_logs_worm.yml

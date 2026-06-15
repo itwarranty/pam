@@ -7,7 +7,7 @@ context: |
   Domain: mtglobal.team
   Lab: raw SSH pubkeys (group_vars/dev/).
   QA target: SSH User CA signed certificates + MFA strict.
-  Tier 1 Free roadmap: openspec/changes/bastion-free-tier1-cso/
+  Tier 1 Free (complete): openspec/specs/ (archived changes in openspec/changes/archive/)
   Key paths: tasks/, templates/, group_vars/, lab/ca/, lab/certs/
   CSO Policy Gate: tasks/preflight_cso.yml
   Language: specs in English (SHALL/WHEN/THEN); docs may be Russian.

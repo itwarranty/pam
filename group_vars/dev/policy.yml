@@ -1,0 +1,3 @@
+---
+# Dev: raw pubkeys разрешены (Phase C prod policy не применяется)
+bastion_allow_raw_pubkey_prod: true

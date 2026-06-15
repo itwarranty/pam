@@ -19,8 +19,21 @@ bastion_operators:
     access: shell                       # только по согласованию CSO
     allowed_sources:
       - "203.0.113.0/24"
+    valid_from: "2026-06-15T09:00:00+03:00"   # JIT window (optional)
+    valid_until: "2026-06-15T18:00:00+03:00"
+    incident_id: "INC-2026-8942"
 
-# Tier 1 Free — CSO optional controls (see openspec/changes/bastion-free-tier1-cso/)
+# Tier 1 Phase B — JIT auto-purge timer (prod host)
+# bastion_jit_timer_enabled: true
+# bastion_jit_playbook_command: "/usr/local/bin/mt-bastion-jit-purge.sh"
+
+# Tier 1 Phase C — SSH User CA prod (prefer certificate over pubkey)
+# bastion_allow_raw_pubkey_prod: false   # default in group_vars/all.yml
+# bastion_ssh_user_ca_qa_complete: true  # after QA sign-off
+# bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
+# Signing: scripts/sign-operator-cert.sh.example (offline, CA private key never on bastion)
+
+# Tier 1 Free — CSO optional controls (openspec/specs/)
 # bastion_require_source_ip: true       # prod: каждый operator MUST have allowed_sources
 # bastion_allowed_source_cidrs: ["203.0.113.0/24"]
 # bastion_siem_forward_enabled: true

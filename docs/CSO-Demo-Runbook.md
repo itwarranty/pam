@@ -259,4 +259,38 @@ Strict mode: `bastion_require_source_ip: true` — preflight fail без `allowe
 
 ---
 
-*MT Global — MT: Bastion CSO Demo v1.3 (Tier 1 Phase A)*
+## Блок 10 — JIT expiry (Tier 1 Phase B, 1 мин)
+
+**Что сказать CSO:** «Окно доступа в YAML — после `valid_until` оператор удаляется автоматически, без ручной чистки.»
+
+```bash
+# Lab: jit-expired-test в group_vars/dev/jit_lab.yml (valid_until 2020)
+ansible-playbook -i inventory/local-lima.yml site.yml
+limactl shell mt-bastion-prod -- sudo test ! -d /home/mt_bastion/operators/jit-expired-test && echo OK
+
+# Периодический purge на prod
+ansible-playbook site.yml --tags jit_purge
+```
+
+**Ожидание:** каталог `jit-expired-test` отсутствует; в логе Ansible — `JIT purge: jit-expired-test (expired)`.
+
+---
+
+## Блок 11 — SSH User CA (Phase C, опционально, 1 мин)
+
+**Что сказать CSO:** «Prod — короткоживущие user certificates; private CA никогда не на бастионе.»
+
+```bash
+# Offline signing (admin workstation):
+export MT_BASTION_USER_CA_KEY=/secure/mtglobal.team-user-ca
+./scripts/sign-operator-cert.sh.example engineer-jump ~/.ssh/engineer-jump.key 72
+
+# QA deploy (after copying qa_mtglobal.yml.example → group_vars/qa_mtglobal.yml):
+ansible-playbook -i inventory/qa-mtglobal.yml site.yml
+```
+
+**Ожидание:** `TrustedUserCAKeys` в контейнере; вход по cert + TOTP. Live QA — после выдачи org CA pubkey.
+
+---
+
+*MT Global — MT: Bastion CSO Demo v1.4 (Tier 1 complete)*
