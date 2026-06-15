@@ -41,7 +41,7 @@
   ansible.builtin.set_fact:
     bastion_container_volumes:
       - "{{ bastion_home }}/.ssh_config/sshd_config:/etc/ssh/sshd_config:ro,Z"
-      - "{{ operators_home }}:/home:Z"
+      - "{{ operators_home }}:/etc/bastion/operators:ro,Z"
       - "{{ audit_log_dir }}:/var/log/bastion_sessions:rw,Z"
 
 - name: Добавление тома SSH User CA
@@ -50,10 +50,8 @@
   when: bastion_trusted_user_ca_file | default('') | length > 0
 
 - name: Загрузка доверенного образа бастиона из локального архива (Air Gap)
-  containers.podman.podman_image:
-    name: "{{ bastion_image_name }}"
-    tag: "{{ bastion_image_tag }}"
-    load: "{{ bastion_image_tar }}"
+  containers.podman.podman_load:
+    input: "{{ bastion_image_tar }}"
   become: true
   become_user: "{{ bastion_user }}"
   environment:

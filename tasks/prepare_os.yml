@@ -5,7 +5,6 @@
       - podman
       - slirp4netns
       - fuse-overlayfs
-      - uidmap
       - firewalld
       - audit
     state: present
@@ -51,22 +50,15 @@
   args:
     creates: "/var/lib/systemd/linger/{{ bastion_user }}"
 
-- name: Создание директории неудаляемых логов сессий
+- name: Создание директории логов сессий (владелец mt_bastion — rootless Podman + SELinux)
   ansible.builtin.file:
     path: "{{ audit_log_dir }}"
     state: directory
-    owner: root
-    group: root
-    mode: "1733"
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0750"
 
-- name: Защита каталога логов (append-only, однократно)
-  ansible.builtin.command: chattr +a {{ audit_log_dir }}
-  register: audit_log_chattr
-  changed_when: "'Operation not permitted' not in audit_log_chattr.stderr"
-  failed_when:
-    - audit_log_chattr.rc != 0
-    - "'Operation not supported' not in audit_log_chattr.stderr"
-    - "'Operation not permitted' not in audit_log_chattr.stderr"
+# Append-only (+a) — на *.log при создании (bastion-shell-wrapper / entrypoint), не на каталог.
 
 - name: Правила auditd для SSH и записи логов сессий
   ansible.builtin.template:

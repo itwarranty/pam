@@ -42,6 +42,7 @@ podman build \
   "${SCRIPT_DIR}"
 
 log "Экспорт образа в ${TAR_PATH} ..."
+rm -f "${TAR_PATH}"
 podman save --output "${TAR_PATH}" "${IMAGE_REF}"
 
 if command -v sha256sum >/dev/null 2>&1; then
