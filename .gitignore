@@ -1,0 +1,13 @@
+*.retry
+.vault_pass
+**/vault.yml
+collections/
+generated/
+/tmp/trusted_upstream_packages/
+lab/keys/*.lab
+!lab/keys/*.lab.pub
+lab/certs/
+lab/ca/*
+!lab/ca/.gitkeep
+group_vars/qa_mtglobal.yml
+inventory/qa-mtglobal.yml

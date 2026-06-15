@@ -1,0 +1,6 @@
+# MT Bastion — правила auditd на хосте (дополнение к логам внутри контейнера)
+
+-w {{ audit_log_dir }} -p wa -k mt_bastion_session_logs
+
+-a always,exit -F arch=b64 -S connect -F a2=16 -k mt_bastion_ssh_connect
+-a always,exit -F arch=b32 -S connect -F a2=16 -k mt_bastion_ssh_connect

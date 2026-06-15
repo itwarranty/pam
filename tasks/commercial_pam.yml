@@ -1,0 +1,32 @@
+---
+# Ветка для клиентов с коммерческим PAM (CyberArk, СКДПУ, BeyondTrust).
+# Open-source компоненты MT Bastion не разворачиваются.
+
+- name: Проверка параметров коммерческого PAM
+  ansible.builtin.assert:
+    that:
+      - commercial_pam_api_url | length > 0
+      - commercial_pam_api_token | length > 0
+    fail_msg: >
+      Для is_commercial_pam=true задайте commercial_pam_api_url
+      и commercial_pam_api_token (рекомендуется Ansible Vault).
+
+- name: Регистрация bastion-хоста в PAM заказчика
+  ansible.builtin.uri:
+    url: "{{ commercial_pam_api_url }}/bastions/register"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ commercial_pam_api_token }}"
+      Content-Type: application/json
+    body_format: json
+    body:
+      hostname: "{{ inventory_hostname }}"
+      address: "{{ ansible_host | default(inventory_hostname) }}"
+      ssh_port: "{{ bastion_ssh_port }}"
+    status_code: [200, 201, 409]
+  register: commercial_pam_register
+  changed_when: commercial_pam_register.status in [200, 201]
+
+- name: Результат интеграции с коммерческим PAM
+  ansible.builtin.debug:
+    msg: "Bastion {{ inventory_hostname }} зарегистрирован в PAM заказчика (HTTP {{ commercial_pam_register.status }})."

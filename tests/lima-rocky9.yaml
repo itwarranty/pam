@@ -1,0 +1,70 @@
+# Lima: локальная симуляция Prod-контура CSO (Rocky Linux 9, x86_64)
+#
+# Требования: Lima >= 0.11, на Apple Silicon — QEMU (медленно, но честный x86_64).
+#
+# Запуск:
+#   limactl start --name=mt-bastion-prod ./tests/lima-rocky9.yaml
+#   limactl show-ssh mt-bastion-prod
+#
+# Ansible:
+#   ansible-playbook -i inventory/local-lima.yml site.yml
+
+minimumLimaVersion: 1.0.0
+
+images:
+  - location: "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2"
+    arch: "x86_64"
+
+# Apple Silicon: принудительная эмуляция x86_64 для паритета с prod
+arch: "x86_64"
+
+cpus: 2
+memory: "4GiB"
+disk: "20GiB"
+
+mountTypesUnsupported:
+  - "9p"
+
+mounts:
+  - location: "~"
+    writable: false
+  - location: "__MT_BASTION_REPO__"
+    writable: true
+
+portForwards:
+  - guestPort: 2222
+    hostPort: 2222
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -euxo pipefail
+      echo "[mt-bastion] Инициализация CSO-эталонного окружения Rocky 9..."
+
+      # SELinux Enforcing (persist после reboot)
+      if [ -f /etc/selinux/config ]; then
+        sed -i 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+      fi
+      setenforce 1
+
+      # Стек preflight / prepare_os (uidmap входит в зависимости podman на EL9)
+      dnf install -y podman slirp4netns fuse-overlayfs firewalld audit
+      systemctl enable --now firewalld
+      systemctl enable --now auditd
+
+      # sudo для пользователя Lima (имя = пользователь macOS)
+      LIMA_USER="$(getent passwd 1000 | cut -d: -f1)"
+      echo "${LIMA_USER} ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/${LIMA_USER}"
+      chmod 0440 "/etc/sudoers.d/${LIMA_USER}"
+
+      mkdir -p /tmp/trusted_upstream_packages
+      chmod 1777 /tmp/trusted_upstream_packages
+
+      echo "[mt-bastion] VM готова: Rocky $(. /etc/os-release; echo $VERSION_ID), $(uname -m), SELinux=$(getenforce)"
+
+message: |
+  MT Bastion — Rocky Linux 9 x86_64 (CSO prod-parity VM)
+  SSH:     limactl shell mt-bastion-prod
+  Ansible: limactl show-ssh mt-bastion-prod
+  Bastion: localhost:2222 после ansible-playbook

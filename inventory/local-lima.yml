@@ -1,0 +1,16 @@
+---
+# Dev: Rocky 9 Lima VM. Операторы — group_vars/dev.yml (lab keys, без Vault)
+# Запуск: ./scripts/dev-up.sh
+
+all:
+  children:
+    bastion_servers:
+      children:
+        dev:
+          children:
+            local_lima:
+              hosts:
+                mt-bastion-lima:
+                  ansible_host: lima-mt-bastion-prod
+                  ansible_user: "{{ lookup('env', 'USER') | lower }}"
+                  ansible_ssh_common_args: "-F {{ lookup('env', 'HOME') }}/.lima/mt-bastion-prod/ssh.config -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"

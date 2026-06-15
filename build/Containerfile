@@ -1,0 +1,38 @@
+# MT: Bastion — декларативный манифест сборки для ИБ-аудита.
+# Сборка один раз на build-машине; при старте контейнера пакеты не скачиваются.
+
+FROM docker.io/library/alpine:3.19
+
+ARG MFA_STRICT=1
+
+LABEL org.opencontainers.image.title="MT Bastion Secure"
+LABEL org.opencontainers.image.vendor="MT Global"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL mt.global.mfa.strict="${MFA_STRICT}"
+
+RUN apk add --no-cache \
+      openssh \
+      openssh-keygen \
+      auditd \
+      libpam-google-authenticator \
+      tmux \
+      bash \
+      script \
+      shadow \
+      e2fsprogs \
+    && mkdir -p /var/empty/sshd /var/log/bastion_sessions \
+    && ssh-keygen -A
+
+COPY build/files/bastion-shell-wrapper.sh /usr/local/bin/bastion-shell-wrapper.sh
+COPY build/files/bastion-entrypoint.sh /usr/local/bin/bastion-entrypoint.sh
+
+RUN chmod 0755 /usr/local/bin/bastion-shell-wrapper.sh /usr/local/bin/bastion-entrypoint.sh \
+    && if [ "${MFA_STRICT}" = "1" ]; then \
+         echo "auth required pam_google_authenticator.so" >> /etc/pam.d/sshd; \
+       else \
+         echo "auth required pam_google_authenticator.so nullok" >> /etc/pam.d/sshd; \
+       fi
+
+EXPOSE 2222
+
+ENTRYPOINT ["/usr/local/bin/bastion-entrypoint.sh"]

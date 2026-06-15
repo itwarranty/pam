@@ -1,0 +1,70 @@
+---
+- name: "[CSO] Rocky Linux 9.x — единственная поддерживаемая ОС хоста"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == bastion_required_os
+      - ansible_facts['distribution_major_version'] == bastion_required_os_major
+    fail_msg: >
+      MT Bastion поддерживается только на {{ bastion_required_os }}
+      {{ bastion_required_os_major }}.x (Enterprise LTS).
+      Обнаружено: {{ ansible_facts['distribution'] }}
+      {{ ansible_facts['distribution_version'] }}.
+      Другие дистрибутивы не проходят ИБ-аудит и блокируются политикой CSO.
+
+- name: "[CSO] Архитектура x86_64"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] == bastion_required_arch
+    fail_msg: >
+      Поддерживается только {{ bastion_required_arch }}.
+      Обнаружено: {{ ansible_facts['architecture'] }}.
+
+- name: "[CSO] SELinux Enforcing обязателен"
+  ansible.builtin.command: getenforce
+  register: selinux_state
+  changed_when: false
+  when: bastion_selinux_enforcing | bool
+
+- name: "[CSO] Проверка режима SELinux"
+  ansible.builtin.assert:
+    that:
+      - selinux_state.stdout == 'Enforcing'
+    fail_msg: >
+      SELinux должен быть в режиме Enforcing (текущий: {{ selinux_state.stdout }}).
+      Permissive/Disabled не допускаются — нарушается MAC-изоляция контейнера (:Z).
+  when: bastion_selinux_enforcing | bool
+
+- name: "[CSO] Только Rootless Podman"
+  ansible.builtin.assert:
+    that:
+      - container_engine == 'podman'
+    fail_msg: >
+      container_engine={{ container_engine }} не поддерживается.
+      Решение CSO: только rootless Podman на Rocky Linux 9.
+
+- name: "[CSO] Whitelist PermitOpen обязателен"
+  ansible.builtin.assert:
+    that:
+      - bastion_permitted_targets | length > 0
+    fail_msg: >
+      bastion_permitted_targets пуст. Jump-host без whitelist не разворачивается —
+      это создаёт неконтролируемый транзитный доступ.
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_allow_tcp_forwarding | bool
+
+- name: "[CSO] Strict MFA обязателен"
+  ansible.builtin.assert:
+    that:
+      - bastion_mfa_enforce | bool
+    fail_msg: >
+      bastion_mfa_enforce=false запрещён политикой CSO.
+      Образ должен быть собран с MFA_STRICT=1 (./trusted_download.sh).
+
+- name: "[CSO] Операторы должны быть определены до деплоя"
+  ansible.builtin.assert:
+    that:
+      - bastion_operators | length > 0
+    fail_msg: >
+      bastion_operators пуст. Бастион без явного списка операторов не разворачивается.
+  when: not (is_commercial_pam | bool)

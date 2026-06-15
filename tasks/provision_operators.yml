@@ -1,0 +1,42 @@
+---
+- name: Создание корневой директории операторов
+  ansible.builtin.file:
+    path: "{{ operators_home }}"
+    state: directory
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0750"
+
+- name: Provisioning домашних каталогов и ключей операторов
+  ansible.builtin.include_tasks: tasks/provision_operator_item.yml
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    loop_var: operator
+    label: "{{ operator.name }}"
+
+- name: Каталог для выдачи MFA-секретов инженерам (контроллер Ansible)
+  ansible.builtin.file:
+    path: "{{ bastion_mfa_secrets_output_dir }}/{{ inventory_hostname }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Сохранение MFA-секретов для onboarding (контроллер Ansible)
+  ansible.builtin.copy:
+    dest: "{{ bastion_mfa_secrets_output_dir }}/{{ inventory_hostname }}/{{ operator.name }}.mfa.txt"
+    mode: "0600"
+    content: |
+      MT Bastion MFA — {{ operator.email | default(operator.name ~ '@' ~ (bastion_lab_domain | default('mtglobal.team'))) }}
+      Secret (base32): {{ operator_mfa_secret }}
+      otpauth://totp/MT%20Bastion:{{ (operator.email | default(operator.name ~ '@' ~ (bastion_lab_domain | default('mtglobal.team')))) | urlencode }}?secret={{ operator_mfa_secret }}&issuer=MT+Bastion+Lab
+  vars:
+    operator_mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    loop_var: operator
+    label: "{{ operator.name }}"
+  delegate_to: localhost
+  become: false
+  no_log: true

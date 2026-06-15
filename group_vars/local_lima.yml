@@ -1,0 +1,4 @@
+---
+# Lima-специфика поверх group_vars/dev.yml
+
+trusted_files_dir: /tmp/trusted_upstream_packages

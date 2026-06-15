@@ -1,0 +1,44 @@
+---
+- name: "Подготовка каталогов {{ operator.name }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "{{ '0700' if item.endswith('.ssh') else '0750' }}"
+  loop:
+    - "{{ operators_home }}/{{ operator.name }}"
+    - "{{ operators_home }}/{{ operator.name }}/.ssh"
+
+- name: "authorized_keys для {{ operator.name }}"
+  ansible.builtin.template:
+    src: authorized_keys.j2
+    dest: "{{ operators_home }}/{{ operator.name }}/.ssh/authorized_keys"
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0600"
+
+- name: "Генерация MFA-секрета для {{ operator.name }}"
+  ansible.builtin.command: openssl rand -base32 20
+  register: operator_mfa_generated
+  changed_when: false
+  when: operator.mfa_secret | default('') | length == 0
+
+- name: "Регистрация MFA-секрета {{ operator.name }}"
+  ansible.builtin.set_fact:
+    operator_mfa_secrets: "{{ operator_mfa_secrets | default({}) | combine({operator.name: operator_mfa_effective_secret}) }}"
+  vars:
+    operator_mfa_effective_secret: >-
+      {{ operator.mfa_secret
+         if (operator.mfa_secret | default('') | length > 0)
+         else operator_mfa_generated.stdout }}
+
+- name: "TOTP-конфигурация для {{ operator.name }}"
+  ansible.builtin.template:
+    src: google_authenticator.j2
+    dest: "{{ operators_home }}/{{ operator.name }}/.google_authenticator"
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0600"
+  vars:
+    mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"

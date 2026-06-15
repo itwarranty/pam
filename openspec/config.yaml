@@ -1,0 +1,11 @@
+schema: spec-driven
+
+context: |
+  Product: MT: Bastion — Security-as-a-Code jump host (Ansible + Rootless Podman).
+  Host OS: Rocky Linux 9.x x86_64, SELinux Enforcing only.
+  Domain: mtglobal.team
+  Lab: raw SSH pubkeys (group_vars/local_lima.yml).
+  QA target: SSH User CA signed certificates + MFA strict.
+  Key paths: tasks/, templates/, group_vars/, lab/ca/, lab/certs/
+  CSO Policy Gate: tasks/preflight_cso.yml
+  Language: specs in English (SHALL/WHEN/THEN); docs may be Russian.

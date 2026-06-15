@@ -1,0 +1,50 @@
+Port {{ bastion_ssh_port }}
+Protocol 2
+PasswordAuthentication no
+PubkeyAuthentication yes
+PermitRootLogin no
+UsePAM yes
+
+# Блокировка неаудируемых каналов
+X11Forwarding no
+AllowAgentForwarding no
+PermitTunnel no
+GatewayPorts no
+
+# Jump-host: контролируемый TCP-forwarding вместо полного запрета
+AllowTcpForwarding {{ 'yes' if bastion_allow_tcp_forwarding | bool else 'no' }}
+{% if bastion_allow_tcp_forwarding | bool and bastion_permitted_targets | length > 0 %}
+{%   for target in bastion_permitted_targets %}
+PermitOpen {{ target }}
+{%   endfor %}
+{% endif %}
+
+ClientAliveInterval 300
+ClientAliveCountMax 2
+LogLevel VERBOSE
+SyslogFacility AUTH
+
+# MFA: pubkey + TOTP (PAM google-authenticator внутри образа)
+KbdInteractiveAuthentication yes
+AuthenticationMethods publickey,keyboard-interactive
+
+{% if bastion_trusted_user_ca_file | default('') | length > 0 %}
+# User certificates, подписанные CA организации (например *.mtglobal.team)
+TrustedUserCAKeys /etc/ssh/trusted_user_ca.pub
+{% endif %}
+
+{% for operator in bastion_operators %}
+Match User {{ operator.name }}
+{%   if operator.access | default('jump') == 'shell' %}
+    ForceCommand /usr/local/bin/bastion-shell-wrapper.sh
+    AllowTcpForwarding no
+{%   else %}
+    # Jump: shell заблокирован через restrict в authorized_keys; только port-forwarding
+    AllowTcpForwarding {{ 'local' if bastion_allow_tcp_forwarding | bool else 'no' }}
+{%     if operator.permit_open | default([]) | length > 0 %}
+{%       for target in operator.permit_open %}
+    PermitOpen {{ target }}
+{%       endfor %}
+{%     endif %}
+{%   endif %}
+{% endfor %}

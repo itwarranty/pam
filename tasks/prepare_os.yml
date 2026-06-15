@@ -1,0 +1,85 @@
+---
+- name: Установка Podman, firewalld и auditd (Rocky Linux 9)
+  ansible.builtin.package:
+    name:
+      - podman
+      - slirp4netns
+      - fuse-overlayfs
+      - uidmap
+      - firewalld
+      - audit
+    state: present
+
+- name: Включение и запуск firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Включение и запуск auditd
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: Создание бесправного пользователя для Rootless контейнеров
+  ansible.builtin.user:
+    name: "{{ bastion_user }}"
+    shell: /bin/bash
+    create_home: true
+    home: "{{ bastion_home }}"
+    state: present
+
+- name: Получение UID bastion-пользователя
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ bastion_user }}"
+
+- name: Настройка лимитов subordinate UID/GID для Rootless Podman
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    line: "{{ bastion_user }}:100000:65536"
+    regexp: "^{{ bastion_user }}:"
+    create: true
+    mode: "0644"
+  loop:
+    - /etc/subuid
+    - /etc/subgid
+
+- name: Включение Linger для работы контейнеров пользователя в фоне
+  ansible.builtin.command: "loginctl enable-linger {{ bastion_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ bastion_user }}"
+
+- name: Создание директории неудаляемых логов сессий
+  ansible.builtin.file:
+    path: "{{ audit_log_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "1733"
+
+- name: Защита каталога логов (append-only, однократно)
+  ansible.builtin.command: chattr +a {{ audit_log_dir }}
+  register: audit_log_chattr
+  changed_when: "'Operation not permitted' not in audit_log_chattr.stderr"
+  failed_when:
+    - audit_log_chattr.rc != 0
+    - "'Operation not supported' not in audit_log_chattr.stderr"
+    - "'Operation not permitted' not in audit_log_chattr.stderr"
+
+- name: Правила auditd для SSH и записи логов сессий
+  ansible.builtin.template:
+    src: auditd-bastion.rules.j2
+    dest: /etc/audit/rules.d/mt-bastion.rules
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Reload auditd rules
+
+- name: Открытие порта бастиона в firewalld
+  ansible.posix.firewalld:
+    port: "{{ bastion_ssh_port }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: true

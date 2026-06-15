@@ -1,0 +1,32 @@
+---
+- name: "Развертывание защищенного контура доступа MT: Bastion"
+  hosts: bastion_servers
+  become: true
+  gather_facts: true
+
+  handlers:
+    - name: Reload auditd rules
+      ansible.builtin.command: augenrules --load
+      changed_when: true
+
+  tasks:
+    - name: "[CSO] Preflight — обязательные проверки платформы и политики"
+      ansible.builtin.include_tasks: tasks/preflight_cso.yml
+
+    # --- ВЕТКА А: КЛИЕНТ С КОММЕРЧЕСКИМ PAM ---
+    - name: Инициализация интеграции с коммерческим PAM заказчика
+      ansible.builtin.include_tasks: tasks/commercial_pam.yml
+      when: is_commercial_pam | bool
+
+    # --- ВЕТКА Б: OPEN-SOURCE MT BASTION ---
+    - name: Развертывание бесплатного безопасного стека MT Bastion
+      when: not (is_commercial_pam | bool)
+      block:
+        - name: Подготовка ОС и создание бесправного пользователя
+          ansible.builtin.include_tasks: tasks/prepare_os.yml
+
+        - name: Provisioning операторов (SSH-ключи + TOTP)
+          ansible.builtin.include_tasks: tasks/provision_operators.yml
+
+        - name: Запуск ssh_bastion в Rootless Podman
+          ansible.builtin.include_tasks: tasks/deploy_ssh_bastion.yml

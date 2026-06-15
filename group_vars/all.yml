@@ -1,0 +1,44 @@
+---
+# Решения CSO — не переопределять без formal risk acceptance заказчика
+
+# Обязательная платформа (плейбук прервётся на других ОС)
+bastion_required_os: Rocky
+bastion_required_os_major: "9"
+bastion_required_arch: x86_64
+bastion_selinux_enforcing: true
+
+# Движок — только rootless Podman (Docker не поддерживается)
+container_engine: podman
+
+# MFA — только strict-образ (MFA_STRICT=1 при сборке)
+bastion_mfa_enforce: true
+
+# Именование и пути
+bastion_user: mt_bastion
+bastion_ssh_port: 2222
+bastion_home: "/home/{{ bastion_user }}"
+trusted_files_dir: /tmp/trusted_upstream_packages
+audit_log_dir: /var/log/bastion_sessions
+operators_home: "{{ bastion_home }}/operators"
+
+# Jump-host: whitelist обязателен (пустой список = запрет деплоя)
+bastion_allow_tcp_forwarding: true
+bastion_permitted_targets:
+  - "10.0.1.10:22"
+  - "10.0.1.11:22"
+
+bastion_mfa_secrets_output_dir: "{{ playbook_dir }}/generated/mfa"
+
+# Операторы prod — через Vault; dev — группа `dev` (group_vars/dev.yml, lab keys)
+bastion_operators: []
+
+# Локальный доверенный образ (Air Gap)
+bastion_image_name: mt_bastion_secure
+bastion_image_tag: latest
+bastion_image_tar: "{{ trusted_files_dir }}/mt_bastion_image.tar"
+bastion_required_image_mfa_strict: "1"
+
+# Коммерческий PAM (ветка A)
+is_commercial_pam: false
+commercial_pam_api_url: ""
+commercial_pam_api_token: ""
