@@ -30,6 +30,9 @@ Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
 | Hot reload | handler `Restart ssh bastion container` в `site.yml` |
 | SELinux `container_file_t` | `tasks/provision_operator_item.yml` |
 
-## Спеки
+## Спеки (OpenSpec)
 
-OpenSpec: `../openspec/` — SSH User CA QA и др.
+| Change | Содержание |
+| :--- | :--- |
+| [bastion-free-tier1-cso](../openspec/changes/bastion-free-tier1-cso/) | **Tier 1 Free:** JIT, SIEM, source IP, tamper-evident logs, compliance verify, SSH User CA prod |
+| [ssh-user-ca-qa-mtglobal](../openspec/changes/ssh-user-ca-qa-mtglobal/) | SSH User CA QA (prerequisite для Tier 1) |
