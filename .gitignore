@@ -1,6 +1,8 @@
 *.retry
 .vault_pass
 **/vault.yml
+.env
+.env.test
 collections/
 generated/
 /tmp/trusted_upstream_packages/
