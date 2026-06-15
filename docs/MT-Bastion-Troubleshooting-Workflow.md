@@ -2,8 +2,8 @@
 
 **Статус:** Enforced (обязателен к исполнению операторами MT Global и ИБ-службами Заказчика)  
 **Концепция:** Dual Custody / принцип «четырёх глаз» (Four-Eyes Principle)  
-**Версия:** 1.0  
-**Связанные документы:** [MT-Bastion-Whitepaper.md](./MT-Bastion-Whitepaper.md), [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md)
+**Версия:** 1.2  
+**Связанные документы:** [MT-Bastion-Whitepaper.md](./MT-Bastion-Whitepaper.md), [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md), [Engineer-Onboarding.md](./Engineer-Onboarding.md)
 
 ---
 
@@ -69,9 +69,9 @@ ssh -p 2222 engineer_support@bastion.client.internal
 
 1. **firewalld** (Rocky Linux 9) пропускает трафик на порт `bastion_ssh_port`.
 2. **Rootless Podman** принимает соединение в контейнере `mt_ssh_bastion` (контекст пользователя `mt_bastion` на хосте).
-3. **sshd** сверяет отпечаток ключа с `authorized_keys` оператора:
-   - хост: `{{ bastion_home }}/operators/<operator>/.ssh/authorized_keys`
-   - контейнер: `/home/<operator>/.ssh/authorized_keys`
+3. **sshd** (контейнер, `sshd.pam`) сверяет ключ или user certificate с данными оператора:
+   - хост (read-only mount): `{{ bastion_home }}/operators/<operator>/`
+   - entrypoint копирует в контейнер: `/home/<operator>/.ssh/authorized_keys`, `.google_authenticator`
 
 **Дополнительно для роли `jump`:** в `authorized_keys` применяются опции `restrict,port-forwarding,permitopen="..."` — прямой интерактивный shell **заблокирован** на уровне OpenSSH.
 
@@ -85,7 +85,7 @@ Verification code:
 
 Инженер генерирует код в приложении Authenticator или на аппаратном токене на **изолированном устройстве** (без доступа в Интернет на стороне Заказчика).
 
-**PAM** (`pam_google_authenticator.so`) сверяет код локально — без сетевых обращений (Air Gap). Образ prod собран с `MFA_STRICT=1` (preflight проверяет OCI-label).
+**PAM** (`pam_google_authenticator.so`) сверяет код локально — без сетевых обращений (Air Gap). Prod-образ: `MFA_STRICT=1`, OCI-label проверяется в `tasks/verify_image_cso.yml` после `podman load`.
 
 | Результат | Действие системы |
 | :--- | :--- |
@@ -128,10 +128,9 @@ exec script -q -f -c "/bin/bash --login" \
   "/var/log/bastion_sessions/session_engineer_support_20260615_143022.log"
 ```
 
-**На хосте** (volume `/var/log/bastion_sessions`):
+**На хосте** (volume `/var/log/bastion_sessions`, владелец `mt_bastion`, mode `0750`):
 
-- каталог с sticky bit `1733`;
-- на каждый новый `.log` — атрибут `chattr +a` (append-only) в момент создания;
+- на каждый новый `.log` — атрибут `chattr +a` (append-only) в `bastion-shell-wrapper.sh` и при старте entrypoint;
 - **auditd** регистрирует операции записи (`mt_bastion_session_logs`).
 
 ---
@@ -201,11 +200,20 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 По истечении утверждённого временного окна доступа **обязательно**:
 
-1. удалить или деактивировать учётные записи инженеров из `bastion_operators` **либо** сузить `permit_open` до пустого whitelist;
+1. удалить учётные записи инженеров из `bastion_operators` (prod) или из dev/test YAML (lab);
 2. перевыпустить `ansible-playbook site.yml`;
 3. зафиксировать закрытие окна в ITSM.
 
-> **Организационный контроль:** автоматизация через cron/systemd timer на стороне Заказчика допустима, но должна вызывать только декларативный Ansible или API ITSM — не ручное редактирование ключей.
+**Технический контроль:** `tasks/purge_revoked_operators.yml` автоматически:
+
+- удаляет каталоги операторов на хосте (`{{ operators_home }}/<name>/`);
+- удаляет TOTP onboarding (`generated/mfa/<host>/<name>.mfa.txt`);
+- удаляет Unix-учётки и `/home/<name>` внутри контейнера;
+- перезапускает `mt_ssh_bastion` (handler в `site.yml`).
+
+Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет учётки, отсутствующие в read-only mount `/etc/bastion/operators`, при каждом старте контейнера.
+
+> **Примечание:** сузить доступ можно через `permit_open`, но `bastion_permitted_targets` не может быть пуст — preflight прервёт деплой.
 
 ### 5.3 Формирование отчёта для CSO и SIEM
 
@@ -257,7 +265,9 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | 1.3 JIT whitelist | `bastion_operators`, `permit_open`, `ansible-playbook` | `group_vars/all.yml`, `site.yml` |
 | 2.1 SSH-ключ | `authorized_keys` (+ `restrict` для jump) | `templates/authorized_keys.j2` |
 | 2.2 TOTP | PAM, `MFA_STRICT=1` | `build/Containerfile`, preflight |
-| 3.2 Append-only лог | `script` + `chattr +a` + sticky `1733` | `bastion-shell-wrapper.sh`, `prepare_os.yml` |
+| 3.2 Append-only лог | `script` + `chattr +a` на `.log`; каталог `0750` | `bastion-shell-wrapper.sh`, `bastion-entrypoint.sh`, `prepare_os.yml` |
+| 2.1 SSH User CA (опц.) | `bastion_trusted_user_ca_file`, operator `certificate` | `templates/sshd_config.j2`, `templates/authorized_keys.j2` |
+| 5.2 JIT-отзыв | `purge_revoked_operators` + restart контейнера | `tasks/purge_revoked_operators.yml`, `site.yml` |
 | 4.3 Kill-switch | `podman stop mt_ssh_bastion` | Runbook §7 Whitepaper |
 | 5.3 Аудит | auditd + session logs | `auditd-bastion.rules.j2` |
 
@@ -284,4 +294,4 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 ---
 
-*MT Global — MT: Bastion Troubleshooting Workflow v1.0. Enforced для всех инцидентов в контурах с развёрнутым продуктом MT: Bastion.*
+*MT Global — MT: Bastion Troubleshooting Workflow v1.2.*

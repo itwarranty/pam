@@ -1,0 +1,83 @@
+---
+# Удаление операторов, отсутствующих в bastion_operators (declarative sync / CSO revoke).
+- name: Декларированный список имён операторов
+  ansible.builtin.set_fact:
+    bastion_operator_names: "{{ bastion_operators | map(attribute='name') | list }}"
+
+- name: Каталоги операторов на хосте
+  ansible.builtin.find:
+    paths: "{{ operators_home }}"
+    file_type: directory
+    depth: 1
+  register: bastion_operator_dirs_on_host
+
+- name: Отозванные операторы (есть на диске, нет в bastion_operators)
+  ansible.builtin.set_fact:
+    bastion_revoked_operator_names: >-
+      {{
+        bastion_operator_dirs_on_host.files
+        | map(attribute='path')
+        | map('basename')
+        | difference(bastion_operator_names)
+        | list
+      }}
+
+- name: Удаление каталогов отозванных операторов
+  ansible.builtin.file:
+    path: "{{ operators_home }}/{{ item }}"
+    state: absent
+  loop: "{{ bastion_revoked_operator_names }}"
+  loop_control:
+    label: "{{ item }}"
+  notify: Restart ssh bastion container
+
+- name: Удаление MFA onboarding для отозванных операторов
+  ansible.builtin.file:
+    path: "{{ bastion_mfa_secrets_output_dir }}/{{ inventory_hostname }}/{{ item }}.mfa.txt"
+    state: absent
+  loop: "{{ bastion_revoked_operator_names }}"
+  loop_control:
+    label: "{{ item }}"
+  delegate_to: localhost
+  become: false
+  when: bastion_revoked_operator_names | length > 0
+
+- name: Удаление отозванных операторов внутри контейнера ssh_bastion
+  ansible.builtin.shell: |
+    set -e
+    podman exec mt_ssh_bastion id "{{ item }}" >/dev/null 2>&1 && \
+      podman exec mt_ssh_bastion deluser -r "{{ item }}" || true
+    podman exec mt_ssh_bastion rm -rf "/home/{{ item }}" || true
+  loop: "{{ bastion_revoked_operator_names }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when:
+    - bastion_revoked_operator_names | length > 0
+    - not (is_commercial_pam | bool)
+  changed_when: true
+  notify: Restart ssh bastion container
+
+- name: Синхронизация Unix-учёток контейнера с декларативным списком
+  ansible.builtin.shell: |
+    set -e
+    allowed=" {{ bastion_operator_names | join(' ') }} "
+    for home in $(podman exec mt_ssh_bastion sh -c 'ls -1 /home 2>/dev/null || true'); do
+      case "${allowed}" in
+        *" ${home} "*) continue ;;
+      esac
+      podman exec mt_ssh_bastion deluser -r "${home}" 2>/dev/null || true
+      podman exec mt_ssh_bastion rm -rf "/home/${home}" || true
+      echo "removed:${home}"
+    done
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when: not (is_commercial_pam | bool)
+  register: bastion_container_user_sync
+  changed_when: bastion_container_user_sync.stdout is search('removed:')
+  notify: Restart ssh bastion container

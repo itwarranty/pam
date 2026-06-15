@@ -2,7 +2,7 @@
 
 ## Архитектура и защитные контроли шлюза удаленного доступа «MT: Bastion»
 
-**Версия документа:** 1.0  
+**Версия документа:** 1.2  
 **Статус:** Релиз (готов к пресейлу / ИБ-аудиту)  
 **Разработчик:** MT Global  
 
@@ -47,7 +47,8 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 9 | Jump-оператор: **restrict + port-forwarding** в `authorized_keys` | Обязательно |
 | 10 | Образ: OCI-label **mt.global.mfa.strict=1** (verify после load) | Обязательно |
 | 11 | Роль `access: shell` — только по согласованию CSO заказчика | Организационно |
-| 12 | **QA:** SSH User CA `mtglobal.team` | Planned — OpenSpec `openspec/changes/ssh-user-ca-qa-mtglobal/` |
+| 12 | **SSH User CA** (`bastion_trusted_user_ca_file`, operator `certificate`) | Реализовано; prod rollout — OpenSpec `openspec/changes/ssh-user-ca-qa-mtglobal/` |
+| 13 | **Declarative revoke операторов** | Удаление из `bastion_operators` → purge каталогов, MFA, Unix-учёток в контейнере + restart | `tasks/purge_revoked_operators.yml` |
 
 ---
 
@@ -90,14 +91,18 @@ Rocky Linux 9 — единственная утверждённая платфо
 | ИБ-требование | Техническая реализация в MT: Bastion | Файл / компонент |
 | :--- | :--- | :--- |
 | **Изоляция процессов и минимизация привилегий** | Запуск контейнера без root на хосте. Systemd lingering для персистентности процессов без интерактивного входа root. | `tasks/prepare_os.yml`, `tasks/deploy_ssh_bastion.yml` (`become_user: mt_bastion`) |
-| **MAC-изоляция контейнера (SELinux)** | Метки томов `:Z` при монтировании в Rootless Podman на Rocky Linux 9. Preflight блокирует деплой при SELinux ≠ Enforcing. | `tasks/preflight_cso.yml`, `tasks/deploy_ssh_bastion.yml` |
+| **MAC-изоляция контейнера (SELinux)** | Метки томов `:Z` при монтировании. Каталоги операторов — `container_file_t` (`setype` + `chcon`). Preflight блокирует деплой при SELinux ≠ Enforcing. | `tasks/preflight_cso.yml`, `tasks/provision_operator_item.yml`, `tasks/deploy_ssh_bastion.yml` |
 | **Policy Gate (Preflight CSO)** | Автоматическая блокировка деплоя на неподдерживаемой ОС, архитектуре, без whitelist или без операторов. | `tasks/preflight_cso.yml` |
 | **Jump без shell (restrict keys)** | `restrict,port-forwarding,permitopen=...` в `authorized_keys` для `access: jump`. Прямой PTY/shell невозможен. | `templates/authorized_keys.j2` |
 | **Верификация supply chain образа** | OCI-label `mt.global.mfa.strict=1` проверяется после `podman load`. | `tasks/verify_image_cso.yml`, `build/Containerfile` |
+| **Provisioning операторов (immutable mount)** | Конфиги операторов на хосте (`operators_home`) монтируются read-only в `/etc/bastion/operators`; entrypoint копирует в `/home/<user>` при старте. | `tasks/provision_operator_item.yml`, `build/files/bastion-entrypoint.sh`, `tasks/deploy_ssh_bastion.yml` |
+| **SSH User CA (опционально)** | `TrustedUserCAKeys` + operator `certificate` вместо raw `pubkey`. | `templates/sshd_config.j2`, `templates/authorized_keys.j2`, `bastion_trusted_user_ca_file` |
 | **Строгая двухфакторная аутентификация (MFA)** | Локальный PAM-модуль TOTP. Режим `MFA_STRICT=1` по умолчанию. Запрет паролей. | `build/Containerfile`, `templates/sshd_config.j2` (`AuthenticationMethods`) |
 | **Защита цепочки поставок (Supply Chain)** | Исключение рантайм-загрузок пакетов (`apk add` при старте). Сборка immutable-образа на build-машине. Верификация SHA-256 артефакта перед деплоем. | `trusted_download.sh`, `build/Containerfile` |
 | **Микросегментация (Least Privilege)** | Ограничение ProxyJump только до разрешённых `host:port` через `PermitOpen`. Персональные списки `permit_open` на оператора. | `templates/sshd_config.j2`, `group_vars/all.yml` |
-| **Неотчуждаемый аудит и логирование** | Перехват shell-сессий через `script`, запись TTY-потока. Sticky bit `1733` на каталоге логов. `chattr +a` при создании файла. | `build/files/bastion-shell-wrapper.sh`, `tasks/prepare_os.yml` |
+| **Неотчуждаемый аудит и логирование** | Перехват shell-сессий через `script`, запись TTY-потока. Каталог логов `0750` (владелец `mt_bastion`). `chattr +a` на каждый `.log` при создании (wrapper + entrypoint). | `build/files/bastion-shell-wrapper.sh`, `build/files/bastion-entrypoint.sh`, `tasks/prepare_os.yml` |
+| **Declarative revoke (JIT offboarding)** | Операторы вне `bastion_operators` удаляются с хоста, из `generated/mfa/`, из контейнера (`deluser`); handler перезапускает `mt_ssh_bastion`. Entrypoint дублирует purge при старте. | `tasks/purge_revoked_operators.yml`, `site.yml` (handler), `bastion-entrypoint.sh` |
+| **Hot reload конфигурации** | Изменения `sshd_config`, ключей или TOTP → `podman restart mt_ssh_bastion` без полного redeploy. | `tasks/deploy_ssh_bastion.yml`, `tasks/provision_operator_item.yml` |
 | **Контроль целостности бастиона** | Мониторинг записи в каталог логов и сетевых connect-событий на уровне ядра хоста. | `templates/auditd-bastion.rules.j2` |
 
 ---
@@ -144,8 +149,8 @@ Rocky Linux 9 — единственная утверждённая платфо
 2. В `group_vars/all.yml` заполняется массив `bastion_operators` (см. `group_vars/all.yml.example`).
 3. Запускается `ansible-galaxy collection install -r requirements.yml`, затем `ansible-playbook site.yml`.
 4. Preflight CSO проверяет Rocky Linux 9, x86_64, SELinux Enforcing, whitelist и операторов. При нарушении — **деплой прерывается**.
-5. Плейбук настраивает `firewalld`, `auditd`, создаёт пользователя `mt_bastion`, генерирует TOTP-ключи, разворачивает Rootless Podman.
-6. **Важно:** сгенерированные секреты TOTP выгружаются на управляющую машину Ansible в `generated/mfa/<host>/<user>.mfa.txt`. Они должны быть переданы инженерам по доверенному корпоративному каналу **до** первой рабочей сессии. Каталог `generated/` не подлежит коммиту в систему контроля версий.
+5. Плейбук: preflight → prepare → **purge отозванных** → provision операторов → deploy (`podman load`, verify label, start container).
+6. **Важно:** TOTP-секреты → `generated/mfa/<host>/<user>.mfa.txt` на контроллере Ansible. Передать операторам **до** первой сессии. Каталог `generated/` не коммитить.
 
 ### Onboarding MFA
 
@@ -174,7 +179,19 @@ TOTP-секреты генерируются плейбуком и переда�
 
 ### Добавление / отзыв прав оператора
 
-Исключительно через редактирование массива `bastion_operators` в Ansible с последующим перевыпуском `ansible-playbook site.yml`. Ручные изменения в `authorized_keys` внутри контейнера запрещены — будут перезаписаны плейбуком (идемпотентность).
+Исключительно через редактирование массива `bastion_operators` в Ansible с последующим перевыпуском `ansible-playbook site.yml`. Ручные правки на хосте или в контейнере запрещены — будут перезаписаны или удалены при sync.
+
+**Отзыв (JIT offboarding):**
+
+1. Удалить оператора из `bastion_operators` (prod) или из `group_vars/dev/test_operators.yml` (lab).
+2. Запустить `ansible-playbook site.yml`.
+3. Плейбук выполняет `tasks/purge_revoked_operators.yml`:
+   - удаляет `{{ operators_home }}/<name>/` на хосте;
+   - удаляет `generated/mfa/<host>/<name>.mfa.txt`;
+   - удаляет Unix-учётку и `/home/<name>` в контейнере;
+   - перезапускает `mt_ssh_bastion` (handler `Restart ssh bastion container`).
+
+**Dev shortcut:** `./scripts/test-repo-key.sh revoke <name> --apply`
 
 ### Ротация ключей и TOTP
 
@@ -205,7 +222,7 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | :--- | :--- |
 | «Наш бастион на 100% гарантирует, что инженер ничего не сломает в вашей сети» | «Архитектура поддерживает принцип наименьших привилегий через прикладную микросегментацию. Инженер изолирован настройкой `PermitOpen` — доступ только к явно одобренным хостам и портам, без неконтролируемого форвардинга и сканирования подсетей» |
 | «Решение полностью сертифицировано по КИИ и PCI-DSS» | «Технические контроли бастиона (локальный MFA, изоляция рантайма, append-only логирование) спроектированы в соответствии с требованиями PCI-DSS 4.0 и руководящих документов по защите КИИ, что упрощает прохождение регулярного ИБ-аудита вашей инфраструктуры» |
-| «Логи абсолютно невозможно удалить» | «Реализована защита логов в момент создания (at-birth protection): sticky-бит на каталоге и атрибут Append-Only на файлах. Рекомендуем дополнить это стримингом `auditd` в SIEM для внешнего контура хранения» |
+| «Логи абсолютно невозможно удалить» | «At-birth protection: каждый лог-файл получает `chattr +a` в момент создания; каталог `/var/log/bastion_sessions` принадлежит `mt_bastion` с правами `0750`. Рекомендуем стриминг `auditd` в SIEM» |
 | «Jump-оператор не получит shell ни при каких условиях» | «Для роли jump в `authorized_keys` включён `restrict,port-forwarding` — PTY и shell заблокированы на уровне OpenSSH. Доступен только audited ProxyJump к whitelist-хостам» |
 
 ---
@@ -231,8 +248,8 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 | Компонент | Пакеты |
 | :--- | :--- |
-| Rootless Podman | `podman`, `slirp4netns`, `fuse-overlayfs`, `uidmap` |
-| Аудит | `auditd` |
+| Rootless Podman | `podman`, `slirp4netns`, `fuse-overlayfs` |
+| Аудит | `audit` (auditd) |
 | Firewall | `firewalld` |
 | MAC | `selinux-policy-targeted` (предустановлен в Rocky Linux 9) |
 
@@ -264,7 +281,17 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | 3 | Маршрутизация с бастиона до целевых хостов проверена (`nc -zv target 22`) |
 | 4 | SIEM-команда клиента уведомлена о правилах `auditd` (`mt_bastion_session_logs`, `mt_bastion_ssh_connect`) |
 
-### Перед первой рабочей сессией
+### Dev / lab (инженеры MT Global)
+
+| # | Требование |
+| :-: | :--- |
+| 1 | macOS/Linux с Lima, Podman, Ansible |
+| 2 | `./scripts/dev-up.sh` — lab-ключи, Rocky 9 VM, образ, деплой |
+| 3 | Операторы: `group_vars/dev/lab.yml` (не prod `all.yml`) |
+| 4 | Inventory: `inventory/local-lima.yml` |
+| 5 | Onboarding: [Engineer-Onboarding.md](./Engineer-Onboarding.md) |
+
+### Перед первой рабочей сессией (prod)
 
 | # | Требование |
 | :-: | :--- |
@@ -285,28 +312,36 @@ mt-bastion/
 │   └── files/
 │       ├── bastion-entrypoint.sh
 │       └── bastion-shell-wrapper.sh
-├── docs/                          # CSO / пресейл (не спеки)
+├── docs/
+│   ├── README.md
 │   ├── MT-Bastion-Whitepaper.md
 │   ├── MT-Bastion-Troubleshooting-Workflow.md
-│   └── CSO-Demo-Runbook.md
-├── openspec/                      # спеки, design, tasks (OpenSpec)
-│   ├── config.yaml
-│   └── changes/ssh-user-ca-qa-mtglobal/
+│   ├── CSO-Demo-Runbook.md
+│   └── Engineer-Onboarding.md
 ├── group_vars/
-│   ├── all.yml
-│   ├── all.yml.example            # prod-шаблон
-│   └── local_lima.yml             # lab (активный)
+│   ├── all.yml                    # prod (CSO policy)
+│   ├── all.yml.example
+│   ├── local_lima.yml
+│   └── dev/                       # lab: lab.yml, operators_merge.yml
 ├── inventory/
-│   ├── hosts.yml
-│   └── local-lima.yml
+│   ├── hosts.yml                  # prod
+│   └── local-lima.yml             # dev (Lima Rocky 9)
+├── lab/keys/                      # gitignored lab SSH keys
+├── scripts/
+│   ├── dev-up.sh                  # one-shot dev stand
+│   ├── test-repo-key.sh           # test access + bastion onboarding
+│   └── repo-access.sh
+├── openspec/                      # OpenSpec (SSH User CA QA, …)
 ├── tasks/
 │   ├── preflight_cso.yml
 │   ├── prepare_os.yml
 │   ├── provision_operators.yml
 │   ├── provision_operator_item.yml
+│   ├── purge_revoked_operators.yml
 │   ├── deploy_ssh_bastion.yml
 │   ├── verify_image_cso.yml
 │   └── commercial_pam.yml
+├── .github/workflows/ci.yml       # syntax-check site.yml
 ├── templates/
 │   ├── sshd_config.j2
 │   ├── authorized_keys.j2
@@ -315,7 +350,9 @@ mt-bastion/
 ├── tests/
 │   ├── lima-rocky9.yaml
 │   ├── start-lima.sh
+│   ├── sync-artifacts.sh
 │   └── README.md
+├── generated/mfa/                 # gitignored TOTP output
 ├── site.yml
 ├── trusted_download.sh
 └── requirements.yml
@@ -323,4 +360,4 @@ mt-bastion/
 
 ---
 
-*Документ подготовлен MT Global. Распространение — по согласованию с заказчиком. Технические детали актуальны для версии продукта 1.0.*
+*Документ подготовлен MT Global. Технические детали актуальны для версии продукта 1.2.*

@@ -1,4 +1,7 @@
 ---
+- name: Отзыв операторов вне декларативного списка (CSO sync)
+  ansible.builtin.include_tasks: tasks/purge_revoked_operators.yml
+
 - name: Создание корневой директории операторов
   ansible.builtin.file:
     path: "{{ operators_home }}"
@@ -6,6 +9,7 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0750"
+    setype: container_file_t
 
 - name: Provisioning домашних каталогов и ключей операторов
   ansible.builtin.include_tasks: tasks/provision_operator_item.yml

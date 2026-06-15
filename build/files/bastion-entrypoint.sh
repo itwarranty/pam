@@ -22,6 +22,14 @@ if [ -d "${OPERATORS_SRC}" ]; then
     chmod 700 "${home_dir}" "${home_dir}/.ssh"
     chmod 600 "${home_dir}/.ssh/authorized_keys" "${home_dir}/.google_authenticator" 2>/dev/null || true
   done
+
+  # Отозванные операторы: удалить Unix-учётки, которых нет в mount
+  for home_dir in /home/*; do
+    [ -d "${home_dir}" ] || continue
+    username="$(basename "${home_dir}")"
+    [ -d "${OPERATORS_SRC}/${username}" ] && continue
+    id "${username}" >/dev/null 2>&1 && deluser -r "${username}" 2>/dev/null || rm -rf "${home_dir}"
+  done
 fi
 
 for logfile in /var/log/bastion_sessions/*.log; do

@@ -1,14 +1,13 @@
 ---
 # Dev-контур: lab-ключи + фиксированный TOTP (без Vault). НЕ для prod.
-# Inventory: -i inventory/local-lima.yml (или любой хост в группе dev)
 
 bastion_lab_domain: mtglobal.team
 lab_keys_dir: "{{ playbook_dir }}/lab/keys"
 
-# TOTP lab (импорт otpauth в authenticator опционален — секреты фиксированы):
+# TOTP lab (otpauth URI в комментариях):
 # engineer-jump: otpauth://totp/MT%20Bastion:engineer-jump@mtglobal.team?secret=WRGZUIDE6V4C5YGGDL4JIQJ23RF5JBUA&issuer=MT+Bastion+Lab
 # engineer-shell: otpauth://totp/MT%20Bastion:engineer-shell@mtglobal.team?secret=4EQHJGRNNM66OR5BEFLYABHOF6S47A3Q&issuer=MT+Bastion+Lab
-bastion_operators:
+bastion_operators_lab:
   - name: engineer-jump
     email: engineer-jump@mtglobal.team
     pubkey: "{{ lookup('file', lab_keys_dir + '/engineer-jump.lab.pub') }}"

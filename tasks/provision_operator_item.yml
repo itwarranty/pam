@@ -6,6 +6,7 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "{{ '0700' if item.endswith('.ssh') else '0750' }}"
+    setype: container_file_t
   loop:
     - "{{ operators_home }}/{{ operator.name }}"
     - "{{ operators_home }}/{{ operator.name }}/.ssh"
@@ -17,6 +18,8 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0600"
+    setype: container_file_t
+  notify: Restart ssh bastion container
 
 - name: "Генерация MFA-секрета для {{ operator.name }}"
   ansible.builtin.command: openssl rand -base32 20
@@ -40,5 +43,20 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0600"
+    setype: container_file_t
   vars:
     mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"
+  notify: Restart ssh bastion container
+
+- name: "SELinux: container_file_t для дерева {{ operator.name }} (Podman :Z mount)"
+  ansible.builtin.command:
+    argv:
+      - chcon
+      - -R
+      - -t
+      - container_file_t
+      - "{{ operators_home }}/{{ operator.name }}"
+  register: operator_selinux_fix
+  changed_when: operator_selinux_fix.rc == 0
+  when: ansible_selinux.status | default('disabled') == 'enabled'
+  notify: Restart ssh bastion container

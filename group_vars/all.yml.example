@@ -1,17 +1,27 @@
-# Пример переменных для деплоя MT Bastion на Rocky Linux 9.x (x86_64).
-# Скопируйте в group_vars/all.yml. Секреты — только через Ansible Vault.
+# Пример переменных для prod-деплоя MT Bastion (Rocky Linux 9.x, x86_64).
+# Скопируйте в group_vars/all.yml. Секреты — через Ansible Vault.
 
 bastion_operators:
   - name: engineer1
+    email: engineer1@mtglobal.team      # опционально, для MFA onboarding file
     pubkey: "ssh-ed25519 AAAA... engineer1@mtglobal"
-    mfa_secret: ""                  # пусто — автогенерация; prod: задайте через Vault
+    mfa_secret: ""                      # пусто — автогенерация → generated/mfa/
     access: jump
     permit_open:
       - "10.0.1.10:22"
   - name: lead1
+    email: lead1@mtglobal.team
     pubkey: "ssh-ed25519 AAAA... lead1@mtglobal"
-    mfa_secret: "JBSWY3DPEHPK3PXP"
-    access: shell                   # интерактив — только по явному согласованию CSO
+    mfa_secret: ""                      # prod: задайте через Vault
+    access: shell                       # только по согласованию CSO
+
+# Альтернатива pubkey — SSH user certificate (при включённом User CA):
+# bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
+# bastion_operators:
+#   - name: engineer1
+#     certificate: "ssh-ed25519-cert-v01@openssh.com AAAA... engineer1@mtglobal.team"
+#     access: jump
+#     permit_open: ["10.0.1.10:22"]
 
 bastion_permitted_targets:
   - "10.0.1.10:22"

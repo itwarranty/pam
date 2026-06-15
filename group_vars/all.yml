@@ -29,7 +29,7 @@ bastion_permitted_targets:
 
 bastion_mfa_secrets_output_dir: "{{ playbook_dir }}/generated/mfa"
 
-# Операторы prod — через Vault; dev — группа `dev` (group_vars/dev.yml, lab keys)
+# Операторы prod — через Vault; dev — `group_vars/dev/` (lab keys)
 bastion_operators: []
 
 # Локальный доверенный образ (Air Gap)

@@ -27,6 +27,7 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0600"
+  notify: Restart ssh bastion container
 
 - name: Установка SSH User CA (mtglobal.team / org CA)
   ansible.builtin.copy:

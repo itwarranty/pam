@@ -53,11 +53,11 @@ ensure_image
 
 ansible-galaxy collection install -r requirements.yml
 
-echo "[dev-up] Deploying (dev operators from group_vars/dev.yml) ..."
+echo "[dev-up] Deploying (dev operators from group_vars/dev/) ..."
 ansible-playbook -i inventory/local-lima.yml site.yml
 
 echo ""
 echo "[dev-up] SSH bastion (порт 2222, после деплоя):"
 echo "  ssh -p 2222 -i lab/keys/engineer-jump.lab engineer-jump@127.0.0.1"
 echo "  ssh -p 2222 -i lab/keys/engineer-shell.lab engineer-shell@127.0.0.1"
-echo "TOTP: см. otpauth URI в group_vars/dev.yml"
+echo "TOTP: см. otpauth URI в group_vars/dev/lab.yml"

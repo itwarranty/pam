@@ -13,3 +13,7 @@ lab/ca/*
 !lab/ca/.gitkeep
 group_vars/qa_mtglobal.yml
 inventory/qa-mtglobal.yml
+scripts/node_modules/
+keys/deploy/
+keys/test/
+!group_vars/dev/test_operators.yml
