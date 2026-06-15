@@ -2,9 +2,36 @@
 
 ## Архитектура и защитные контроли шлюза удаленного доступа «MT: Bastion»
 
-**Версия документа:** 1.2  
-**Статус:** Релиз (готов к пресейлу / ИБ-аудиту)  
+**Версия документа:** 1.3  
+**Статус:** Релиз (Tier 1 Free complete в репозитории; live PKI QA — org)  
+**Продукт (git tags):** `v0.4.0` — см. § «Версии релиза»  
 **Разработчик:** MT Global  
+
+---
+
+## Версии релиза (Tier 1 Free)
+
+| Git tag | Содержание | Статус |
+| :--- | :--- | :--- |
+| **v0.1** | Baseline: Policy Gate, MFA, declarative revoke, test-repo-key | ✅ |
+| **v0.2.0** | **Phase A:** compliance verify, tamper-evident logs, source IP, SIEM forward, WORM | ✅ |
+| **v0.4.0** | **Phase B + C:** JIT windows, SSH User CA prod policy, OpenSpec → `openspec/specs/` | ✅ |
+| **GA (будущее)** | Live PKI QA + `bastion_ssh_user_ca_qa_complete: true` | ⏳ org |
+
+Спецификации: `openspec/specs/`. История changes: `openspec/changes/archive/`.
+
+### Tier 1 — что реализовано в репозитории
+
+| Фаза | Реализация |
+| :--- | :--- |
+| **A** | `verify_compliance_cso.yml`, `bastion-shell-wrapper.sh` (`.sha256`/`.meta`), `from=`, SIEM, WORM |
+| **B** | `jit_filter_operators.yml`, `--tags jit_purge`, `configure_jit_timer.yml` (opt-in) |
+| **C** | `bastion_allow_raw_pubkey_prod`, preflight, `sign-operator-cert.sh.example`, QA `.example` |
+
+### Вне репозитория (организационно)
+
+- Получить `mtglobal.team-user-ca.pub`, прогнать QA deploy и acceptance scenarios (`openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/tasks.md` §3–5).
+- На prod клиента: включить opt-in при необходимости — `bastion_jit_timer_enabled`, `bastion_siem_forward_enabled`, `bastion_worm_archive_dir`.
 
 ---
 

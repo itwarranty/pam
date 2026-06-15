@@ -46,6 +46,15 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 
 Отзыв доступа: удалите оператора из `bastion_operators` и перевыпустите плейбук (`purge_revoked_operators.yml`).
 
+## Releases (Tier 1)
+
+| Tag | Content |
+| :--- | :--- |
+| `v0.2.0` | Phase A — compliance, tamper logs, source IP, SIEM |
+| `v0.4.0` | Phase B + C — JIT, SSH User CA policy (current) |
+
+Tier 1 features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
+
 ## CI
 
 GitHub Actions: syntax-check `site.yml` (`.github/workflows/ci.yml`).

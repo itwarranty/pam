@@ -9,6 +9,17 @@
 | [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) | Пресейл | 10-мин демо на lab-стенде |
 | [Engineer-Onboarding.md](./Engineer-Onboarding.md) | Инженеры MT Global | Git-доступ, dev-up, первый SSH |
 
+## Версии (Tier 1 Free)
+
+| Tag | Содержание |
+| :--- | :--- |
+| [v0.2.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.2.0) | Phase A |
+| [v0.4.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.4.0) | Phase B + C (текущий Tier 1 complete) |
+
+Подробнее: [Whitepaper §Версии релиза](./MT-Bastion-Whitepaper.md), [openspec/changes/archive/README.md](../openspec/changes/archive/README.md).
+
+**В репозитории Tier 1 реализован полностью.** Live PKI QA и prod GA certificates — после org sign-off (`bastion_ssh_user_ca_qa_complete`).
+
 ## Платформа
 
 Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
