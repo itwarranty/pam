@@ -1,5 +1,5 @@
 #!/bin/sh
-# Invoked inside script(1) — runs ssh to target (with optional remote command policy).
+# Invoked inside script(1) — runs ssh to target (policy v2 bastion-side or v1 remote rc).
 set -eu
 
 TARGET_ID="${1:?target id}"
@@ -15,6 +15,13 @@ if [ "${BASTION_GATEWAY_LAB_MODE:-0}" = "1" ]; then
   SSH_OPTS="${SSH_OPTS} -o StrictHostKeyChecking=accept-new"
 else
   SSH_OPTS="${SSH_OPTS} -o StrictHostKeyChecking=yes"
+fi
+
+if [ -f /etc/bastion/command_denylist ] && [ "${BASTION_GATEWAY_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ]; then
+  export BASTION_DENYLIST=/etc/bastion/command_denylist
+  export BASTION_GATEWAY_DENY_KILL="${BASTION_GATEWAY_DENY_KILL_SESSION:-0}"
+  # shellcheck disable=SC2086
+  exec /usr/local/bin/bastion-pty-inspector.sh ssh ${SSH_OPTS} -tt "${ACCOUNT}@${HOST}"
 fi
 
 if [ -f /etc/bastion/command_denylist ] && [ -f /usr/local/bin/bastion-command-policy-rc.sh ]; then

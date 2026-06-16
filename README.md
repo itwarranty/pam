@@ -24,6 +24,10 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 bastion-session-ctl list
 ansible-playbook -i inventory/local-lima.yml site.yml --tags session_kill -e bastion_session_kill_id=<id>
 
+# Session search / watch (Tier 4)
+bastion-session-search --operator engineer1 --since 7d
+bastion-session-watch <session-id>
+
 # Доступ по GitHub-аккаунту
 ./scripts/repo-access.sh grant <github_user>
 ./scripts/repo-access.sh revoke <github_user>
@@ -38,8 +42,10 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags session_kill -e bas
 | [Whitepaper](docs/MT-Bastion-Whitepaper.md) | Техпаспорт для CSO |
 | [Troubleshooting Workflow](docs/MT-Bastion-Troubleshooting-Workflow.md) | Регламент инцидента |
 | [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | Пресейл demo |
-| [Client Without PAM](docs/MT-Bastion-Client-Without-PAM.md) | Tier 3 adoption 1-pager |
-| [OpenSpec specs](openspec/specs/) | GA specs Tier 1–3 |
+| [МТ Доступ SSH PAM Overview](docs/MT-Dostup-SSH-PAM-Overview.md) | PAM positioning для заказчика |
+| [Battlecard vs СКДПУ SSH](docs/MT-Bastion-Battlecard-SKDPU-SSH.md) | Пресейл сравнение |
+| [HA Runbook](docs/MT-Bastion-HA-Runbook.md) | Active-passive failover |
+| [OpenSpec specs](openspec/specs/) | GA specs Tier 1–4 |
 | [OpenSpec archive](openspec/changes/archive/) | Completed change history |
 
 ## Prod deploy
@@ -58,9 +64,10 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags session_kill -e bas
 | `v0.2.0` | Tier 1 Phase A — compliance, tamper logs, source IP, SIEM |
 | `v0.4.0` | Tier 1 Phase B + C — JIT, SSH User CA policy |
 | `v0.5.0` | Tier 2 — incident naming, denylist, audit, rate limit, break-glass |
-| `v0.6.0` | Tier 3 — SSH gateway, target recording, session-ctl (current) |
+| `v0.6.0` | Tier 3 — SSH gateway, target recording, session-ctl |
+| **`v1.0.0`** | **Tier 4 — SSH PAM GA:** search, policy v2, watch, Vault, OIDC examples, HA |
 
-Tier 1–3 Free features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
+Tier 1–4 Free features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
 
 ## CI
 

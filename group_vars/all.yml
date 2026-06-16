@@ -89,6 +89,24 @@ bastion_session_ctl_enabled: true
 bastion_kill_gateway_sessions: true
 bastion_gateway_audit_target_keys: true
 
+# Tier 4 Free (v1.0): SSH PAM complete — search, policy v2, watch, Vault, OIDC, HA
+bastion_session_search_enabled: true
+bastion_session_watch_enabled: true
+bastion_gateway_command_policy_v2_enabled: true
+bastion_shell_command_policy_v2_enabled: true
+bastion_gateway_deny_kill_session: false
+bastion_vault_enabled: false
+bastion_vault_addr: ""
+bastion_vault_token: ""
+bastion_vault_namespace: ""
+bastion_vault_mount: secret
+bastion_oidc_cert_policy_enabled: false
+bastion_oidc_issuer: ""
+bastion_oidc_client_id: ""
+bastion_oidc_required_group: bastion-operators
+bastion_ha_enabled: false
+bastion_ha_role: primary
+
 # Локальный доверенный образ (Air Gap)
 bastion_image_name: mt_bastion_secure
 bastion_image_tag: latest

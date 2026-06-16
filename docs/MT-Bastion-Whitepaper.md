@@ -2,14 +2,14 @@
 
 ## Архитектура и защитные контроли шлюза удаленного доступа «MT: Bastion»
 
-**Версия документа:** 1.5  
-**Статус:** Релиз (Tier 3 Free complete в репозитории)  
-**Продукт (git tags):** `v0.6.0` — см. § «Версии релиза»  
+**Версия документа:** 1.6  
+**Статус:** Релиз (Tier 4 Free complete — SSH PAM GA)  
+**Продукт (git tags):** `v1.0.0` — см. § «Версии релиза»  
 **Разработчик:** MT Global  
 
 ---
 
-## Версии релиза (Tier 1 + Tier 2 + Tier 3 Free)
+## Версии релиза (Tier 1 + Tier 2 + Tier 3 + Tier 4 Free)
 
 | Git tag | Содержание | Статус |
 | :--- | :--- | :--- |
@@ -18,7 +18,8 @@
 | **v0.4.0** | **Tier 1 Phase B + C:** JIT windows, SSH User CA prod policy | ✅ |
 | **v0.5.0** | **Tier 2:** incident naming, denylist, audit role, rate limit, break-glass | ✅ |
 | **v0.6.0** | **Tier 3:** SSH gateway, target recording, session-ctl, jump/gateway policy | ✅ |
-| **GA (будущее)** | Live PKI QA + `bastion_ssh_user_ca_qa_complete: true` | ⏳ org |
+| **v1.0.0** | **Tier 4:** session search, policy v2, live watch, Vault, OIDC examples, HA runbook | ✅ |
+| **Org gate** | Live PKI QA + `bastion_ssh_user_ca_qa_complete: true` on internal prod | ⏳ org |
 
 Спецификации: `openspec/specs/`. История changes: `openspec/changes/archive/`.
 
@@ -113,6 +114,9 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 26 | **SSH gateway access (Tier 3)** | `access: gateway` — bastion-originated SSH, full target PTY log | `bastion-ssh-gateway-wrapper.sh`, `tasks/provision_bastion_targets.yml` |
 | 27 | **Target credential broking (Tier 3)** | `bastion_targets[]`; keys Vault-only; RO mount `/etc/bastion/targets` | `tasks/provision_bastion_targets.yml` |
 | 28 | **Gateway session control (Tier 3)** | `bastion-session-ctl list|kill`; JIT purge kills active sessions | `scripts/bastion-session-ctl.sh`, `tasks/kill_gateway_sessions.yml` |
+| 29 | **Session search (Tier 4)** | JSONL filter by operator/date; host CLI `bastion-session-search` | `scripts/bastion-session-search.sh`, `tasks/install_tier4_tools.yml` |
+| 30 | **Live session moderation (Tier 4)** | `bastion-session-watch` tail + JSONL `moderator_watch_start` | `scripts/bastion-session-watch.sh` |
+| 31 | **Gateway command policy v2 (Tier 4)** | Bastion-side PTY inspector (Python); deny without target rc | `bastion-pty-inspector.py`, `bastion-ssh-gateway-exec.sh` |
 
 ---
 
@@ -184,6 +188,12 @@ Rocky Linux 9 — единственная утверждённая платфо
 | **Target session recording (Tier 3)** | `gateway_<INCIDENT>_<USER>_<TARGETID>_*.log` + `.sha256`/`.meta`; JSONL export. | `build/files/bastion-ssh-gateway-wrapper.sh` |
 | **Session control plane (Tier 3)** | Registry + `bastion-session-ctl`; kill on JIT purge. | `bastion-session-ctl-internal.sh`, `tasks/kill_gateway_sessions.yml` |
 | **Jump vs gateway policy (Tier 3)** | Opt-in `bastion_prod_require_gateway`; jump = connect-audit only. | `scripts/preflight-jump-gateway.py`, `preflight_cso.yml` |
+| **Session search (Tier 4)** | JSONL filter by operator/target/date; `jq` on host. | `scripts/bastion-session-search.sh` |
+| **Live session moderation (Tier 4)** | Moderator tail active gateway log; audit JSONL events. | `scripts/bastion-session-watch.sh` |
+| **Gateway command policy v2 (Tier 4)** | PTY inspector on bastion; v1 remote rc fallback when disabled. | `bastion-pty-inspector.py`, gateway/shell wrappers |
+| **External secrets Vault (Tier 4)** | Target keys from HashiCorp KV at deploy; mutual exclusion with `identity_file`. | `tasks/fetch_vault_target_keys.yml` |
+| **OIDC SSH user certs (Tier 4)** | Example signing scripts; preflight when `bastion_oidc_cert_policy_enabled`. | `scripts/sign-operator-cert-oidc.sh.example` |
+| **HA active-passive (Tier 4)** | Shared audit mount; standby stopped; manual promote script. | `docs/MT-Bastion-HA-Runbook.md`, `bastion-ha-promote.sh` |
 
 ---
 
@@ -217,8 +227,9 @@ Rocky Linux 9 — единственная утверждённая платфо
 2. Bastion SSH к target с broked key; оператор ключ target не получает.
 3. Лог `gateway_*` + sidecars + JSONL.
 4. `bastion-session-ctl list|kill`.
+5. **Tier 4:** `bastion-session-search`, `bastion-session-watch` (moderator), command policy v2 on PTY stream.
 
-См. [MT-Bastion-Client-Without-PAM.md](./MT-Bastion-Client-Without-PAM.md).
+См. [MT-Dostup-SSH-PAM-Overview.md](./MT-Dostup-SSH-PAM-Overview.md).
 
 
 ---
@@ -330,6 +341,16 @@ incident_id: "INC-2026-8942"
 5. После QA: `bastion_ssh_user_ca_qa_complete: true`, `bastion_allow_raw_pubkey_prod: false`.
 
 **Rollback:** убрать `bastion_trusted_user_ca_file`, вернуть `pubkey`, redeploy — без пересборки образа.
+
+### OIDC / SAML → SSH user certificates (Tier 4, opt-in)
+
+1. IdP group `bastion-operators` (или `bastion_oidc_required_group`).
+2. Offline token: `scripts/oidc-offline-token.sh.example`.
+3. Sign cert: `scripts/sign-operator-cert-oidc.sh.example` (bridge к org User CA).
+4. SAML stub: `scripts/sign-operator-cert-saml.sh.example` → OIDC bridge.
+5. Prod gate: `bastion_oidc_cert_policy_enabled: true` — preflight требует `certificate` у операторов.
+
+См. также `openspec/specs/bastion-oidc-saml-ssh-certificates/spec.md`.
 
 ### Ротация ключей и TOTP
 

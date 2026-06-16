@@ -1,0 +1,27 @@
+---
+# Optional HA: ensure shared audit_log_dir mount exists (NFS/WORM — client-provided).
+- name: HA shared audit log mount point
+  ansible.builtin.file:
+    path: "{{ audit_log_dir }}"
+    state: directory
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0750"
+  when: bastion_ha_enabled | default(false) | bool
+
+- name: HA standby — container stopped when role is standby
+  ansible.builtin.command:
+    argv:
+      - podman
+      - stop
+      - mt_ssh_bastion
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  register: ha_standby_stop
+  changed_when: ha_standby_stop.rc == 0
+  failed_when: false
+  when:
+    - bastion_ha_enabled | default(false) | bool
+    - bastion_ha_role | default('primary') == 'standby'

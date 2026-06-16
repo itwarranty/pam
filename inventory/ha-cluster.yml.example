@@ -1,0 +1,15 @@
+---
+all:
+  children:
+    bastion_servers:
+      children:
+        bastion_primary:
+          hosts:
+            bastion-primary:
+              ansible_host: 10.0.0.10
+              bastion_ha_role: primary
+        bastion_standby:
+          hosts:
+            bastion-standby:
+              ansible_host: 10.0.0.11
+              bastion_ha_role: standby

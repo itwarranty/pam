@@ -1,15 +1,16 @@
 schema: spec-driven
 
 context: |
-  Product: MT: Bastion — Security-as-a-Code jump host (Ansible + Rootless Podman).
-  Free tier: open-source slice of commercial product «МТ Доступ» (SSH-only).
+  Product: MT: Bastion — open-source tier of «МТ Доступ», a full SSH PAM product (Privileged Access Management).
+  Replaces commercial SSH gateways (e.g. СКДПУ) for Linux scope; not «for clients without PAM».
   Host OS: Rocky Linux 9.x x86_64, SELinux Enforcing only.
   Domain: mtglobal.team
   Lab: raw SSH pubkeys (group_vars/dev/).
   QA target: SSH User CA signed certificates + MFA strict.
-  Tier 1 Free (complete): openspec/specs/ (archived changes in openspec/changes/archive/)
-  Tier 2 Free (complete): v0.5.0 — incident naming, command policy, audit role, SSH rate limit, break-glass
-  Tier 3 Gateway (complete): v0.6.0 — SSH gateway, target recording, session-ctl, jump/gateway policy
+  Tier 1 Free (complete): v0.2–v0.4 — openspec/specs/
+  Tier 2 Free (complete): v0.5.0
+  Tier 3 Gateway (complete): v0.6.0
+  Tier 4 SSH PAM complete (complete): v1.0.0 — openspec/specs/
   Key paths: tasks/, templates/, group_vars/, lab/ca/, lab/certs/
   CSO Policy Gate: tasks/preflight_cso.yml
   Language: specs in English (SHALL/WHEN/THEN); docs may be Russian.

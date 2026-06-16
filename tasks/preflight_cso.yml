@@ -310,3 +310,39 @@
     - not (is_commercial_pam | bool)
     - bastion_prod_require_gateway | default(false) | bool
       or bastion_jump_risk_acceptance_required | default(false) | bool
+
+- name: "[CSO] Target vault_path vs identity_file mutually exclusive"
+  ansible.builtin.assert:
+    that:
+      - not (item.identity_file | default('') | length > 0 and item.vault_secret_path | default('') | length > 0)
+    fail_msg: >
+      bastion_targets «{{ item.id }}»: задайте identity_file ИЛИ vault_secret_path, не оба.
+  loop: "{{ bastion_targets | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: not (is_commercial_pam | bool)
+
+- name: "[CSO] Vault enabled requires bastion_vault_addr"
+  ansible.builtin.assert:
+    that:
+      - bastion_vault_addr | default('') | length > 0
+      - bastion_vault_token | default('') | length > 0
+    fail_msg: "bastion_vault_enabled=true: задайте bastion_vault_addr и bastion_vault_token (Vault)."
+  when:
+    - bastion_vault_enabled | default(false) | bool
+    - not (is_commercial_pam | bool)
+
+- name: "[CSO] OIDC cert policy requires operator certificate"
+  ansible.builtin.assert:
+    that:
+      - item.certificate | default('') | length > 0
+    fail_msg: >
+      bastion_oidc_cert_policy_enabled: оператор «{{ item.name }}» должен использовать certificate.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - bastion_oidc_cert_policy_enabled | default(false) | bool
+    - not (is_commercial_pam | bool)
+    - item.pubkey | default('') | length > 0
+    - item.certificate | default('') | length == 0

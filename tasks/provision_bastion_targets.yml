@@ -32,6 +32,10 @@
   loop_control:
     label: "{{ item.id }}"
 
+- name: Fetch target keys from HashiCorp Vault (Tier 4, opt-in)
+  ansible.builtin.include_tasks: tasks/fetch_vault_target_keys.yml
+  when: bastion_vault_enabled | default(false) | bool
+
 - name: Target identity key {{ item.id }}
   ansible.builtin.copy:
     src: "{{ item.identity_file }}"
@@ -44,6 +48,9 @@
   loop_control:
     label: "{{ item.id }}"
   no_log: true
+  when:
+    - item.identity_file | default('') | length > 0
+    - item.vault_secret_path | default('') | length == 0
 
 - name: Target env {{ item.id }}
   ansible.builtin.template:

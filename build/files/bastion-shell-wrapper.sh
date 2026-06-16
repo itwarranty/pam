@@ -44,6 +44,11 @@ BG_LOG=""
 logger -t mt-bastion "shell session start user=${USER} log=${LOG} client=${SSH_CLIENT:-unknown} incident=${MT_BASTION_INCIDENT_ID:--}${BG_LOG}"
 
 if [ -f /etc/bastion/command_denylist ]; then
+  if [ "${BASTION_SHELL_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ]; then
+    export BASTION_DENYLIST=/etc/bastion/command_denylist
+    export MT_BASTION_GATEWAY_MODE=shell
+    exec script -q -f -c "/usr/local/bin/bastion-pty-inspector.sh /bin/bash --login" "${LOG}"
+  fi
   exec script -q -f -c "/usr/local/bin/bastion-command-policy.sh /bin/bash --login" "${LOG}"
 fi
 exec script -q -f -c "/bin/bash --login" "${LOG}"

@@ -19,6 +19,8 @@ BASTION_IMAGE_NAME="${BASTION_IMAGE_NAME:-mt_bastion_secure}"
 BASTION_IMAGE_TAG="${BASTION_IMAGE_TAG:-latest}"
 BASTION_REQUIRED_MFA_LABEL="${BASTION_REQUIRED_MFA_LABEL:-1}"
 CONTAINER_NAME="${BASTION_CONTAINER_NAME:-mt_ssh_bastion}"
+BASTION_TARGETS_HOME="${BASTION_TARGETS_HOME:-/home/${BASTION_USER}/targets}"
+BASTION_SESSION_SEARCH_ENABLED="${BASTION_SESSION_SEARCH_ENABLED:-false}"
 
 PASS=0
 FAIL=0
@@ -183,6 +185,41 @@ check_rate_limit() {
   fi
 }
 
+check_gateway_manifest() {
+  local manifest="${BASTION_TARGETS_HOME}/manifest.json"
+  if [[ ! -f "${manifest}" ]]; then
+    if [[ "${BASTION_GATEWAY_TARGETS_EXPECTED:-false}" == "true" ]]; then
+      log_fail "gateway_targets — manifest.json missing at ${manifest}"
+    fi
+    return 0
+  fi
+  if command -v jq >/dev/null 2>&1 && jq -e '.targets | type == "array"' "${manifest}" >/dev/null 2>&1; then
+    log_pass "gateway_targets — manifest.json valid"
+  elif grep -q '"targets"' "${manifest}" 2>/dev/null; then
+    log_pass "gateway_targets — manifest.json present"
+  else
+    log_fail "gateway_targets — manifest.json invalid"
+  fi
+}
+
+check_jq_optional() {
+  [[ "${BASTION_SESSION_SEARCH_ENABLED}" != "true" ]] && return 0
+  if command -v jq >/dev/null 2>&1; then
+    log_pass "jq — installed (session search enabled)"
+  else
+    log_fail "jq — required when BASTION_SESSION_SEARCH_ENABLED=true"
+  fi
+}
+
+check_tier4_cli() {
+  [[ "${BASTION_SESSION_SEARCH_ENABLED}" != "true" ]] && return 0
+  if [[ -x /usr/local/bin/bastion-session-search ]]; then
+    log_pass "tier4_cli — bastion-session-search installed"
+  else
+    log_fail "tier4_cli — bastion-session-search missing"
+  fi
+}
+
 main() {
   printf '=== MT Bastion compliance verify ===\n\n'
   check_os
@@ -197,6 +234,9 @@ main() {
   check_session_log_dir
   check_firewall_port
   check_rate_limit
+  check_gateway_manifest
+  check_jq_optional
+  check_tier4_cli
 
   printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"
   if [[ "${FAIL}" -gt 0 ]]; then

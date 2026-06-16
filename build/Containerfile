@@ -14,6 +14,7 @@ RUN apk add --no-cache \
       openssh \
       openssh-keygen \
       openssh-server-pam \
+      python3 \
       google-authenticator \
       tmux \
       bash \
@@ -33,6 +34,8 @@ COPY build/files/bastion-ssh-gateway-wrapper.sh /usr/local/bin/bastion-ssh-gatew
 COPY build/files/bastion-ssh-gateway.sh /usr/local/bin/bastion-ssh-gateway.sh
 COPY build/files/bastion-ssh-gateway-exec.sh /usr/local/bin/bastion-ssh-gateway-exec.sh
 COPY build/files/bastion-session-ctl-internal.sh /usr/local/bin/bastion-session-ctl-internal.sh
+COPY build/files/bastion-pty-inspector.py /usr/local/bin/bastion-pty-inspector.py
+COPY build/files/bastion-pty-inspector.sh /usr/local/bin/bastion-pty-inspector.sh
 
 RUN mkdir -p /run/mt-bastion/sessions \
     && chmod 0755 /usr/local/bin/bastion-shell-wrapper.sh /usr/local/bin/bastion-entrypoint.sh \
@@ -40,6 +43,7 @@ RUN mkdir -p /run/mt-bastion/sessions \
     /usr/local/bin/bastion-audit-shell-wrapper.sh /usr/local/bin/bastion-audit-shell.sh \
     /usr/local/bin/bastion-ssh-gateway-wrapper.sh /usr/local/bin/bastion-ssh-gateway.sh \
     /usr/local/bin/bastion-ssh-gateway-exec.sh /usr/local/bin/bastion-session-ctl-internal.sh \
+    /usr/local/bin/bastion-pty-inspector.py /usr/local/bin/bastion-pty-inspector.sh \
     && if [ "${MFA_STRICT}" = "1" ]; then \
          printf '%s\n' '#%PAM-1.0' \
            'auth required pam_google_authenticator.so' \

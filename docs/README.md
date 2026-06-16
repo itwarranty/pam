@@ -6,20 +6,24 @@
 | :--- | :--- | :--- |
 | [MT-Bastion-Whitepaper.md](./MT-Bastion-Whitepaper.md) | CSO, аудитор | Техпаспорт, Control Matrix, checklist |
 | [MT-Bastion-Troubleshooting-Workflow.md](./MT-Bastion-Troubleshooting-Workflow.md) | ИБ + инженеры | Регламент инцидента, four-eyes, JIT |
-| [MT-Bastion-Client-Without-PAM.md](./MT-Bastion-Client-Without-PAM.md) | CSO, заказчик | Tier 3: первый контур без PAM |
-| [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) | Пресейл | Demo lab (Tier 1–3) |
+| [MT-Dostup-SSH-PAM-Overview.md](./MT-Dostup-SSH-PAM-Overview.md) | CSO, заказчик | «МТ Доступ» SSH PAM positioning |
+| [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) | Пресейл | Demo lab (Tier 1–4) |
+| [MT-Bastion-Battlecard-SKDPU-SSH.md](./MT-Bastion-Battlecard-SKDPU-SSH.md) | Пресейл | Сравнение с СКДПУ SSH |
+| [MT-Bastion-SoW-SSH-Access.md](./MT-Bastion-SoW-SSH-Access.md) | Юристы | Формулировка для договора |
+| [MT-Bastion-HA-Runbook.md](./MT-Bastion-HA-Runbook.md) | SRE | Active-passive HA |
 | [Engineer-Onboarding.md](./Engineer-Onboarding.md) | Инженеры MT Global | Git-доступ, dev-up, первый SSH |
 
-## Версии (Tier 1–3 Free)
+## Версии (Tier 1–4 Free)
 
 | Tag | Содержание |
 | :--- | :--- |
 | [v0.2.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.2.0) | Tier 1 Phase A |
 | [v0.4.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.4.0) | Tier 1 Phase B + C |
 | [v0.5.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.5.0) | Tier 2 |
-| [v0.6.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.6.0) | Tier 3 SSH Gateway (текущий) |
+| [v0.6.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.6.0) | Tier 3 SSH Gateway |
+| [v1.0.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v1.0.0) | Tier 4 SSH PAM GA (текущий) |
 
-**Tier 1–3 реализованы в репозитории.**
+**Tier 1–4 реализованы в репозитории.**
 
 ## Платформа
 
@@ -53,11 +57,17 @@ Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
 | Break-glass (Tier 2) | `break_glass: true`, preflight, auditd key |
 | SSH gateway (Tier 3) | `access: gateway`, `bastion_targets`, `bastion-ssh-gateway-wrapper.sh` |
 | Session control (Tier 3) | `bastion-session-ctl`, JIT kill, JSONL export |
+| Session search (Tier 4) | `bastion-session-search.sh`, `install_tier4_tools.yml` |
+| Live moderation (Tier 4) | `bastion-session-watch.sh`, JSONL `moderator_watch_start` |
+| Command policy v2 (Tier 4) | `bastion-pty-inspector.py`, gateway/shell wrappers |
+| Vault target keys (Tier 4) | `fetch_vault_target_keys.yml`, `community.hashi_vault` |
+| HA active-passive (Tier 4) | `MT-Bastion-HA-Runbook.md`, `configure_ha_shared_audit.yml` |
 
 ## Спеки (OpenSpec)
 
 | Change | Содержание |
 | :--- | :--- |
-| [openspec/specs/](../openspec/specs/) | **Tier 1–3 GA** |
+| [openspec/specs/](../openspec/specs/) | **Tier 1–4 GA** |
+| [archive/2026-06-bastion-free-tier4-ssh-pam-complete](../openspec/changes/archive/2026-06-bastion-free-tier4-ssh-pam-complete/) | История change Tier 4 |
 | [archive/2026-06-bastion-ssh-gateway-tier3](../openspec/changes/archive/2026-06-bastion-ssh-gateway-tier3/) | История change Tier 3 |
 | [archive/2026-06-ssh-user-ca-qa-mtglobal](../openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/) | SSH User CA QA (live PKI pending) |

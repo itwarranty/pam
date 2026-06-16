@@ -16,4 +16,22 @@
 # bastion_jump_risk_acceptance_required: false
 # bastion_gateway_lab_mode: false
 
+# Tier 4 Free — SSH PAM GA (v1.0)
+# bastion_session_search_enabled: true
+# bastion_session_watch_enabled: true
+# bastion_gateway_command_policy_v2_enabled: true
+# bastion_shell_command_policy_v2_enabled: true
+# bastion_gateway_deny_kill_session: false
+# bastion_vault_enabled: false
+# bastion_vault_addr: "https://vault.example"
+# bastion_vault_token: ""  # Ansible Vault
+# bastion_targets vault_secret_path example:
+#   - id: prod-app-01
+#     vault_secret_path: secret/data/bastion/targets/prod-app-01
+#     vault_secret_key: private_key
+# bastion_oidc_cert_policy_enabled: false
+# bastion_oidc_issuer: "https://idp.example"
+# bastion_ha_enabled: false
+# bastion_ha_role: primary
+
 # Tier 2 Free — CSO optional controls (openspec/specs/)

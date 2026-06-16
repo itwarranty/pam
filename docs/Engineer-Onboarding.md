@@ -140,7 +140,19 @@ TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 | Новая фича | `git checkout -b feature/...` → PR в `main` |
 | Синтаксис playbook | `ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml` |
 | Lab-образ с nullok (только dev) | `BASTION_LAB_MODE=1 MFA_STRICT=0 ./trusted_download.sh` |
-| Пересборка после Tier 2/3 scripts | `./trusted_download.sh` (wrapper, gateway, audit) → redeploy |
+| Пересборка после Tier 2/3/4 scripts | `./trusted_download.sh` (wrapper, gateway, pty-inspector) → redeploy |
+
+## Tier 4 (v1.0 GA)
+
+| CLI | Назначение |
+| :--- | :--- |
+| `bastion-session-search` | Поиск сессий в JSONL |
+| `bastion-session-watch` | Live moderation gateway log |
+| `bastion-ha-promote.sh` | Failover standby → primary |
+
+OpenSpec: `openspec/changes/archive/2026-06-bastion-free-tier4-ssh-pam-complete/`
+
+Prod profile: `group_vars/prod.yml.example`
 
 Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только по согласованию с lead / CSO.
 
@@ -156,4 +168,4 @@ Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только п�
 
 ---
 
-*MT Global — Engineer Onboarding v1.3*
+*MT Global — Engineer Onboarding v1.4*

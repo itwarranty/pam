@@ -85,6 +85,10 @@
           ansible.builtin.include_tasks: tasks/provision_bastion_targets.yml
           when: bastion_targets | default([]) | length > 0
 
+        - name: HA shared audit + standby role (Tier 4, opt-in)
+          ansible.builtin.include_tasks: tasks/configure_ha_shared_audit.yml
+          when: bastion_ha_enabled | default(false) | bool
+
         - name: Provisioning операторов (SSH-ключи + TOTP)
           ansible.builtin.include_tasks: tasks/provision_operators.yml
 
@@ -93,6 +97,12 @@
 
         - name: Install bastion-session-ctl (Tier 3)
           ansible.builtin.include_tasks: tasks/install_session_ctl.yml
+
+        - name: Install Tier 4 CLI tools (session search, watch)
+          ansible.builtin.include_tasks: tasks/install_tier4_tools.yml
+          when: >
+            (bastion_session_search_enabled | default(true) | bool)
+            or (bastion_session_watch_enabled | default(true) | bool)
 
         - name: WORM archive session logs (опционально)
           ansible.builtin.include_tasks: tasks/archive_session_logs_worm.yml

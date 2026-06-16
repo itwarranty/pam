@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Example: exchange OIDC refresh token for operator SSH user certificate (offline signing).
+# Requires: curl, jq, ssh-keygen, org User CA key on admin workstation (never on bastion).
+set -euo pipefail
+
+: "${MT_BASTION_USER_CA_KEY:?Set MT_BASTION_USER_CA_KEY to CA private key path}"
+: "${BASTION_OIDC_ISSUER:?Set BASTION_OIDC_ISSUER e.g. https://idp.example.com/realms/mt}"
+: "${BASTION_OIDC_CLIENT_ID:?Set BASTION_OIDC_CLIENT_ID}"
+: "${BASTION_OIDC_REFRESH_TOKEN:?Export via oidc-offline-token.sh.example}"
+
+OPERATOR_NAME="${1:?operator name (matches bastion_operators[].name)}"
+OPERATOR_PUBKEY="${2:?path to operator public key}"
+VALID_HOURS="${3:-24}"
+REQUIRED_GROUP="${BASTION_OIDC_REQUIRED_GROUP:-bastion-operators}"
+
+TOKEN_JSON="$(curl -sS -X POST "${BASTION_OIDC_ISSUER}/protocol/openid-connect/token" \
+  -d "grant_type=refresh_token" \
+  -d "client_id=${BASTION_OIDC_CLIENT_ID}" \
+  -d "refresh_token=${BASTION_OIDC_REFRESH_TOKEN}")"
+
+ACCESS_TOKEN="$(printf '%s' "${TOKEN_JSON}" | jq -r '.access_token // empty')"
+[[ -n "${ACCESS_TOKEN}" ]] || { echo "Token refresh failed: ${TOKEN_JSON}" >&2; exit 1; }
+
+USERINFO="$(curl -sS -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  "${BASTION_OIDC_ISSUER}/protocol/openid-connect/userinfo")"
+
+GROUPS="$(printf '%s' "${USERINFO}" | jq -r '.groups // [] | @sh' 2>/dev/null || echo '')"
+USERNAME="$(printf '%s' "${USERINFO}" | jq -r '.preferred_username // .sub // empty')"
+[[ "${USERNAME}" == "${OPERATOR_NAME}" ]] || echo "WARN: IdP username ${USERNAME} != ${OPERATOR_NAME}" >&2
+
+if ! printf '%s' "${USERINFO}" | jq -e --arg g "${REQUIRED_GROUP}" '.groups[]? | select(. == $g)' >/dev/null 2>&1; then
+  echo "WARN: required group ${REQUIRED_GROUP} not found in token claims — verify IdP mapper" >&2
+fi
+
+VALID_UNTIL="$(date -u -d "+${VALID_HOURS} hours" +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v+"${VALID_HOURS}"H +%Y-%m-%dT:%M:%S)"
+
+ssh-keygen -s "${MT_BASTION_USER_CA_KEY}" -I "${OPERATOR_NAME}@mtglobal.team" \
+  -n "${OPERATOR_NAME}" -V "-1d:${VALID_UNTIL}" \
+  -O "force-command=/usr/local/bin/bastion-ssh-gateway-wrapper.sh" \
+  "${OPERATOR_PUBKEY}"
+
+echo "Signed certificate written next to ${OPERATOR_PUBKEY} (.-cert.pub)"
+echo "Add operator.certificate to Ansible and redeploy."

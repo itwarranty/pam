@@ -98,6 +98,9 @@
     network: "{{ bastion_gateway_lab_network }}"
     env:
       BASTION_GATEWAY_LAB_MODE: "{{ '1' if (bastion_gateway_lab_mode | default(false) | bool) else '0' }}"
+      BASTION_GATEWAY_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (bastion_gateway_command_policy_v2_enabled | default(true) | bool) else '0' }}"
+      BASTION_SHELL_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (bastion_shell_command_policy_v2_enabled | default(true) | bool) else '0' }}"
+      BASTION_GATEWAY_DENY_KILL_SESSION: "{{ '1' if (bastion_gateway_deny_kill_session | default(false) | bool) else '0' }}"
     ports:
       - "{{ bastion_ssh_port }}:{{ bastion_ssh_port }}"
     volumes: "{{ bastion_container_volumes }}"
@@ -117,6 +120,9 @@
     restart_policy: always
     env:
       BASTION_GATEWAY_LAB_MODE: "{{ '1' if (bastion_gateway_lab_mode | default(false) | bool) else '0' }}"
+      BASTION_GATEWAY_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (bastion_gateway_command_policy_v2_enabled | default(true) | bool) else '0' }}"
+      BASTION_SHELL_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (bastion_shell_command_policy_v2_enabled | default(true) | bool) else '0' }}"
+      BASTION_GATEWAY_DENY_KILL_SESSION: "{{ '1' if (bastion_gateway_deny_kill_session | default(false) | bool) else '0' }}"
     ports:
       - "{{ bastion_ssh_port }}:{{ bastion_ssh_port }}"
     volumes: "{{ bastion_container_volumes }}"

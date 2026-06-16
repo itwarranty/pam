@@ -300,6 +300,30 @@ grep gateway_start /var/log/bastion_sessions/sessions.jsonl | tail -5
 jq -r 'select(.event=="gateway_end")' /var/log/bastion_sessions/sessions.jsonl
 ```
 
+### 5.7 Session search и live moderation (Tier 4)
+
+**Поиск завершённых сессий** (JSONL + optional grep по `.log`):
+
+```bash
+bastion-session-search --operator engineer1 --since 7d
+bastion-session-search --target prod-app-01 --json
+bastion-session-search --grep "rm -rf" --since 24h
+```
+
+Требует `jq` на хосте (Ansible `install_tier4_tools.yml` при `bastion_session_search_enabled`).
+
+**Live moderation** (четырёх глаз на активной gateway-сессии):
+
+```bash
+bastion-session-ctl list
+bastion-session-watch <session-id>
+# JSONL: moderator_watch_start в sessions.jsonl
+```
+
+Модератор: пользователь с `access: audit` или член группы `mt_bastion_moderators` (sudo на host CLI).
+
+**Command policy v2** (gateway): destructive команды блокируются на бастion PTY до SSH к target; v1 remote rc — fallback при `bastion_gateway_command_policy_v2_enabled: false`.
+
 ---
 
 ## Блок-схема воркфлоу (слайд для презентации)
@@ -361,4 +385,4 @@ jq -r 'select(.event=="gateway_end")' /var/log/bastion_sessions/sessions.jsonl
 
 ---
 
-*MT Global — MT: Bastion Troubleshooting Workflow v1.3.*
+*MT Global — MT: Bastion Troubleshooting Workflow v1.4.*

@@ -1,0 +1,35 @@
+---
+# Fetch target SSH keys from HashiCorp Vault at deploy time (render-at-deploy).
+- name: Fetch Vault secret for target {{ item.id }}
+  community.hashi_vault.vault_kv2_get:
+    url: "{{ bastion_vault_addr }}"
+    auth_method: token
+    token: "{{ bastion_vault_token }}"
+    namespace: "{{ bastion_vault_namespace | default(omit) }}"
+    path: "{{ item.vault_secret_path | regex_replace('^secret/data/', '') }}"
+    engine_mount_point: "{{ bastion_vault_mount | default('secret') }}"
+  register: vault_target_fetch
+  delegate_to: localhost
+  become: false
+  no_log: true
+  loop: "{{ bastion_targets | selectattr('vault_secret_path', 'defined') | selectattr('vault_secret_path') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: bastion_vault_enabled | default(false) | bool
+
+- name: Write Vault-fetched identity for {{ item.item.id }}
+  ansible.builtin.copy:
+    dest: "{{ bastion_targets_home }}/{{ item.item.id }}/identity"
+    content: "{{ item.data.data[item.item.vault_secret_key | default('ssh_private_key')] }}"
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0600"
+    setype: container_file_t
+  loop: "{{ vault_target_fetch.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.id }}"
+  when:
+    - bastion_vault_enabled | default(false) | bool
+    - item.data is defined
+    - not item.skipped | default(false)
+  no_log: true

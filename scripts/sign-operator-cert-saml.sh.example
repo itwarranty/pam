@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Example: SAML → OIDC bridge via saml2aws (stub — adapt to customer IdP).
+set -euo pipefail
+
+echo "SAML direct signing is out of scope for v1."
+echo "Documented path: SAML IdP → Keycloak (OIDC) → sign-operator-cert-oidc.sh.example"
+echo "Alternative: saml2aws login && export SAML assertion → map groups → User CA sign"
+echo "See openspec/specs/bastion-oidc-saml-ssh-certificates/spec.md"

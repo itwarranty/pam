@@ -408,8 +408,52 @@ journalctl -t mt-bastion-session-kill --since "2 min ago" | tail -3
 
 **Что сказать CSO:** «Jump — для automation и connect-audit; gateway — для интерактива на prod с полным доказательством.»
 
-См. [MT-Bastion-Client-Without-PAM.md](./MT-Bastion-Client-Without-PAM.md) — five auditor questions.
+См. [MT-Dostup-SSH-PAM-Overview.md](./MT-Dostup-SSH-PAM-Overview.md) — five auditor questions.
 
 ---
 
-*MT Global — MT: Bastion CSO Demo v1.6 (Tier 3 complete)*
+## Блок 20 — Session search (Tier 4, 1 мин)
+
+**Что сказать CSO:** «Историю gateway-сессий ищем по оператору и дате без SIEM.»
+
+```bash
+limactl shell mt-bastion-prod -- sudo bastion-session-search --operator gateway-lab --since 7d
+limactl shell mt-bastion-prod -- sudo bastion-session-search --json | jq -r '.[].session_id' | head
+```
+
+**Ожидание:** строки из `sessions.jsonl` за окно; `--json` — machine-readable.
+
+---
+
+## Блок 21 — Command policy v2 (Tier 4, 1 мин)
+
+**Что сказать CSO:** «Опасная команда блокируется на бастion до попадания на target — без remote rc на сервере.»
+
+```bash
+# gateway-lab session on mock target:
+rm -rf /
+# ожидается отказ в PTY
+journalctl -t mt-bastion-deny --since "5 min ago" | tail -5
+```
+
+**Ожидание:** deny message; v2 enabled in `gateway_lab.yml`.
+
+---
+
+## Блок 22 — Live session watch (Tier 4, 1 мин)
+
+**Что сказать CSO:** «Модератор видит ввод в реальном времени — audit trail фиксирует начало наблюдения.»
+
+```bash
+# Terminal 1: gateway session (keep open)
+# Terminal 2:
+limactl shell mt-bastion-prod -- sudo bastion-session-ctl list
+limactl shell mt-bastion-prod -- sudo bastion-session-watch <session-id>
+grep moderator_watch_start /var/log/bastion_sessions/sessions.jsonl | tail -1
+```
+
+**Ожидание:** live tail gateway log; JSONL event с session_id и moderator user.
+
+---
+
+*MT Global — MT: Bastion CSO Demo v1.7 (Tier 4 complete)*
