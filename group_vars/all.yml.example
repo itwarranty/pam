@@ -1,76 +1,19 @@
-# Пример переменных для prod-деплоя MT Bastion (Rocky Linux 9.x, x86_64).
-# Скопируйте в group_vars/all.yml. Секреты — через Ansible Vault.
-
-bastion_operators:
-  - name: engineer1
-    email: engineer1@mtglobal.team      # опционально, для MFA onboarding file
-    pubkey: "ssh-ed25519 AAAA... engineer1@mtglobal"
-    mfa_secret: ""                      # пусто — автогенерация → generated/mfa/
-    access: jump
-    permit_open:
-      - "10.0.1.10:22"
-    allowed_sources:                    # опционально: OpenSSH from= + firewalld (strict mode)
-      - "203.0.113.0/24"
-      - "198.51.100.10"
-  - name: lead1
-    email: lead1@mtglobal.team
-    pubkey: "ssh-ed25519 AAAA... lead1@mtglobal"
-    mfa_secret: ""                      # prod: задайте через Vault
-    access: shell                       # только по согласованию CSO
-    allowed_sources:
-      - "203.0.113.0/24"
-    valid_from: "2026-06-15T09:00:00+03:00"   # JIT window (optional)
-    valid_until: "2026-06-15T18:00:00+03:00"
-    incident_id: "INC-2026-8942"
-
-# Tier 1 Phase B — JIT auto-purge timer (prod host)
-# bastion_jit_timer_enabled: true
-# bastion_jit_playbook_command: "/usr/local/bin/mt-bastion-jit-purge.sh"
-
-# Tier 1 Phase C — SSH User CA prod (prefer certificate over pubkey)
-# bastion_allow_raw_pubkey_prod: false   # default in group_vars/all.yml
-# bastion_ssh_user_ca_qa_complete: true  # after QA sign-off
-# bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
-# Signing: scripts/sign-operator-cert.sh.example (offline, CA private key never on bastion)
-
-# Tier 2 Free — CSO optional controls (openspec/specs/)
-# bastion_shell_command_policy_enabled: true
-# bastion_shell_command_denylist:
-#   - '^rm\s+-rf\s+/'
-#   - '^iptables\s+-F'
-# bastion_ssh_rate_limit_enabled: true
-# bastion_ssh_rate_limit_method: firewalld   # firewalld | fail2ban
-# bastion_ssh_rate_limit_rate: "30/m"
-# bastion_break_glass_enabled: false
-# bastion_break_glass_max_hours: 4
-# Operator break-glass example:
-#   - name: emergency-lead
-#     access: shell
-#     break_glass: true
-#     incident_id: "INC-2026-9999"
-#     valid_from: "2026-06-15T09:00:00+03:00"
-#     valid_until: "2026-06-15T12:00:00+03:00"
-# Operator audit example:
-#   - name: auditor1
-#     access: audit
-
-# Tier 1 Free — CSO optional controls (openspec/specs/)
-# bastion_require_source_ip: true       # prod: каждый operator MUST have allowed_sources
-# bastion_allowed_source_cidrs: ["203.0.113.0/24"]
-# bastion_siem_forward_enabled: true
-# bastion_siem_server: "siem.internal.example"
-# bastion_siem_port: 514
-# bastion_siem_protocol: tcp            # tcp | udp | relp
-# bastion_worm_archive_dir: "/mnt/worm/bastion/"
-
-# Альтернатива pubkey — SSH user certificate (при включённом User CA):
-# bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
+# Tier 3 Free — SSH gateway (v0.6)
+# bastion_targets:
+#   - id: prod-app-01
+#     host: 10.0.1.10
+#     port: 22
+#     account: mt_support
+#     identity_file: "{{ playbook_dir }}/vault/targets/prod-app-01_ed25519"  # Ansible Vault
+#     host_key_fingerprint: "SHA256:abcdef..."
+#     tags: [prod, linux]
 # bastion_operators:
 #   - name: engineer1
-#     certificate: "ssh-ed25519-cert-v01@openssh.com AAAA... engineer1@mtglobal.team"
-#     access: jump
+#     access: gateway
 #     permit_open: ["10.0.1.10:22"]
+#     incident_id: "INC-2026-8942"
+# bastion_prod_require_gateway: false
+# bastion_jump_risk_acceptance_required: false
+# bastion_gateway_lab_mode: false
 
-bastion_permitted_targets:
-  - "10.0.1.10:22"
-  - "10.0.1.11:22"
+# Tier 2 Free — CSO optional controls (openspec/specs/)

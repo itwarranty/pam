@@ -73,6 +73,22 @@ bastion_break_glass_enabled: false
 bastion_break_glass_max_hours: 4
 bastion_break_glass_audit_enabled: true
 
+# Tier 3 Free (v0.6): SSH gateway — target session recording + credential broking
+bastion_targets: []
+bastion_targets_home: "{{ bastion_home }}/targets"
+bastion_runtime_dir: "{{ bastion_home }}/runtime"
+bastion_gateway_lab_mode: false
+bastion_gateway_lab_enabled: false
+bastion_gateway_lab_network: mt_bastion_net
+bastion_gateway_lab_target_image: mt_gateway_target:latest
+bastion_require_vault_target_keys: true
+bastion_prod_require_gateway: false
+bastion_prod_target_tags: [prod]
+bastion_jump_risk_acceptance_required: false
+bastion_session_ctl_enabled: true
+bastion_kill_gateway_sessions: true
+bastion_gateway_audit_target_keys: true
+
 # Локальный доверенный образ (Air Gap)
 bastion_image_name: mt_bastion_secure
 bastion_image_tag: latest

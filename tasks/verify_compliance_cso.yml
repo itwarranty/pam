@@ -234,6 +234,21 @@
     - bastion_ssh_rate_limit_method == 'fail2ban'
   tags: [verify_compliance]
 
+- name: "[Verify] Gateway targets provisioned"
+  ansible.builtin.stat:
+    path: "{{ bastion_targets_home }}/manifest.json"
+  register: verify_gateway_manifest
+  when: bastion_targets | default([]) | length > 0
+  tags: [verify_compliance]
+
+- name: "[Verify] Gateway manifest exists"
+  ansible.builtin.assert:
+    that:
+      - verify_gateway_manifest.stat.exists
+    fail_msg: "FAIL:gateway_targets — manifest.json missing"
+  when: bastion_targets | default([]) | length > 0
+  tags: [verify_compliance]
+
 - name: "[Verify] Compliance summary"
   ansible.builtin.debug:
     msg: "PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist, auditd, firewalld, session logs)"

@@ -1,0 +1,9 @@
+---
+# Remote session kill: ansible-playbook site.yml --tags session_kill -e bastion_session_kill_id=...
+- name: JIT — UID bastion (session kill)
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ bastion_user }}"
+
+- name: Kill gateway session by id
+  ansible.builtin.include_tasks: tasks/kill_gateway_sessions.yml

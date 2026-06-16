@@ -119,17 +119,28 @@
     - not (bastion_allow_raw_pubkey_prod | default(false) | bool)
     - not (is_commercial_pam | bool)
 
-- name: "[CSO] Допустимые значения access (jump|shell|audit)"
+- name: "[CSO] Допустимые значения access (jump|shell|audit|gateway)"
   ansible.builtin.assert:
     that:
-      - item.access | default('jump') in ['jump', 'shell', 'audit']
+      - item.access | default('jump') in ['jump', 'shell', 'audit', 'gateway']
     fail_msg: >
       Оператор «{{ item.name }}»: access={{ item.access | default('jump') }} недопустим.
-      Разрешены: jump, shell, audit.
+      Разрешены: jump, shell, audit, gateway.
   loop: "{{ bastion_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when: not (is_commercial_pam | bool)
+
+- name: "[CSO] access: gateway запрещён в ветке commercial PAM"
+  ansible.builtin.assert:
+    that:
+      - item.access | default('jump') != 'gateway'
+    fail_msg: >
+      Оператор «{{ item.name }}» с access: gateway не поддерживается при is_commercial_pam=true.
+  loop: "{{ bastion_operators }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: is_commercial_pam | bool
 
 - name: "[CSO] access: audit запрещён в ветке commercial PAM"
   ansible.builtin.assert:
@@ -202,3 +213,100 @@
   when:
     - item.break_glass | default(false) | bool
     - not (is_commercial_pam | bool)
+
+- name: "[CSO] Индекс bastion_targets host:port"
+  ansible.builtin.set_fact:
+    bastion_target_host_ports: >-
+      {{
+        bastion_target_host_ports | default([])
+        + [target_item.host ~ ':' ~ (target_item.port | default(22) | string)]
+      }}
+  loop: "{{ bastion_targets | default([]) }}"
+  loop_control:
+    loop_var: target_item
+    label: "{{ target_item.id }}"
+  when: not (is_commercial_pam | bool)
+
+- name: "[CSO] Gateway operator permit_open resolves to bastion_targets"
+  ansible.builtin.assert:
+    that:
+      - permit_entry in bastion_target_host_ports
+    fail_msg: >
+      Оператор «{{ item.0.name }}» (gateway): permit_open «{{ permit_entry }}»
+      не найден в bastion_targets.
+  vars:
+    permit_entry: "{{ item.1 }}"
+  loop: >-
+    {{
+      query(
+        'subelements',
+        bastion_operators | selectattr('access', 'equalto', 'gateway') | list,
+        'permit_open',
+        skip_missing=True
+      )
+    }}
+  loop_control:
+    label: "{{ item.0.name }}:{{ item.1 }}"
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_targets | default([]) | length > 0
+
+- name: "[CSO] Gateway operator requires permit_open"
+  ansible.builtin.assert:
+    that:
+      - item.permit_open | default([]) | length > 0
+    fail_msg: >
+      Оператор «{{ item.name }}» (gateway): permit_open обязателен.
+  loop: "{{ bastion_operators | selectattr('access', 'equalto', 'gateway') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (is_commercial_pam | bool)
+
+- name: "[CSO] Target identity file exists"
+  ansible.builtin.stat:
+    path: "{{ item.identity_file }}"
+  register: target_key_stat
+  loop: "{{ bastion_targets | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: not (is_commercial_pam | bool)
+
+- name: "[CSO] Target identity file present"
+  ansible.builtin.assert:
+    that:
+      - target_key_stat.results[idx].stat.exists
+    fail_msg: >
+      bastion_targets «{{ item.id }}»: identity_file не найден: {{ item.identity_file }}
+  loop: "{{ bastion_targets | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+    index_var: idx
+  when: not (is_commercial_pam | bool)
+
+- name: "[CSO] Target host_key_fingerprint missing (warn)"
+  ansible.builtin.debug:
+    msg: >
+      ВНИМАНИЕ: bastion_targets «{{ item.id }}» без host_key_fingerprint —
+      MITM risk. Задайте fingerprint или lab mode только в dev.
+  loop: "{{ bastion_targets | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when:
+    - not (is_commercial_pam | bool)
+    - not (bastion_gateway_lab_mode | default(false) | bool)
+    - item.host_key_fingerprint | default('') | length == 0
+
+- name: "[CSO] Jump/gateway prod policy check"
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/scripts/preflight-jump-gateway.py"
+  environment:
+    OPERATORS: "{{ bastion_operators | to_json }}"
+    TARGETS: "{{ bastion_targets | default([]) | to_json }}"
+    PROD_REQUIRE_GATEWAY: "{{ bastion_prod_require_gateway | default(false) | ternary('true', 'false') }}"
+    PROD_TAGS: "{{ bastion_prod_target_tags | default(['prod']) | to_json }}"
+    JUMP_RISK: "{{ bastion_jump_risk_acceptance_required | default(false) | ternary('true', 'false') }}"
+  changed_when: false
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_prod_require_gateway | default(false) | bool
+      or bastion_jump_risk_acceptance_required | default(false) | bool

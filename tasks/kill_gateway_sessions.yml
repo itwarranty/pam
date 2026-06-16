@@ -1,0 +1,44 @@
+---
+# Terminate active gateway sessions (JIT purge / revoke / session_kill).
+- name: Kill gateway sessions for operator {{ op }}
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - mt_ssh_bastion
+      - /usr/local/bin/bastion-session-ctl-internal
+      - kill
+      - --operator
+      - "{{ op }}"
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  register: gw_kill_op
+  changed_when: gw_kill_op.rc == 0
+  failed_when: false
+  loop: "{{ bastion_kill_operators | default([]) }}"
+  loop_control:
+    loop_var: op
+    label: "{{ op }}"
+  when:
+    - not (is_commercial_pam | bool)
+    - bastion_kill_gateway_sessions | default(true) | bool
+    - bastion_kill_operators | default([]) | length > 0
+
+- name: Kill gateway session by id
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - mt_ssh_bastion
+      - /usr/local/bin/bastion-session-ctl-internal
+      - kill
+      - "{{ bastion_session_kill_id }}"
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when:
+    - bastion_session_kill_id | default('') | length > 0
+    - not (is_commercial_pam | bool)

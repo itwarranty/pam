@@ -1,0 +1,8 @@
+# MT Bastion — mock SSH target for gateway lab (Alpine sshd).
+FROM docker.io/library/alpine:3.19
+
+COPY build/gateway-target/entrypoint.sh /entrypoint.sh
+RUN chmod 0755 /entrypoint.sh
+
+EXPOSE 22
+ENTRYPOINT ["/entrypoint.sh"]

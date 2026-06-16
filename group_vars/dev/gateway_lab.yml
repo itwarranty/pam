@@ -1,0 +1,32 @@
+---
+# Tier 3 lab: SSH gateway + mock target container on podman network mt_bastion_net.
+bastion_gateway_lab_enabled: true
+bastion_gateway_lab_mode: true
+bastion_require_vault_target_keys: false
+bastion_shell_command_policy_enabled: true
+
+bastion_targets:
+  - id: lab-mock-01
+    host: gateway-target
+    port: 22
+    account: mt_support
+    identity_file: "{{ lab_keys_dir }}/gateway-target-support.lab"
+    tags: [lab]
+    description: "Gateway lab mock SSH target (mt_gateway_target container)"
+
+bastion_operators_gateway_lab:
+  - name: gateway-lab
+    email: gateway-lab@mtglobal.team
+    pubkey: "{{ lookup('file', lab_keys_dir + '/gateway-lab.lab.pub') }}"
+    mfa_secret: GATEWAYLABGATEWAYLABGATEWAYLABG
+    access: gateway
+    incident_id: INC-LAB-GW-01
+    permit_open:
+      - "gateway-target:22"
+    allowed_sources:
+      - "127.0.0.0/8"
+
+bastion_permitted_targets:
+  - "10.0.1.10:22"
+  - "10.0.1.11:22"
+  - "gateway-target:22"

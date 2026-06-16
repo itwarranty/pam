@@ -6,20 +6,20 @@
 | :--- | :--- | :--- |
 | [MT-Bastion-Whitepaper.md](./MT-Bastion-Whitepaper.md) | CSO, аудитор | Техпаспорт, Control Matrix, checklist |
 | [MT-Bastion-Troubleshooting-Workflow.md](./MT-Bastion-Troubleshooting-Workflow.md) | ИБ + инженеры | Регламент инцидента, four-eyes, JIT |
-| [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) | Пресейл | 15-мин демо на lab-стенде (Tier 1 + Tier 2) |
+| [MT-Bastion-Client-Without-PAM.md](./MT-Bastion-Client-Without-PAM.md) | CSO, заказчик | Tier 3: первый контур без PAM |
+| [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) | Пресейл | Demo lab (Tier 1–3) |
 | [Engineer-Onboarding.md](./Engineer-Onboarding.md) | Инженеры MT Global | Git-доступ, dev-up, первый SSH |
 
-## Версии (Tier 1 + Tier 2 Free)
+## Версии (Tier 1–3 Free)
 
 | Tag | Содержание |
 | :--- | :--- |
 | [v0.2.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.2.0) | Tier 1 Phase A |
 | [v0.4.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.4.0) | Tier 1 Phase B + C |
-| [v0.5.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.5.0) | Tier 2 Phases A–E (текущий) |
+| [v0.5.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.5.0) | Tier 2 |
+| [v0.6.0](https://github.com/MT-Global-Team/mt-bastion/releases/tag/v0.6.0) | Tier 3 SSH Gateway (текущий) |
 
-Подробнее: [Whitepaper §Версии релиза](./MT-Bastion-Whitepaper.md), [openspec/changes/archive/README.md](../openspec/changes/archive/README.md).
-
-**В репозитории Tier 1 и Tier 2 Free реализованы полностью.** Live PKI QA и prod GA certificates — после org sign-off (`bastion_ssh_user_ca_qa_complete`).
+**Tier 1–3 реализованы в репозитории.**
 
 ## Платформа
 
@@ -51,12 +51,13 @@ Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
 | Audit readonly role (Tier 2) | `access: audit`, `bastion-audit-shell-wrapper.sh` |
 | SSH rate limit (Tier 2) | `configure_ssh_brute_force.yml` |
 | Break-glass (Tier 2) | `break_glass: true`, preflight, auditd key |
+| SSH gateway (Tier 3) | `access: gateway`, `bastion_targets`, `bastion-ssh-gateway-wrapper.sh` |
+| Session control (Tier 3) | `bastion-session-ctl`, JIT kill, JSONL export |
 
 ## Спеки (OpenSpec)
 
 | Change | Содержание |
 | :--- | :--- |
-| [openspec/specs/](../openspec/specs/) | **Tier 1 + Tier 2 Free (GA):** compliance, JIT, SIEM, command policy, audit, rate limit, break-glass |
-| [archive/2026-06-bastion-free-tier1-cso](../openspec/changes/archive/2026-06-bastion-free-tier1-cso/) | История change Tier 1 |
-| [archive/2026-06-bastion-free-tier2-cso](../openspec/changes/archive/2026-06-bastion-free-tier2-cso/) | История change Tier 2 |
+| [openspec/specs/](../openspec/specs/) | **Tier 1–3 GA** |
+| [archive/2026-06-bastion-ssh-gateway-tier3](../openspec/changes/archive/2026-06-bastion-ssh-gateway-tier3/) | История change Tier 3 |
 | [archive/2026-06-ssh-user-ca-qa-mtglobal](../openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/) | SSH User CA QA (live PKI pending) |

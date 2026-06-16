@@ -47,6 +47,9 @@ Match User {{ operator.name }}
 {%   elif operator.access | default('jump') == 'shell' %}
     ForceCommand /usr/local/bin/bastion-shell-wrapper.sh
     AllowTcpForwarding no
+{%   elif operator.access | default('jump') == 'gateway' %}
+    ForceCommand /usr/local/bin/bastion-ssh-gateway-wrapper.sh
+    AllowTcpForwarding no
 {%   else %}
     # Jump: shell заблокирован через restrict в authorized_keys; только port-forwarding
     AllowTcpForwarding {{ 'local' if bastion_allow_tcp_forwarding | bool else 'no' }}

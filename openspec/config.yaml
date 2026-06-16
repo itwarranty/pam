@@ -9,6 +9,7 @@ context: |
   QA target: SSH User CA signed certificates + MFA strict.
   Tier 1 Free (complete): openspec/specs/ (archived changes in openspec/changes/archive/)
   Tier 2 Free (complete): v0.5.0 — incident naming, command policy, audit role, SSH rate limit, break-glass
+  Tier 3 Gateway (complete): v0.6.0 — SSH gateway, target recording, session-ctl, jump/gateway policy
   Key paths: tasks/, templates/, group_vars/, lab/ca/, lab/certs/
   CSO Policy Gate: tasks/preflight_cso.yml
   Language: specs in English (SHALL/WHEN/THEN); docs may be Russian.

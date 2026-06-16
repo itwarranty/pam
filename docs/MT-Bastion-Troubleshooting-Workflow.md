@@ -280,6 +280,26 @@ podman exec mt_ssh_bastion cat /etc/bastion/command_denylist
 
 **Закрытие окна:** по истечении `valid_until` — `jit_purge` удаляет оператора (как Tier 1 JIT).
 
+### 5.6 Gateway session kill (Tier 3)
+
+Активные gateway-сессии регистрируются в `{{ bastion_runtime_dir }}/sessions/` (mount в контейнер `/run/mt-bastion/sessions/`).
+
+```bash
+bastion-session-ctl list
+bastion-session-ctl kill <session-id>
+bastion-session-ctl kill --operator engineer1
+ansible-playbook site.yml --tags session_kill -e bastion_session_kill_id=<id>
+```
+
+**JIT purge** (`--tags jit_purge`) завершает сессии отозванных операторов до purge каталогов.
+
+**JSONL для SIEM:**
+
+```bash
+grep gateway_start /var/log/bastion_sessions/sessions.jsonl | tail -5
+jq -r 'select(.event=="gateway_end")' /var/log/bastion_sessions/sessions.jsonl
+```
+
 ---
 
 ## Блок-схема воркфлоу (слайд для презентации)

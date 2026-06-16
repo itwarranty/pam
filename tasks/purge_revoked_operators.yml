@@ -27,6 +27,14 @@
         | list
       }}
 
+- name: Kill active gateway sessions for revoked operators
+  ansible.builtin.include_tasks: tasks/kill_gateway_sessions.yml
+  vars:
+    bastion_kill_operators: "{{ bastion_revoked_operator_names }}"
+  when:
+    - bastion_revoked_operator_names | length > 0
+    - not (is_commercial_pam | bool)
+
 - name: Удаление каталогов отозванных операторов
   ansible.builtin.file:
     path: "{{ operators_home }}/{{ item }}"

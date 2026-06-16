@@ -77,11 +77,22 @@
           ansible.builtin.include_tasks: tasks/configure_ssh_brute_force.yml
           when: bastion_ssh_rate_limit_enabled | default(false) | bool
 
+        - name: Gateway lab mock target (Tier 3, опционально)
+          ansible.builtin.include_tasks: tasks/provision_gateway_lab_target.yml
+          when: bastion_gateway_lab_enabled | default(false) | bool
+
+        - name: Provisioning bastion_targets (Tier 3 gateway)
+          ansible.builtin.include_tasks: tasks/provision_bastion_targets.yml
+          when: bastion_targets | default([]) | length > 0
+
         - name: Provisioning операторов (SSH-ключи + TOTP)
           ansible.builtin.include_tasks: tasks/provision_operators.yml
 
         - name: Запуск ssh_bastion в Rootless Podman
           ansible.builtin.include_tasks: tasks/deploy_ssh_bastion.yml
+
+        - name: Install bastion-session-ctl (Tier 3)
+          ansible.builtin.include_tasks: tasks/install_session_ctl.yml
 
         - name: WORM archive session logs (опционально)
           ansible.builtin.include_tasks: tasks/archive_session_logs_worm.yml
@@ -94,6 +105,11 @@
     - name: JIT expiry purge (standalone — tag jit_purge)
       ansible.builtin.include_tasks: tasks/jit_purge.yml
       tags: [jit_purge]
+      when: not (is_commercial_pam | bool)
+
+    - name: Gateway session kill (standalone — tag session_kill)
+      ansible.builtin.include_tasks: tasks/session_kill.yml
+      tags: [session_kill]
       when: not (is_commercial_pam | bool)
 
     - name: "[CSO] Compliance verify (post-deploy)"

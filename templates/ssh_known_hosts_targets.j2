@@ -1,0 +1,5 @@
+{% for target in bastion_targets | default([]) %}
+{% if target.host_key_fingerprint | default('') | length > 0 %}
+[{{ target.host }}]:{{ target.port | default(22) }} {{ target.host_key_fingerprint }}
+{% endif %}
+{% endfor %}

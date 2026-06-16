@@ -20,6 +20,10 @@
 ./scripts/bastion-compliance-verify.sh
 ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 
+# Gateway session control (Tier 3)
+bastion-session-ctl list
+ansible-playbook -i inventory/local-lima.yml site.yml --tags session_kill -e bastion_session_kill_id=<id>
+
 # Доступ по GitHub-аккаунту
 ./scripts/repo-access.sh grant <github_user>
 ./scripts/repo-access.sh revoke <github_user>
@@ -33,8 +37,9 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 | [Engineer Onboarding](docs/Engineer-Onboarding.md) | Доступ к repo + dev-стенд |
 | [Whitepaper](docs/MT-Bastion-Whitepaper.md) | Техпаспорт для CSO |
 | [Troubleshooting Workflow](docs/MT-Bastion-Troubleshooting-Workflow.md) | Регламент инцидента |
-| [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | 10-мин пресейл |
-| [OpenSpec: Tier 1 + Tier 2 specs](openspec/specs/) | GA specs: JIT, SIEM, command policy, audit, break-glass |
+| [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | Пресейл demo |
+| [Client Without PAM](docs/MT-Bastion-Client-Without-PAM.md) | Tier 3 adoption 1-pager |
+| [OpenSpec specs](openspec/specs/) | GA specs Tier 1–3 |
 | [OpenSpec archive](openspec/changes/archive/) | Completed change history |
 
 ## Prod deploy
@@ -52,9 +57,10 @@ ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 | :--- | :--- |
 | `v0.2.0` | Tier 1 Phase A — compliance, tamper logs, source IP, SIEM |
 | `v0.4.0` | Tier 1 Phase B + C — JIT, SSH User CA policy |
-| `v0.5.0` | Tier 2 Phases A–E — incident naming, denylist, audit, rate limit, break-glass (current) |
+| `v0.5.0` | Tier 2 — incident naming, denylist, audit, rate limit, break-glass |
+| `v0.6.0` | Tier 3 — SSH gateway, target recording, session-ctl (current) |
 
-Tier 1 and Tier 2 Free features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
+Tier 1–3 Free features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
 
 ## CI
 

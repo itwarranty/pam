@@ -1,0 +1,65 @@
+---
+# Lab mock target container (mt_gateway_target) on podman network mt_bastion_net.
+- name: Gateway lab — podman network
+  ansible.builtin.command:
+    argv:
+      - podman
+      - network
+      - create
+      - "{{ bastion_gateway_lab_network }}"
+  register: gw_net_create
+  changed_when: gw_net_create.rc == 0
+  failed_when: gw_net_create.rc not in [0, 125]
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+
+- name: Gateway lab — каталог authorized_keys для mock target
+  ansible.builtin.file:
+    path: "{{ bastion_home }}/gateway_lab"
+    state: directory
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0750"
+
+- name: Gateway lab — pubkey mock target (mt_support)
+  ansible.builtin.copy:
+    src: "{{ lab_keys_dir }}/gateway-target-support.lab.pub"
+    dest: "{{ bastion_home }}/gateway_lab/authorized_keys"
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0644"
+
+- name: Gateway lab — сборка образа mock target
+  ansible.builtin.command:
+    argv:
+      - podman
+      - build
+      - -f
+      - "{{ playbook_dir }}/build/gateway-target/Containerfile"
+      - -t
+      - "{{ bastion_gateway_lab_target_image }}"
+      - "{{ playbook_dir }}"
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  register: gw_target_build
+  changed_when: "'Successfully tagged' in gw_target_build.stdout"
+
+- name: Gateway lab — контейнер mock target
+  containers.podman.podman_container:
+    name: mt_gateway_target
+    image: "{{ bastion_gateway_lab_target_image }}"
+    state: started
+    restart_policy: always
+    network: "{{ bastion_gateway_lab_network }}"
+    network_aliases:
+      - gateway-target
+    volumes:
+      - "{{ bastion_home }}/gateway_lab/authorized_keys:/etc/gateway-lab/authorized_keys:ro,Z"
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"

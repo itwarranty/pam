@@ -6,4 +6,7 @@
 {% endif %}
 
 -a always,exit -F arch=b64 -S connect -F a2=16 -k mt_bastion_ssh_connect
+{% if bastion_gateway_audit_target_keys | default(true) | bool and bastion_targets | default([]) | length > 0 %}
+-w {{ bastion_targets_home }} -p r -k mt_bastion_target_key_read
+{% endif %}
 -a always,exit -F arch=b32 -S connect -F a2=16 -k mt_bastion_ssh_connect

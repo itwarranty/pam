@@ -371,4 +371,45 @@ journalctl -t mt-bastion-break-glass --since "5 min ago" | tail -3
 
 ---
 
-*MT Global — MT: Bastion CSO Demo v1.5 (Tier 2 complete)*
+## Блок 17 — SSH Gateway (Tier 3, 2 мин)
+
+**Что сказать CSO:** «Инженер работает на target через бастion; полный TTY-лог на нашей стороне; ключ target оператор не видит.»
+
+```bash
+ssh -p 2222 -i lab/keys/gateway-lab.lab gateway-lab@127.0.0.1
+# interactive on mock target (gateway-target), then exit
+limactl shell mt-bastion-prod -- sudo ls /var/log/bastion_sessions/gateway_INC-LAB-GW-01_*
+limactl shell mt-bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/gateway_*.log.sha256
+```
+
+**Ожидание:** log + sidecars; `.meta` содержит `MODE=gateway`, `TARGET=lab-mock-01`.
+
+> После изменения gateway wrappers: `./trusted_download.sh` (в Lima) и redeploy.
+
+---
+
+## Блок 18 — Session kill (Tier 3, 1 мин)
+
+**Что сказать CSO:** «Активную gateway-сессию можно разорвать без остановки всего бастиона.»
+
+```bash
+# Terminal 1: gateway-lab session (keep open)
+# Terminal 2:
+limactl shell mt-bastion-prod -- sudo bastion-session-ctl list
+limactl shell mt-bastion-prod -- sudo bastion-session-ctl kill <session-id>
+journalctl -t mt-bastion-session-kill --since "2 min ago" | tail -3
+```
+
+**Ожидание:** сессия завершена ≤10s; syslog `mt-bastion-session-kill`.
+
+---
+
+## Блок 19 — Jump vs Gateway (Tier 3 narrative, 1 мин)
+
+**Что сказать CSO:** «Jump — для automation и connect-audit; gateway — для интерактива на prod с полным доказательством.»
+
+См. [MT-Bastion-Client-Without-PAM.md](./MT-Bastion-Client-Without-PAM.md) — five auditor questions.
+
+---
+
+*MT Global — MT: Bastion CSO Demo v1.6 (Tier 3 complete)*
