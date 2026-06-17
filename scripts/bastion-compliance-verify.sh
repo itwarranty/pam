@@ -152,10 +152,10 @@ check_session_log_dir() {
   fi
   owner="$(stat -c '%U' "${AUDIT_LOG_DIR}")"
   mode="$(stat -c '%a' "${AUDIT_LOG_DIR}")"
-  if [[ "${owner}" == "${BASTION_USER}" && "${mode}" == "750" ]]; then
+  if [[ "${owner}" == "${BASTION_USER}" && "${mode}" == "${BASTION_AUDIT_LOG_DIR_MODE:-750}" ]]; then
     log_pass "session_log_dir — ${AUDIT_LOG_DIR} ${mode} ${BASTION_USER}"
   else
-    log_fail "session_log_dir — expected 0750 ${BASTION_USER}, got ${mode} ${owner}"
+    log_fail "session_log_dir — expected ${BASTION_AUDIT_LOG_DIR_MODE:-750} ${BASTION_USER}, got ${mode} ${owner}"
   fi
 }
 

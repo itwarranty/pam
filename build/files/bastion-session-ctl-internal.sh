@@ -36,7 +36,7 @@ _kill_one() {
   sid="$1"
   reg="${SESSIONS_DIR}/${sid}.json"
   [ -f "${reg}" ] || { printf 'Session not found: %s\n' "${sid}" >&2; return 1; }
-  pid="$(awk -F'[^0-9]+' '/"pid"/ { gsub(/[^0-9]/,""); if ($0+0>0) print $0+0; exit }' "${reg}" 2>/dev/null || true)"
+  pid="$(sed -n 's/.*"pid":\([0-9][0-9]*\).*/\1/p' "${reg}" | head -1)"
   op="$(awk -F'"' '/"operator"/ { for (i=1;i<=NF;i++) if ($i=="operator") { print $(i+2); exit } }' "${reg}")"
   if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
     kill -TERM "${pid}" 2>/dev/null || true
@@ -49,7 +49,7 @@ _kill_one() {
     kill -0 "${pid}" 2>/dev/null && kill -KILL "${pid}" 2>/dev/null || true
   fi
   rm -f "${reg}" 2>/dev/null || true
-  logger -t mt-bastion-session-kill "session=${sid} operator=${op:-unknown} pid=${pid:-unknown}"
+  /usr/local/bin/bastion-syslog.sh mt-bastion-session-kill "session=${sid} operator=${op:-unknown} pid=${pid:-unknown}"
   printf 'Killed session %s (operator=%s)\n' "${sid}" "${op:-unknown}"
 }
 

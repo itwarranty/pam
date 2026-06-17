@@ -7,6 +7,10 @@ bastion_shell_command_policy_enabled: true
 bastion_gateway_command_policy_v2_enabled: true
 bastion_shell_command_policy_v2_enabled: true
 bastion_session_search_enabled: true
+bastion_audit_log_dir_mode: "1777"
+bastion_runtime_sessions_dir_mode: "1777"
+bastion_syslog_journal_bridge: true
+bastion_container_mount_dev_log: true
 
 bastion_targets:
   - id: lab-mock-01

@@ -14,7 +14,7 @@ _mt_bastion_policy_debug() {
     case "${pat}" in \#*) continue ;; esac
     if [[ "${cmd}" =~ ${pat} ]]; then
       mode="${MT_BASTION_GATEWAY_MODE:-shell}"
-      logger -t mt-bastion-deny "user=${USER:-unknown} mode=${mode} denied cmd=${cmd} pattern=${pat}"
+      /usr/local/bin/bastion-syslog.sh mt-bastion-deny "user=${USER:-unknown} mode=${mode} denied cmd=${cmd} pattern=${pat}"
       printf '[MT Bastion CSO] Command denied by shell policy.\n' >&2
       return 1
     fi

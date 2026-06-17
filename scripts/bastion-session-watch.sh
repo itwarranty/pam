@@ -2,7 +2,7 @@
 # Live tail of active gateway session log (four-eyes moderation).
 set -euo pipefail
 
-SESSIONS_DIR="${BASTION_SESSIONS_DIR:-/home/mt_bastion/runtime/sessions}"
+SESSIONS_DIR="${BASTION_RUNTIME_SESSIONS_DIR:-/home/mt_bastion/runtime/sessions}"
 JSONL="${AUDIT_LOG_DIR:-/var/log/bastion_sessions}/sessions.jsonl"
 CONTAINER="${BASTION_CONTAINER_NAME:-mt_ssh_bastion}"
 MODERATOR="${SUDO_USER:-${USER:-unknown}}"

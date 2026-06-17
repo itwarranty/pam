@@ -77,6 +77,23 @@
       }}
   when: bastion_targets | default([]) | length > 0
 
+- name: Проверка /dev/log для проброса journald в контейнер
+  ansible.builtin.stat:
+    path: /dev/log
+  register: bastion_dev_log_stat
+  when: bastion_container_mount_dev_log | default(false) | bool
+
+- name: Добавление тома /dev/log (journald для logger в контейнере)
+  ansible.builtin.set_fact:
+    bastion_container_volumes: >-
+      {{
+        bastion_container_volumes
+        + ['/dev/log:/dev/log:rw']
+      }}
+  when:
+    - bastion_container_mount_dev_log | default(false) | bool
+    - bastion_dev_log_stat.stat.exists | default(false)
+
 - name: Загрузка доверенного образа бастиона из локального архива (Air Gap)
   containers.podman.podman_load:
     input: "{{ bastion_image_tar }}"
@@ -104,6 +121,7 @@
     ports:
       - "{{ bastion_ssh_port }}:{{ bastion_ssh_port }}"
     volumes: "{{ bastion_container_volumes }}"
+    recreate: true
   become: true
   become_user: "{{ bastion_user }}"
   environment:
@@ -126,6 +144,7 @@
     ports:
       - "{{ bastion_ssh_port }}:{{ bastion_ssh_port }}"
     volumes: "{{ bastion_container_volumes }}"
+    recreate: true
   become: true
   become_user: "{{ bastion_user }}"
   environment:

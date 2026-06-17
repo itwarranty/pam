@@ -1,0 +1,59 @@
+---
+# Import container bastion.syslog lines into host journald (journalctl -t mt-bastion-*).
+- name: Каталог state для syslog bridge
+  ansible.builtin.file:
+    path: /var/lib/mt-bastion
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: bastion_syslog_journal_bridge | default(false) | bool
+
+- name: bastion-syslog-journal-bridge on host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/bastion-syslog-journal-bridge.sh"
+    dest: /usr/local/bin/bastion-syslog-journal-bridge.sh
+    mode: "0755"
+  when: bastion_syslog_journal_bridge | default(false) | bool
+
+- name: systemd timer — bastion syslog → journald
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/mt-bastion-syslog-bridge.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=MT Bastion syslog file to journald bridge
+      After=network.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/bastion-syslog-journal-bridge.sh
+
+      [Install]
+      WantedBy=multi-user.target
+  when: bastion_syslog_journal_bridge | default(false) | bool
+
+- name: systemd timer unit — bastion syslog bridge
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/mt-bastion-syslog-bridge.timer
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Run MT Bastion syslog bridge every 10s
+
+      [Timer]
+      OnBootSec=30
+      OnUnitActiveSec=10
+      Unit=mt-bastion-syslog-bridge.service
+
+      [Install]
+      WantedBy=timers.target
+  when: bastion_syslog_journal_bridge | default(false) | bool
+
+- name: Enable mt-bastion-syslog-bridge timer
+  ansible.builtin.systemd:
+    name: mt-bastion-syslog-bridge.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: bastion_syslog_journal_bridge | default(false) | bool

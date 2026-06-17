@@ -32,7 +32,7 @@ _audit_check_line() {
   esac
 
   if ! [[ "${cmd}" =~ ^(${ALLOWED_CMDS})$ ]]; then
-    logger -t mt-bastion-deny "audit user=${USER} denied cmd=${cmd}"
+    /usr/local/bin/bastion-syslog.sh mt-bastion-deny "audit user=${USER} denied cmd=${cmd}"
     echo "[MT Bastion CSO] Command not permitted for audit role." >&2
     return 1
   fi

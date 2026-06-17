@@ -104,6 +104,10 @@
             (bastion_session_search_enabled | default(true) | bool)
             or (bastion_session_watch_enabled | default(true) | bool)
 
+        - name: Syslog file → journald bridge (gateway lab / rootless podman)
+          ansible.builtin.include_tasks: tasks/configure_bastion_syslog_journal.yml
+          when: bastion_syslog_journal_bridge | default(false) | bool
+
         - name: WORM archive session logs (опционально)
           ansible.builtin.include_tasks: tasks/archive_session_logs_worm.yml
           tags: [worm_archive]

@@ -171,9 +171,9 @@
       - verify_session_log_dir.stat.exists
       - verify_session_log_dir.stat.isdir
       - verify_session_log_dir.stat.pw_name == bastion_user
-      - verify_session_log_dir.stat.mode == '0750'
+      - verify_session_log_dir.stat.mode == (bastion_audit_log_dir_mode | default('0750'))
     fail_msg: >-
-      FAIL:session_log_dir — expected {{ audit_log_dir }} dir 0750 owner {{ bastion_user }}
+      FAIL:session_log_dir — expected {{ audit_log_dir }} dir {{ bastion_audit_log_dir_mode | default('0750') }} owner {{ bastion_user }}
   tags: [verify_compliance]
 
 - name: "[Verify] Bastion SSH port open in firewalld"

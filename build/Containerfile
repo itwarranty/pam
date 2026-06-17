@@ -36,6 +36,7 @@ COPY build/files/bastion-ssh-gateway-exec.sh /usr/local/bin/bastion-ssh-gateway-
 COPY build/files/bastion-session-ctl-internal.sh /usr/local/bin/bastion-session-ctl-internal.sh
 COPY build/files/bastion-pty-inspector.py /usr/local/bin/bastion-pty-inspector.py
 COPY build/files/bastion-pty-inspector.sh /usr/local/bin/bastion-pty-inspector.sh
+COPY build/files/bastion-syslog.sh /usr/local/bin/bastion-syslog.sh
 
 RUN mkdir -p /run/mt-bastion/sessions \
     && chmod 0755 /usr/local/bin/bastion-shell-wrapper.sh /usr/local/bin/bastion-entrypoint.sh \
@@ -44,6 +45,8 @@ RUN mkdir -p /run/mt-bastion/sessions \
     /usr/local/bin/bastion-ssh-gateway-wrapper.sh /usr/local/bin/bastion-ssh-gateway.sh \
     /usr/local/bin/bastion-ssh-gateway-exec.sh /usr/local/bin/bastion-session-ctl-internal.sh \
     /usr/local/bin/bastion-pty-inspector.py /usr/local/bin/bastion-pty-inspector.sh \
+    /usr/local/bin/bastion-syslog.sh \
+    && ln -sf /usr/local/bin/bastion-session-ctl-internal.sh /usr/local/bin/bastion-session-ctl-internal \
     && if [ "${MFA_STRICT}" = "1" ]; then \
          printf '%s\n' '#%PAM-1.0' \
            'auth required pam_google_authenticator.so' \

@@ -7,12 +7,14 @@ _sanitize() {
 }
 
 SESSIONS_DIR="${MT_BASTION_SESSIONS_DIR:-/run/mt-bastion/sessions}"
-PERMIT_FILE="/etc/bastion/operators/${USER}/permit_open"
+TARGETS_ROOT="${MT_BASTION_TARGETS_DIR:-/run/mt-bastion/targets-runtime}"
+[ -d "${TARGETS_ROOT}" ] || TARGETS_ROOT="/etc/bastion/targets"
+PERMIT_FILE="/home/${USER}/permit_open"
 JSONL="${MT_BASTION_JSONL:-/var/log/bastion_sessions/sessions.jsonl}"
 TARGETS_LIST="/tmp/.mt-gw-targets.$$"
 
 _fail() {
-  logger -t mt-bastion-gateway "user=${USER} error=$* client=${SSH_CLIENT:-unknown}"
+  /usr/local/bin/bastion-syslog.sh mt-bastion-gateway "user=${USER} error=$* client=${SSH_CLIENT:-unknown}"
   printf '[MT Bastion Gateway] %s\n' "$*" >&2
   exit 1
 }
@@ -24,7 +26,7 @@ _append_jsonl() {
 
 _resolve_targets() {
   : > "${TARGETS_LIST}"
-  for envf in /etc/bastion/targets/*/target.env; do
+  for envf in "${TARGETS_ROOT}"/*/target.env; do
     [ -f "${envf}" ] || continue
     # shellcheck disable=SC1090
     . "${envf}"
@@ -64,7 +66,7 @@ rm -f "${TARGETS_LIST}"
 [ -n "${TARGET_ID}" ] || _fail "Invalid target selection."
 
 # shellcheck disable=SC1090
-. "/etc/bastion/targets/${TARGET_ID}/target.env"
+. "${TARGETS_ROOT}/${TARGET_ID}/target.env"
 
 INCIDENT_RAW="${MT_BASTION_INCIDENT_ID:-}"
 INCIDENT_TAG=""
@@ -87,7 +89,7 @@ printf '{"id":"%s","operator":"%s","target_id":"%s","target_host":"%s","target_p
   "${SESSION_ID}" "${USER}" "${TARGET_ID}" "${HOST}" "${PORT}" "${ACCOUNT}" "$$" "${UTC_START}" "${LOG}" \
   > "${REG_FILE}"
 
-logger -t mt-bastion-gateway \
+/usr/local/bin/bastion-syslog.sh mt-bastion-gateway \
   "session start id=${SESSION_ID} user=${USER} target=${TARGET_ID} host=${HOST}:${PORT} log=${LOG} client=${CLIENT}"
 
 _append_jsonl "$(printf \
@@ -122,5 +124,5 @@ _append_jsonl "$(printf \
   "${UTC_END}" "${SESSION_ID}" "${USER}" "${TARGET_ID}" "${EXIT_CODE}" "${LOG_SHA}")"
 
 rm -f "${REG_FILE}" 2>/dev/null || true
-logger -t mt-bastion-gateway "session end id=${SESSION_ID} user=${USER} exit=${EXIT_CODE}"
+/usr/local/bin/bastion-syslog.sh mt-bastion-gateway "session end id=${SESSION_ID} user=${USER} exit=${EXIT_CODE}"
 exit "${EXIT_CODE}"

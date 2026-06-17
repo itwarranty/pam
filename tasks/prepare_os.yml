@@ -56,7 +56,15 @@
     state: directory
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
-    mode: "0750"
+    mode: "{{ bastion_audit_log_dir_mode | default('0750') }}"
+
+- name: Shared bastion syslog file (container operators append)
+  ansible.builtin.file:
+    path: "{{ audit_log_dir }}/bastion.syslog"
+    state: touch
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "{{ bastion_audit_log_file_mode | default('0666') }}"
 
 # Append-only (+a) — на *.log при создании (bastion-shell-wrapper / entrypoint), не на каталог.
 

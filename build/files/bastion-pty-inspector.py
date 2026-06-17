@@ -95,8 +95,7 @@ def main():
                         os.write(sys.stdout.fileno(), msg.encode())
                         subprocess.run(
                             [
-                                "logger",
-                                "-t",
+                                "/usr/local/bin/bastion-syslog.sh",
                                 "mt-bastion-deny",
                                 f"mode={mode} user={os.environ.get('USER', 'unknown')} "
                                 f"denied pattern={matched} cmd={line!r}",

@@ -5,8 +5,10 @@ set -eu
 apk add --no-cache openssh openssh-server-pam shadow sudo 2>/dev/null || true
 
 if ! id mt_support >/dev/null 2>&1; then
-  adduser -D -s /bin/bash mt_support
+  adduser -D -s /bin/sh mt_support
 fi
+usermod -p '*' mt_support 2>/dev/null || true
+passwd -u mt_support 2>/dev/null || true
 
 mkdir -p /home/mt_support/.ssh
 chmod 700 /home/mt_support/.ssh
