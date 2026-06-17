@@ -1,6 +1,6 @@
 # MT: Bastion
 
-Бесплатная open-source версия **«МТ Доступ»** — Security-as-a-Code jump host для Rocky Linux 9 (Rootless Podman, CSO Policy Gate).
+Open-source tier продукта **«МТ Доступ»** — **SSH PAM** (Privileged Access Management) для Rocky Linux 9: gateway, MFA, JIT, session recording, Security-as-a-Code (Rootless Podman, CSO Policy Gate).
 
 ## Quick start (dev)
 
@@ -43,6 +43,7 @@ bastion-session-watch <session-id>
 | [Troubleshooting Workflow](docs/MT-Bastion-Troubleshooting-Workflow.md) | Регламент инцидента |
 | [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | Пресейл demo |
 | [МТ Доступ SSH PAM Overview](docs/MT-Dostup-SSH-PAM-Overview.md) | PAM positioning для заказчика |
+| [FIDO Onboarding](docs/MT-Bastion-FIDO-Onboarding.md) | FIDO-sk + TOTP (Tier 5) |
 | [Battlecard vs СКДПУ SSH](docs/MT-Bastion-Battlecard-SKDPU-SSH.md) | Пресейл сравнение |
 | [HA Runbook](docs/MT-Bastion-HA-Runbook.md) | Active-passive failover |
 | [OpenSpec specs](openspec/specs/) | GA specs Tier 1–4 |
@@ -66,8 +67,9 @@ bastion-session-watch <session-id>
 | `v0.5.0` | Tier 2 — incident naming, denylist, audit, rate limit, break-glass |
 | `v0.6.0` | Tier 3 — SSH gateway, target recording, session-ctl |
 | **`v1.0.0`** | **Tier 4 — SSH PAM GA:** search, policy v2, watch, Vault, OIDC examples, HA |
+| **`v1.1.0`** | **Tier 5 — FIDO-Anchor MFA:** `ed25519-sk` + TOTP, JIT sk certs |
 
-Tier 1–4 Free features are **fully implemented in this repo**. Live SSH User CA QA requires org PKI — see `openspec/changes/archive/README.md`.
+Tier 1–5 реализованы в репозитории. FIDO onboarding: [docs/MT-Bastion-FIDO-Onboarding.md](docs/MT-Bastion-FIDO-Onboarding.md).
 
 ## CI
 

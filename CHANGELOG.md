@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.0 — FIDO-Anchor MFA (Tier 5)
+
+- FIDO2 / platform SSH keys (`ed25519-sk -O verify-required`) as first factor
+- MFA modes: `totp`, `fido_totp`, `fido_only` (CSO waiver)
+- Preflight + compliance verify `fido_pubkey`
+- JIT certificate signing for FIDO keys (`sign-operator-cert-jit.sh.example`)
+- FIDO onboarding doc, Policy Gate #32–33
+
 ## v1.0.0 — SSH PAM GA (Tier 4)
 
 - Session search CLI (`bastion-session-search`)

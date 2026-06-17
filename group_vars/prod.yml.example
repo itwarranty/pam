@@ -11,6 +11,10 @@ bastion_session_search_enabled: true
 bastion_session_watch_enabled: true
 bastion_ssh_user_ca_qa_complete: true  # after internal PKI sign-off
 
+# Tier 5 FIDO-Anchor MFA (recommended prod)
+bastion_require_fido_pubkey: true
+bastion_mfa_mode: fido_totp
+
 # bastion_vault_enabled: true
 # bastion_vault_addr: "https://vault.internal.example"
 # bastion_oidc_cert_policy_enabled: true

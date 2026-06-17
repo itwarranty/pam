@@ -1,12 +1,13 @@
 # Battlecard: MT «МТ Доступ» SSH vs СКДПУ SSH
 
-| Критерий | СКДПУ «Шлюз SSH» | MT: Bastion Free (v1.0) |
+| Критерий | СКДПУ «Шлюз SSH» | «МТ Доступ» open-source (v1.0) |
 |:---|:---|:---|
 | Запись сессии на target | ✅ | ✅ gateway PTY log + hash |
 | Credential broking | ✅ | ✅ Ansible Vault / HashiCorp |
 | Live moderation | ✅ | ✅ `bastion-session-watch` |
 | Session kill | ✅ | ✅ `bastion-session-ctl` |
-| MFA | ✅ | ✅ TOTP strict |
+| MFA | ✅ | ✅ TOTP strict + **FIDO-sk (Tier 5)** |
+| FIDO2 / platform key | ✅ | ✅ `ed25519-sk` (no tsh client) |
 | Security-as-a-Code | ⚠️ | ✅ Git/Ansible |
 | Air Gap | ✅ | ✅ immutable image |
 | ФСТЭК / реестр | ✅ | ❌ org track |
@@ -17,4 +18,4 @@
 
 ---
 
-*MT Global — Battlecard v1.0*
+*MT Global — Battlecard v1.1*

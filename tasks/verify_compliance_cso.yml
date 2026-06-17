@@ -249,7 +249,44 @@
   when: bastion_targets | default([]) | length > 0
   tags: [verify_compliance]
 
+- name: "[Verify] FIDO-sk operator keys (Tier 5)"
+  ansible.builtin.slurp:
+    src: "{{ operators_home }}/{{ item.name }}/.ssh/authorized_keys"
+  register: verify_fido_authorized_keys
+  loop: "{{ bastion_operators_effective | default(bastion_operators) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - bastion_require_fido_pubkey | default(false) | bool
+    - not (is_commercial_pam | bool)
+    - item.name not in (bastion_fido_waiver_operators | default([]))
+  tags: [verify_compliance]
+
+- name: "[Verify] FIDO-sk key material"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    tmp="$(mktemp)"
+    trap 'rm -f "$tmp"' EXIT
+    echo '{{ item.content }}' | base64 -d > "$tmp"
+    line="$(grep -v '^#' "$tmp" | sed '/^[[:space:]]*$/d' | head -1)"
+    test -n "$line"
+    python3 "{{ playbook_dir }}/scripts/preflight-fido-key.py" "$line"
+  environment:
+    BASTION_FIDO_ECDSA_SK_ALLOWED: "{{ bastion_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
+  changed_when: false
+  loop: "{{ verify_fido_authorized_keys.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - bastion_require_fido_pubkey | default(false) | bool
+    - not (is_commercial_pam | bool)
+    - item.content is defined
+    - not (item.skipped | default(false))
+  tags: [verify_compliance]
+
 - name: "[Verify] Compliance summary"
   ansible.builtin.debug:
-    msg: "PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist, auditd, firewalld, session logs)"
+    msg: >-
+      PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist,
+      auditd, firewalld, session logs{% if bastion_require_fido_pubkey | default(false) %}, FIDO-sk operators{% endif %})
   tags: [verify_compliance]

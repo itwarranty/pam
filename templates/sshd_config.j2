@@ -24,9 +24,15 @@ ClientAliveCountMax 2
 LogLevel VERBOSE
 SyslogFacility AUTH
 
-# MFA: pubkey + TOTP (PAM google-authenticator внутри образа)
+{% if bastion_mfa_mode | default('totp') == 'fido_only' and bastion_fido_only_waiver | default(false) | bool and bastion_require_fido_pubkey | default(false) | bool %}
+# MFA fido_only (CSO waiver): FIDO-sk pubkey/cert only — no TOTP prompt
+KbdInteractiveAuthentication no
+AuthenticationMethods publickey
+{% else %}
+# MFA: pubkey/cert + TOTP (PAM google-authenticator внутри образа)
 KbdInteractiveAuthentication yes
 AuthenticationMethods publickey,keyboard-interactive
+{% endif %}
 
 {% if bastion_trusted_user_ca_file | default('') | length > 0 %}
 # User certificates, подписанные CA организации (например *.mtglobal.team)

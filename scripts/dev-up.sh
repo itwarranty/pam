@@ -21,6 +21,21 @@ ensure_lab_keys() {
   done
 }
 
+ensure_fido_lab_keys() {
+  [[ "${BASTION_FIDO_LAB:-0}" == "1" ]] || return 0
+  if [[ -f lab/keys/engineer-fido.lab ]]; then
+    echo "[dev-up] FIDO lab key engineer-fido.lab already present"
+    return 0
+  fi
+  echo "[dev-up] Generating FIDO sk key lab/keys/engineer-fido.lab (verify-required) ..."
+  if ssh-keygen -t ed25519-sk -O verify-required -f lab/keys/engineer-fido.lab -N "" -C "engineer-fido@mtglobal.team" 2>/dev/null; then
+    echo "[dev-up] FIDO lab key OK — enable bastion_fido_lab_enabled for deploy"
+  else
+    echo "[dev-up] SKIP FIDO key: no sk/FIDO support on this host."
+    echo "[dev-up] See docs/MT-Bastion-FIDO-Onboarding.md — use Mac Touch ID or YubiKey manually."
+  fi
+}
+
 INSTANCE="${LIMA_INSTANCE_NAME:-mt-bastion-prod}"
 
 ensure_lima() {
@@ -54,13 +69,19 @@ ensure_image() {
 }
 
 ensure_lab_keys
+ensure_fido_lab_keys
 ensure_lima
 ensure_image
 
 ansible-galaxy collection install -r requirements.yml
 
+EXTRA_ARGS=()
+if [[ "${BASTION_FIDO_LAB:-0}" == "1" ]]; then
+  EXTRA_ARGS+=(-e bastion_fido_lab_enabled=true)
+fi
+
 echo "[dev-up] Deploying (dev operators from group_vars/dev/) ..."
-ansible-playbook -i inventory/local-lima.yml site.yml
+ansible-playbook -i inventory/local-lima.yml site.yml "${EXTRA_ARGS[@]}"
 
 echo ""
 echo "[dev-up] SSH bastion (порт 2222, после деплоя):"
@@ -69,4 +90,7 @@ echo "  ssh -p 2222 -i lab/keys/engineer-shell.lab engineer-shell@127.0.0.1"
 echo "  ssh -p 2222 -i lab/keys/engineer-audit.lab engineer-audit@127.0.0.1"
 echo "  ssh -p 2222 -i lab/keys/breakglass-lab.lab breakglass-lab@127.0.0.1"
 echo "  ssh -p 2222 -i lab/keys/gateway-lab.lab gateway-lab@127.0.0.1"
-echo "TOTP: см. otpauth URI в group_vars/dev/lab.yml"
+if [[ "${BASTION_FIDO_LAB:-0}" == "1" ]] && [[ -f lab/keys/engineer-fido.lab ]]; then
+  echo "  ssh -p 2222 -i lab/keys/engineer-fido.lab engineer-fido@127.0.0.1  # FIDO-sk + TOTP"
+fi
+echo "TOTP: см. otpauth URI в group_vars/dev/lab.yml (engineer-fido — fido_lab.yml)"

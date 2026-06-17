@@ -21,6 +21,9 @@ BASTION_REQUIRED_MFA_LABEL="${BASTION_REQUIRED_MFA_LABEL:-1}"
 CONTAINER_NAME="${BASTION_CONTAINER_NAME:-mt_ssh_bastion}"
 BASTION_TARGETS_HOME="${BASTION_TARGETS_HOME:-/home/${BASTION_USER}/targets}"
 BASTION_SESSION_SEARCH_ENABLED="${BASTION_SESSION_SEARCH_ENABLED:-false}"
+BASTION_REQUIRE_FIDO_PUBKEY="${BASTION_REQUIRE_FIDO_PUBKEY:-false}"
+BASTION_FIDO_ECDSA_SK_ALLOWED="${BASTION_FIDO_ECDSA_SK_ALLOWED:-false}"
+BASTION_FIDO_WAIVER_OPERATORS="${BASTION_FIDO_WAIVER_OPERATORS:-}"
 
 PASS=0
 FAIL=0
@@ -220,6 +223,53 @@ check_tier4_cli() {
   fi
 }
 
+check_fido_pubkey() {
+  [[ "${BASTION_REQUIRE_FIDO_PUBKEY}" != "true" ]] && return 0
+  local script="${BASTION_FIDO_CHECK_SCRIPT:-/usr/local/lib/mt-bastion/preflight-fido-key.py}"
+  local waiver=" ${BASTION_FIDO_WAIVER_OPERATORS} "
+  local op ak line name failures=0
+
+  if [[ ! -f "${script}" ]]; then
+    script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight-fido-key.py"
+  fi
+  if [[ ! -f "${script}" ]]; then
+    log_fail "fido_pubkey — preflight-fido-key.py not found"
+    return
+  fi
+
+  if [[ ! -d "${OPERATORS_HOME}" ]]; then
+    log_fail "fido_pubkey — operators home missing: ${OPERATORS_HOME}"
+    return
+  fi
+
+  for opdir in "${OPERATORS_HOME}"/*; do
+    [[ -d "${opdir}" ]] || continue
+    name="$(basename "${opdir}")"
+    case "${waiver}" in
+      *" ${name} "*) continue ;;
+    esac
+    ak="${opdir}/.ssh/authorized_keys"
+    [[ -f "${ak}" ]] || { log_fail "fido_pubkey — ${name}: authorized_keys missing"; failures=$((failures + 1)); continue; }
+    line="$(grep -v '^#' "${ak}" | head -1 || true)"
+    if [[ -z "${line}" ]]; then
+      log_fail "fido_pubkey — ${name}: empty authorized_keys"
+      failures=$((failures + 1))
+      continue
+    fi
+    if BASTION_FIDO_ECDSA_SK_ALLOWED="${BASTION_FIDO_ECDSA_SK_ALLOWED}" \
+      python3 "${script}" "${line}" >/dev/null 2>&1; then
+      :
+    else
+      log_fail "fido_pubkey — ${name}: not FIDO-sk backed"
+      failures=$((failures + 1))
+    fi
+  done
+
+  if [[ "${failures}" -eq 0 ]]; then
+    log_pass "fido_pubkey — all operators use FIDO-sk keys or certs (CSO policy)"
+  fi
+}
+
 main() {
   printf '=== MT Bastion compliance verify ===\n\n'
   check_os
@@ -237,6 +287,7 @@ main() {
   check_gateway_manifest
   check_jq_optional
   check_tier4_cli
+  check_fido_pubkey
 
   printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"
   if [[ "${FAIL}" -gt 0 ]]; then

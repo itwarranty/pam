@@ -34,4 +34,11 @@
 # bastion_ha_enabled: false
 # bastion_ha_role: primary
 
+# Tier 5 FIDO-Anchor MFA (v1.1)
+# bastion_require_fido_pubkey: false
+# bastion_mfa_mode: totp  # totp | fido_totp | fido_only
+# bastion_fido_only_waiver: false
+# bastion_fido_ecdsa_sk_allowed: false
+# bastion_fido_waiver_operators: []
+
 # Tier 2 Free — CSO optional controls (openspec/specs/)

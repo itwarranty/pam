@@ -1,4 +1,4 @@
-# Сценарий демонстрации MT: Bastion для CSO (10 минут)
+# Сценарий демонстрации «МТ Доступ» для CSO (~10 мин)
 
 **Аудитория:** CSO, архитектор ИБ, аудитор  
 **Цель:** показать Policy Gate, изоляцию и аудит — не «скрипт», а корпоративный control  
@@ -35,8 +35,11 @@ ansible-playbook -i inventory/local-lima.yml site.yml
 
 | Учётная запись | Роль | Ключ |
 | :--- | :--- | :--- |
+| `gateway-lab` | `access: gateway` | `lab/keys/gateway-lab.lab` |
 | `engineer-jump` | `access: jump` | `lab/keys/engineer-jump.lab` |
 | `engineer-shell` | `access: shell` | `lab/keys/engineer-shell.lab` |
+| `engineer-audit` | `access: audit` | `lab/keys/engineer-audit.lab` |
+| `breakglass-lab` | `access: shell` (break-glass) | `lab/keys/breakglass-lab.lab` |
 
 TOTP-секреты — в комментариях `group_vars/dev/lab.yml` (фиксированные для lab).
 
@@ -456,4 +459,21 @@ grep moderator_watch_start /var/log/bastion_sessions/sessions.jsonl | tail -1
 
 ---
 
-*MT Global — MT: Bastion CSO Demo v1.7 (Tier 4 complete)*
+## Блок 23 — FIDO-Anchor MFA (Tier 5, опционально, 1 мин)
+
+**Что сказать CSO:** «Phishing-resistant первый фактор — Touch ID / YubiKey на ноутбуке; TOTP остаётся на бастion. Без proprietary client.»
+
+```bash
+# Требуется FIDO hardware + BASTION_FIDO_LAB=1 deploy:
+BASTION_FIDO_LAB=1 ./scripts/dev-up.sh
+ssh -p 2222 -i lab/keys/engineer-fido.lab engineer-fido@127.0.0.1
+python3 scripts/preflight-fido-key.py < test/fixtures/fido-pubkey.txt
+```
+
+**Ожидание:** touch/PIN при SSH; TOTP prompt; preflight script exit 0 на sk fixture.
+
+> Без hardware — пропустить блок; lab regression на `engineer-jump.lab` без FIDO.
+
+---
+
+*MT Global — CSO Demo v1.9 (v1.1.0)*

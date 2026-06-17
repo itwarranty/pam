@@ -63,7 +63,7 @@ https://github.com/MT-Global-Team/mt-bastion → Settings → Collaborators — 
 ### Что не передавать инженерам
 
 - Prod-секреты (`group_vars/all.yml`, Ansible Vault)
-- Private SSH User CA (когда будет включён — см. OpenSpec `openspec/changes/ssh-user-ca-qa-mtglobal/`)
+- Private SSH User CA — см. `openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/`
 - Prod TOTP из `generated/mfa/`
 
 ---
@@ -100,7 +100,7 @@ brew install lima podman ansible
 
 Скрипт выполняет:
 
-1. `lab/keys/engineer-jump.lab`, `engineer-shell.lab` (если нет)
+1. `lab/keys/*.lab` (jump, shell, gateway, audit, break-glass — при отсутствии)
 2. Lima VM `mt-bastion-prod` (`./tests/start-lima.sh`)
 3. Сборку/синхронизацию образа (`trusted_download.sh`, `tests/sync-artifacts.sh`)
 4. `ansible-playbook -i inventory/local-lima.yml site.yml`
@@ -109,22 +109,26 @@ brew install lima podman ansible
 
 | Файл | Назначение |
 | :--- | :--- |
-| `group_vars/dev/lab.yml` | Операторы `engineer-jump`, `engineer-shell`, фиксированный TOTP |
-| `group_vars/dev/operators_merge.yml` | `bastion_operators = lab + test` |
+| `group_vars/dev/lab.yml` | Базовые операторы jump/shell |
+| `group_vars/dev/gateway_lab.yml` | `gateway-lab`, mock target |
+| `group_vars/dev/audit_lab.yml`, `break_glass_lab.yml` | audit / break-glass |
+| `group_vars/dev/operators_merge.yml` | Слияние всех lab-операторов |
 | `group_vars/local_lima.yml` | Путь к tar на Lima |
 | `inventory/local-lima.yml` | Host `mt-bastion-lima` через Lima SSH |
 
 ### 5. Проверка SSH к бастion-контейнеру
 
 ```bash
+ssh -p 2222 -i lab/keys/gateway-lab.lab gateway-lab@127.0.0.1
 ssh -p 2222 -i lab/keys/engineer-jump.lab engineer-jump@127.0.0.1
 ssh -p 2222 -i lab/keys/engineer-shell.lab engineer-shell@127.0.0.1
 ```
 
 TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 
-**Jump:** прямой shell должен быть отклонён (`restrict,port-forwarding`).  
-**Shell:** интерактивная сессия + лог в `/var/log/bastion_sessions/`.
+**Jump:** прямой shell отклонён (`restrict,port-forwarding`).  
+**Gateway:** интерактив на mock target; лог `gateway_*` на хосте.  
+**Shell:** PTY + лог в `/var/log/bastion_sessions/`.
 
 ### 6. Сценарии для отчёта
 
@@ -156,6 +160,18 @@ Prod profile: `group_vars/prod.yml.example`
 
 Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только по согласованию с lead / CSO.
 
+## Tier 5 — FIDO-Anchor MFA (v1.1)
+
+| Действие | Команда / документ |
+| :--- | :--- |
+| Onboarding | [MT-Bastion-FIDO-Onboarding.md](./MT-Bastion-FIDO-Onboarding.md) |
+| Lab FIDO operator | `BASTION_FIDO_LAB=1 ./scripts/dev-up.sh` |
+| Preflight check | `python3 scripts/preflight-fido-key.py < test/fixtures/fido-pubkey.txt` |
+| JIT cert (sk) | `scripts/sign-operator-cert-jit.sh.example` |
+| Prod vars | `bastion_require_fido_pubkey: true`, `bastion_mfa_mode: fido_totp` |
+
+Dev lab по умолчанию: `bastion_require_fido_pubkey: false` — `.lab` keys без изменений.
+
 ---
 
 ## Troubleshooting
@@ -168,4 +184,4 @@ Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только п�
 
 ---
 
-*MT Global — Engineer Onboarding v1.4*
+*MT Global — Engineer Onboarding v1.5*

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# MT Bastion — JIT-aligned SSH user certificate for FIDO-sk operator keys (EXAMPLE).
+#
+# Reads operator window from env (typically from bastion_operators YAML):
+#   OPERATOR_NAME=engineer1
+#   SK_PUBKEY_PATH=~/.ssh/mt-bastion-fido.pub
+#   VALID_FROM=2026-06-01T08:00:00Z   # optional; default now
+#   VALID_UNTIL=2026-06-01T20:00:00Z
+#   MT_BASTION_USER_CA_KEY=/secure/mtglobal.team-user-ca
+#
+# Usage:
+#   export OPERATOR_NAME SK_PUBKEY_PATH VALID_UNTIL MT_BASTION_USER_CA_KEY
+#   ./scripts/sign-operator-cert-jit.sh.example
+
+set -euo pipefail
+
+NAME="${OPERATOR_NAME:?set OPERATOR_NAME}"
+PUB="${SK_PUBKEY_PATH:?set SK_PUBKEY_PATH to FIDO .pub}"
+VU="${VALID_UNTIL:?set VALID_UNTIL (ISO8601, matches bastion_operators valid_until)}"
+VF="${VALID_FROM:-}"
+DOMAIN="${MT_BASTION_CERT_DOMAIN:-mtglobal.team}"
+CA_KEY="${MT_BASTION_USER_CA_KEY:?set MT_BASTION_USER_CA_KEY}"
+MAX_H="${MT_BASTION_CERT_MAX_VALIDITY_HOURS:-72}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+[[ -f "${PUB}" ]] || { echo "Pubkey not found: ${PUB}" >&2; exit 1; }
+
+if ! python3 "${SCRIPT_DIR}/preflight-fido-key.py" "${PUB}"; then
+  echo "JIT cert signing requires FIDO-sk pubkey (ed25519-sk -O verify-required)" >&2
+  exit 1
+fi
+
+if [[ -z "${VF}" ]]; then
+  VALIDITY="-1d:${VU}"
+else
+  VALIDITY="${VF}:${VU}"
+fi
+
+OUT="$(dirname "${PUB}")/${NAME}-cert.pub"
+ssh-keygen -s "${CA_KEY}" -I "${NAME}@${DOMAIN}" -n "${NAME}" -V "${VALIDITY}" \
+  -z "$(date +%s)" "${PUB}"
+mv -f "${PUB}-cert.pub" "${OUT}"
+
+printf '[sign-operator-cert-jit] %s validity %s (max CSO default %sh)\n' "${OUT}" "${VALIDITY}" "${MAX_H}"
+printf 'Cross-ref: bastion-jit-access-windows, bastion-ssh-user-cert-operators\n'
+printf 'Ansible: certificate + valid_from/valid_until on operator in bastion_operators\n'

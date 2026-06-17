@@ -346,3 +346,7 @@
     - not (is_commercial_pam | bool)
     - item.pubkey | default('') | length > 0
     - item.certificate | default('') | length == 0
+
+- name: "[CSO] FIDO-Anchor operator key policy (Tier 5)"
+  ansible.builtin.include_tasks: preflight_fido_operators.yml
+  when: not (is_commercial_pam | bool)

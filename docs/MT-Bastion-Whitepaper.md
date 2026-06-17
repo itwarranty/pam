@@ -2,14 +2,14 @@
 
 ## Архитектура и защитные контроли шлюза удаленного доступа «MT: Bastion»
 
-**Версия документа:** 1.6  
-**Статус:** Релиз (Tier 4 Free complete — SSH PAM GA)  
-**Продукт (git tags):** `v1.0.0` — см. § «Версии релиза»  
+**Версия документа:** 1.7  
+**Статус:** Релиз (Tier 5 FIDO-Anchor — v1.1.0)  
+**Продукт (git tags):** `v1.1.0` — см. § «Версии релиза»  
 **Разработчик:** MT Global  
 
 ---
 
-## Версии релиза (Tier 1 + Tier 2 + Tier 3 + Tier 4 Free)
+## Версии релиза
 
 | Git tag | Содержание | Статус |
 | :--- | :--- | :--- |
@@ -19,37 +19,10 @@
 | **v0.5.0** | **Tier 2:** incident naming, denylist, audit role, rate limit, break-glass | ✅ |
 | **v0.6.0** | **Tier 3:** SSH gateway, target recording, session-ctl, jump/gateway policy | ✅ |
 | **v1.0.0** | **Tier 4:** session search, policy v2, live watch, Vault, OIDC examples, HA runbook | ✅ |
+| **v1.1.0** | **Tier 5:** FIDO-Anchor MFA (`ed25519-sk` + TOTP), JIT cert signing for sk keys | ✅ |
 | **Org gate** | Live PKI QA + `bastion_ssh_user_ca_qa_complete: true` on internal prod | ⏳ org |
 
-Спецификации: `openspec/specs/`. История changes: `openspec/changes/archive/`.
-
-### Tier 1 — что реализовано в репозитории
-
-| Фаза | Реализация |
-| :--- | :--- |
-| **A** | `verify_compliance_cso.yml`, `bastion-shell-wrapper.sh` (`.sha256`/`.meta`), `from=`, SIEM, WORM |
-| **B** | `jit_filter_operators.yml`, `--tags jit_purge`, `configure_jit_timer.yml` (opt-in) |
-| **C** | `bastion_allow_raw_pubkey_prod`, preflight, `sign-operator-cert.sh.example`, QA `.example` |
-
-### Tier 2 — что реализовано в репозитории
-
-| Фаза | Реализация |
-| :--- | :--- |
-| **A** | `incident_id` в basename session log (`bastion-shell-wrapper.sh`) |
-| **B** | `bastion-command-policy.sh`, `command_denylist` mount, DEBUG trap denylist |
-| **C** | `access: audit`, `bastion-audit-shell-wrapper.sh`, preflight enum |
-| **D** | `configure_ssh_brute_force.yml` (firewalld / opt-in fail2ban), compliance verify |
-| **E** | `break_glass: true`, preflight max window, auditd key, syslog `BREAK_GLASS=1` |
-
-### Tier 3 — что реализовано в репозитории
-
-| Фаза | Реализация |
-| :--- | :--- |
-| **A** | `bastion_targets`, gateway wrappers, `gateway_*` logs + sidecars, lab mock target |
-| **B** | `bastion-session-ctl`, JIT kill, tag `session_kill` |
-| **C** | Gateway command policy, `known_hosts`, auditd `mt_bastion_target_key_read` |
-| **D** | JSONL `sessions.jsonl`, SIEM appendix |
-| **E** | `bastion_prod_require_gateway`, jump waiver, client 1-pager |
+Спецификации: `openspec/specs/`. История changes: `openspec/changes/archive/`. Краткий индекс кода: [docs/README.md](./README.md).
 
 ### Вне репозитория (организационно)
 
@@ -60,7 +33,7 @@
 
 ## 1. Executive Summary (Общее описание)
 
-**MT: Bastion** — отчуждаемое программное решение класса *Security-as-a-Code (SaaC)*, предназначенное для организации контролируемого, изолированного и полностью аудируемого удалённого доступа инженеров технической поддержки во внутренний периметр заказчика.
+**MT: Bastion** — open-source tier продукта **«МТ Доступ»**: полноценный **SSH PAM** (Privileged Access Management) в модели *Security-as-a-Code*. Заменяет коммерческий PAM-шлюз для Linux: контролируемый, изолированный и полностью аудируемый доступ инженеров поддержки во внутренний периметр заказчика.
 
 Решение спроектировано по методологии **Zero Trust (микросегментация на уровне сессий)** и ориентировано на развёртывание в изолированных, критических и **Air-Gapped** контурах без необходимости прямого доступа к сети Интернет на этапе эксплуатации.
 
@@ -69,6 +42,7 @@
 - **Полная декларативность:** развёртывание, конфигурация и управление доступом осуществляются через идемпотентные сценарии Ansible.
 - **Вендор-агностичность:** сквозной триггер `is_commercial_pam` позволяет переключать контур авторизации с open-source стека на промышленное коммерческое ПО (PAM-системы) без изменения логики деплоя.
 - **Изоляция рантайма:** исключено использование привилегированного контекста внутри контейнера. Бастион функционирует в Rootless Podman под непривилегированным пользователем хоста `mt_bastion`.
+- **FIDO-Anchor MFA (v1.1):** prod рекомендует **client-side** `ed25519-sk -O verify-required` (Touch ID / YubiKey) как первый фактор + **offline TOTP** на бастion; без WebAuthn в контейнере и без proprietary client.
 
 ### Системные требования (хост бастиона)
 
@@ -105,9 +79,9 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 17 | **Compliance verify** | Post-deploy checks (Rocky 9, SELinux, container, auditd…) | `scripts/bastion-compliance-verify.sh`, `tasks/verify_compliance_cso.yml` |
 | 18 | **WORM archive session logs** | Копирование закрытых `.log` + sidecars на WORM mount | `tasks/archive_session_logs_worm.yml` |
 | 19 | **JIT access windows** | `valid_from` / `valid_until` + auto-purge; опц. systemd timer | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
-| 20 | **SSH User CA prod (Free)** | Certificates ≤72h; raw pubkey blocked без waiver | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
+| 20 | **SSH User CA prod** | Certificates ≤72h; raw pubkey blocked без waiver | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
 | 21 | **Incident log naming (Tier 2)** | `incident_id` в basename `session_<INCIDENT>_<USER>_…` | `build/files/bastion-shell-wrapper.sh` |
-| 22 | **Shell command denylist (Tier 2)** | DEBUG trap; denylist RO mount `/etc/bastion/command_denylist` | `bastion-command-policy.sh`, `tasks/configure_shell_command_policy.yml` |
+| 22 | **Shell command denylist (Tier 2)** | Denylist RO `/etc/bastion/command_denylist`; v2 — PTY inspector (Tier 4) | `bastion-command-policy.sh`, `bastion-pty-inspector.py` |
 | 23 | **Audit readonly role (Tier 2)** | `access: audit` — чтение `/var/log/bastion_sessions` без jump | `bastion-audit-shell-wrapper.sh`, `templates/sshd_config.j2` |
 | 24 | **SSH brute-force protection (Tier 2)** | firewalld rate limit (default) или opt-in fail2ban | `tasks/configure_ssh_brute_force.yml` |
 | 25 | **Break-glass emergency access (Tier 2)** | `break_glass: true` + JIT window ≤ max hours; auditd + syslog markers | `preflight_cso.yml`, `templates/auditd-bastion.rules.j2` |
@@ -117,6 +91,8 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 29 | **Session search (Tier 4)** | JSONL filter by operator/date; host CLI `bastion-session-search` | `scripts/bastion-session-search.sh`, `tasks/install_tier4_tools.yml` |
 | 30 | **Live session moderation (Tier 4)** | `bastion-session-watch` tail + JSONL `moderator_watch_start` | `scripts/bastion-session-watch.sh` |
 | 31 | **Gateway command policy v2 (Tier 4)** | Bastion-side PTY inspector (Python); deny without target rc | `bastion-pty-inspector.py`, `bastion-ssh-gateway-exec.sh` |
+| 32 | **FIDO-Anchor operator keys (Tier 5)** | `ed25519-sk -O verify-required`; preflight + compliance `fido_pubkey` | `scripts/preflight-fido-key.py`, `bastion_require_fido_pubkey` |
+| 33 | **MFA modes (Tier 5)** | `totp` / `fido_totp` (prod) / `fido_only` (CSO waiver only) | `bastion_mfa_mode`, `templates/sshd_config.j2` |
 
 ---
 
@@ -140,60 +116,28 @@ Rocky Linux 9 — единственная утверждённая платфо
                                +---------------------------------------+
                                          |
                                          v
-                               [ Внутренний периметр заказчика ]
-                               (только PermitOpen host:port)
+                               [ Gateway SSH → target Linux ]
+                               (PTY log на бастion; jump — PermitOpen only)
 ```
 
 ### Нейтрализуемые векторы атак
 
 1. **Компрометация SSH-демона (0-day):** эксплуатация уязвимости внутри контейнера не позволяет злоумышленнику получить права `root` на хосте, так как процесс запущен в Rootless-режиме (UID сопоставлен с непривилегированным пользователем `mt_bastion`).
-2. **Компрометация учётной записи оператора:** перехват приватного SSH-ключа недостаточен для входа из-за обязательной валидации второго фактора MFA (локальный TOTP через PAM).
+2. **Компрометация учётной записи оператора:** перехват файла приватного ключа недостаточен — требуется **FIDO user verification** на устройстве (sk key, Tier 5) и **offline TOTP** на бастion (или CSO-waiver `fido_only`).
 3. **Модификация логов правонарушителем:** попытка очистить историю команд блокируется системным атрибутом `Append-Only` (`chattr +a`) на уровне хостовой ОС в момент создания лог-файла.
 
 ---
 
-## 3. Матрица защитных контролей (Control Matrix)
+## 3. Роли доступа и запись сессий
 
-Таблица сопоставляет требования ИБ-стандартов с технической реализацией в кодовой базе `mt-bastion/`.
+| `access` | Назначение | Запись PTY |
+| :--- | :--- | :---: |
+| `gateway` | **Prod:** интерактив на Linux-target через бастion | ✅ на target |
+| `jump` | ProxyJump / automation; connect-audit | ❌ |
+| `shell` | Работа на бастion, four-eyes | ✅ bastion |
+| `audit` | Чтение логов, `bastion-session-watch` | read-only |
 
-| ИБ-требование | Техническая реализация в MT: Bastion | Файл / компонент |
-| :--- | :--- | :--- |
-| **Изоляция процессов и минимизация привилегий** | Запуск контейнера без root на хосте. Systemd lingering для персистентности процессов без интерактивного входа root. | `tasks/prepare_os.yml`, `tasks/deploy_ssh_bastion.yml` (`become_user: mt_bastion`) |
-| **MAC-изоляция контейнера (SELinux)** | Метки томов `:Z` при монтировании. Каталоги операторов — `container_file_t` (`setype` + `chcon`). Preflight блокирует деплой при SELinux ≠ Enforcing. | `tasks/preflight_cso.yml`, `tasks/provision_operator_item.yml`, `tasks/deploy_ssh_bastion.yml` |
-| **Policy Gate (Preflight CSO)** | Автоматическая блокировка деплоя на неподдерживаемой ОС, архитектуре, без whitelist или без операторов. | `tasks/preflight_cso.yml` |
-| **Jump без shell (restrict keys)** | `restrict,port-forwarding,permitopen=...` в `authorized_keys` для `access: jump`. Прямой PTY/shell невозможен. | `templates/authorized_keys.j2` |
-| **Верификация supply chain образа** | OCI-label `mt.global.mfa.strict=1` проверяется после `podman load`. | `tasks/verify_image_cso.yml`, `build/Containerfile` |
-| **Provisioning операторов (immutable mount)** | Конфиги операторов на хосте (`operators_home`) монтируются read-only в `/etc/bastion/operators`; entrypoint копирует в `/home/<user>` при старте. | `tasks/provision_operator_item.yml`, `build/files/bastion-entrypoint.sh`, `tasks/deploy_ssh_bastion.yml` |
-| **SSH User CA (опционально)** | `TrustedUserCAKeys` + operator `certificate` вместо raw `pubkey`. | `templates/sshd_config.j2`, `templates/authorized_keys.j2`, `bastion_trusted_user_ca_file` |
-| **Строгая двухфакторная аутентификация (MFA)** | Локальный PAM-модуль TOTP. Режим `MFA_STRICT=1` по умолчанию. Запрет паролей. | `build/Containerfile`, `templates/sshd_config.j2` (`AuthenticationMethods`) |
-| **Защита цепочки поставок (Supply Chain)** | Исключение рантайм-загрузок пакетов (`apk add` при старте). Сборка immutable-образа на build-машине. Верификация SHA-256 артефакта перед деплоем. | `trusted_download.sh`, `build/Containerfile` |
-| **Микросегментация (Least Privilege)** | Ограничение ProxyJump только до разрешённых `host:port` через `PermitOpen`. Персональные списки `permit_open` на оператора. | `templates/sshd_config.j2`, `group_vars/all.yml` |
-| **Неотчуждаемый аудит и логирование** | Перехват shell-сессий через `script`, запись TTY-потока. Каталог логов `0750` (владелец `mt_bastion`). `chattr +a` на каждый `.log` при создании (wrapper + entrypoint). | `build/files/bastion-shell-wrapper.sh`, `build/files/bastion-entrypoint.sh`, `tasks/prepare_os.yml` |
-| **Declarative revoke (JIT offboarding)** | Операторы вне `bastion_operators` удаляются с хоста, из `generated/mfa/`, из контейнера (`deluser`); handler перезапускает `mt_ssh_bastion`. Entrypoint дублирует purge при старте. | `tasks/purge_revoked_operators.yml`, `site.yml` (handler), `bastion-entrypoint.sh` |
-| **Hot reload конфигурации** | Изменения `sshd_config`, ключей или TOTP → `podman restart mt_ssh_bastion` без полного redeploy. | `tasks/deploy_ssh_bastion.yml`, `tasks/provision_operator_item.yml` |
-| **Контроль целостности бастиона** | Мониторинг записи в каталог логов и сетевых connect-событий на уровне ядра хоста. | `templates/auditd-bastion.rules.j2` |
-| **Source IP restriction (Tier 1)** | Per-operator `from="CIDR,..."` в `authorized_keys`; опционально firewalld rich rules. | `templates/authorized_keys.j2`, `tasks/configure_source_firewall.yml`, `tasks/preflight_cso.yml` |
-| **Tamper-evident session logs (Tier 1)** | При закрытии shell-сессии: GNU `.sha256` для `sha256sum -c` + `.meta` (UTC, USER, INCIDENT, CLIENT). | `build/files/bastion-shell-wrapper.sh` |
-| **SIEM syslog export (Tier 1)** | auditd plugin LOCAL6 + rsyslog drop-in → client SIEM (TCP/UDP/RELP). | `tasks/configure_rsyslog_siem.yml`, `templates/rsyslog-bastion-siem.conf.j2` |
-| **Compliance verify (Tier 1)** | Автоматическая проверка post-deploy; exit 0/non-zero для аудита и мониторинга. | `scripts/bastion-compliance-verify.sh`, tag `verify_compliance` |
-| **WORM archive (Tier 1, опц.)** | Копирование закрытых логов на client WORM mount. | `tasks/archive_session_logs_worm.yml` |
-| **JIT access windows (Tier 1)** | `valid_from`/`valid_until` → filter + purge; timer `jit_purge`. | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
-| **SSH User CA prod policy (Tier 1)** | Preflight blocks raw pubkey; cert renewal SOP. | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
-| **Incident log naming (Tier 2)** | Sanitized `incident_id` в basename session log; sidecars следуют basename. | `build/files/bastion-shell-wrapper.sh` |
-| **Shell command policy (Tier 2)** | Configurable denylist для `access: shell`; syslog `mt-bastion-deny`. | `bastion-command-policy.sh`, `templates/command_denylist.j2` |
-| **Audit readonly role (Tier 2)** | `access: audit` — PTY без TCP forward; path guard на session logs. | `bastion-audit-shell-wrapper.sh`, `templates/sshd_config.j2` |
-| **SSH rate limiting (Tier 2)** | firewalld rich rule `limit value` или opt-in fail2ban jail. | `tasks/configure_ssh_brute_force.yml` |
-| **Break-glass access (Tier 2)** | Opt-in emergency profile; preflight gate; `mt_bastion_break_glass_session` auditd key. | `preflight_cso.yml`, `templates/auditd-bastion.rules.j2` |
-| **SSH gateway mode (Tier 3)** | `access: gateway` — PTY capture on bastion; credential broking; no target key to operator. | `bastion-ssh-gateway-wrapper.sh`, `bastion-ssh-gateway-exec.sh` |
-| **Target session recording (Tier 3)** | `gateway_<INCIDENT>_<USER>_<TARGETID>_*.log` + `.sha256`/`.meta`; JSONL export. | `build/files/bastion-ssh-gateway-wrapper.sh` |
-| **Session control plane (Tier 3)** | Registry + `bastion-session-ctl`; kill on JIT purge. | `bastion-session-ctl-internal.sh`, `tasks/kill_gateway_sessions.yml` |
-| **Jump vs gateway policy (Tier 3)** | Opt-in `bastion_prod_require_gateway`; jump = connect-audit only. | `scripts/preflight-jump-gateway.py`, `preflight_cso.yml` |
-| **Session search (Tier 4)** | JSONL filter by operator/target/date; `jq` on host. | `scripts/bastion-session-search.sh` |
-| **Live session moderation (Tier 4)** | Moderator tail active gateway log; audit JSONL events. | `scripts/bastion-session-watch.sh` |
-| **Gateway command policy v2 (Tier 4)** | PTY inspector on bastion; v1 remote rc fallback when disabled. | `bastion-pty-inspector.py`, gateway/shell wrappers |
-| **External secrets Vault (Tier 4)** | Target keys from HashiCorp KV at deploy; mutual exclusion with `identity_file`. | `tasks/fetch_vault_target_keys.yml` |
-| **OIDC SSH user certs (Tier 4)** | Example signing scripts; preflight when `bastion_oidc_cert_policy_enabled`. | `scripts/sign-operator-cert-oidc.sh.example` |
-| **HA active-passive (Tier 4)** | Shared audit mount; standby stopped; manual promote script. | `docs/MT-Bastion-HA-Runbook.md`, `bastion-ha-promote.sh` |
+Полная матрица контролей — **Policy Gate** (§ выше, #1–33).
 
 ---
 
@@ -272,7 +216,7 @@ TOTP-секреты генерируются плейбуком и переда�
 - политику долгосрочного хранения (retention) файлов аудита сессий на внешних WORM-хранилищах;
 - сетевую сегментацию DMZ и мониторинг исходящих соединений с бастиона.
 
-### SIEM forwarder (Tier 1 Free, опционально)
+### SIEM forwarder (опционально)
 
 При `bastion_siem_forward_enabled: true` плейбук разворачивает:
 
@@ -458,79 +402,24 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | :-: | :--- |
 | 1 | TOTP-секреты переданы операторам по доверенному каналу |
 | 2 | Операторы импортировали TOTP в authenticator-приложение |
-| 3 | Выполнен тестовый вход: shell-оператор и jump-оператор |
-| 4 | Проверено появление лог-файла в `/var/log/bastion_sessions/` (shell-сценарий) |
-| 5 | Образ собран с `MFA_STRICT=1` (prod) |
+| 3 | Тестовый вход: `gateway` (prod), при необходимости `jump` / `shell` |
+| 4 | Gateway: `gateway_*.log` + `sha256sum -c`; JSONL в `sessions.jsonl` |
+| 5 | `bastion-session-search` / compliance verify exit 0 |
+| 6 | Образ `MFA_STRICT=1`; после wrapper — `./trusted_download.sh` |
 
 ---
 
-## Приложение: структура репозитория
+## Приложение: ключевые пути
 
-```
-mt-bastion/
-├── build/
-│   ├── Containerfile
-│   └── files/
-│       ├── bastion-entrypoint.sh
-│       └── bastion-shell-wrapper.sh
-├── docs/
-│   ├── README.md
-│   ├── MT-Bastion-Whitepaper.md
-│   ├── MT-Bastion-Troubleshooting-Workflow.md
-│   ├── CSO-Demo-Runbook.md
-│   └── Engineer-Onboarding.md
-├── group_vars/
-│   ├── all.yml                    # prod (CSO policy)
-│   ├── all.yml.example
-│   ├── local_lima.yml
-│   └── dev/                       # lab: lab.yml, operators_merge.yml
-├── inventory/
-│   ├── hosts.yml                  # prod
-│   └── local-lima.yml             # dev (Lima Rocky 9)
-├── lab/keys/                      # gitignored lab SSH keys
-├── scripts/
-│   ├── dev-up.sh                  # one-shot dev stand
-│   ├── bastion-compliance-verify.sh
-│   ├── jit-purge-host.sh.example
-│   ├── sign-operator-cert.sh.example
-│   ├── test-repo-key.sh
-│   └── repo-access.sh
-├── openspec/
-│   ├── specs/                     # GA Tier 1 specs
-│   └── changes/archive/
-├── tasks/
-│   ├── preflight_cso.yml
-│   ├── jit_filter_operators.yml
-│   ├── jit_purge.yml
-│   ├── configure_jit_timer.yml
-│   ├── prepare_os.yml
-│   ├── verify_compliance_cso.yml
-│   ├── configure_rsyslog_siem.yml
-│   ├── configure_source_firewall.yml
-│   ├── archive_session_logs_worm.yml
-│   ├── provision_operators.yml
-│   ├── provision_operator_item.yml
-│   ├── purge_revoked_operators.yml
-│   ├── deploy_ssh_bastion.yml
-│   ├── verify_image_cso.yml
-│   └── commercial_pam.yml
-├── .github/workflows/ci.yml       # syntax-check site.yml
-├── templates/
-│   ├── sshd_config.j2
-│   ├── authorized_keys.j2
-│   ├── auditd-bastion.rules.j2
-│   └── google_authenticator.j2
-├── tests/
-│   ├── lima-rocky9.yaml
-│   ├── start-lima.sh
-│   ├── sync-artifacts.sh
-│   └── README.md
-├── generated/mfa/                 # gitignored TOTP output
-├── site.yml
-├── trusted_download.sh
-└── requirements.yml
-```
+| Область | Пути |
+| :--- | :--- |
+| Deploy | `site.yml`, `tasks/preflight_cso.yml`, `tasks/deploy_ssh_bastion.yml` |
+| Gateway | `build/files/bastion-ssh-gateway-*.sh`, `tasks/provision_bastion_targets.yml` |
+| Policy | `group_vars/all.yml`, `group_vars/prod.yml.example`, `templates/sshd_config.j2` |
+| CLI | `scripts/bastion-session-{ctl,search,watch}.sh`, `scripts/bastion-compliance-verify.sh` |
+| Lab | `group_vars/dev/`, `inventory/local-lima.yml`, `./scripts/dev-up.sh` |
+| Specs | `openspec/specs/`, `openspec/changes/archive/` |
 
 ---
 
-*Документ подготовлен MT Global. Технические детали актуальны для версии продукта 1.2.*
+*Документ подготовлен MT Global. Актуально для продукта **v1.0.0** (документ **1.6**).*
