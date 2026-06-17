@@ -68,6 +68,37 @@ ensure_image() {
   limactl shell "${INSTANCE}" -- bash -c "cd '${ROOT}' && ./trusted_download.sh"
 }
 
+print_lab_summary() {
+  echo ""
+  echo "=== Lab operators (MT Dostup) ==="
+  printf '%-18s %-8s  %s\n' "OPERATOR" "ACCESS" "HOW TO CONNECT"
+  printf '%-18s %-8s  %s\n' "----------" "------" "--------------"
+  python3 - "${ROOT}" <<'PY' | while IFS=$'\t' read -r name access hint; do
+    printf '%-18s %-8s  %s\n' "$name" "$access" "$hint"
+  done
+import json, subprocess, sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+script = root / "scripts" / "lib" / "parse-lab-operators.py"
+ops = json.loads(subprocess.check_output([sys.executable, str(script), str(root / "group_vars" / "dev")], text=True))
+hints = {
+    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/mt-dostup-doctor.sh NAME",
+    "gateway": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
+    "shell": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
+    "audit": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
+}
+for o in sorted(ops, key=lambda x: x["name"]):
+    acc = o.get("access", "jump")
+    hint = hints.get(acc, "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1").replace("NAME", o["name"])
+    print(f"{o['name']}\t{acc}\t{hint}")
+PY
+  echo ""
+  echo "TOTP: ./scripts/mt-dostup-doctor.sh <operator>  (live 6-digit code)"
+  echo "Pre-login banner on bastion reminds: jump → use -J"
+  echo ""
+}
+
 ensure_lab_keys
 ensure_fido_lab_keys
 ensure_lima
@@ -83,14 +114,4 @@ fi
 echo "[dev-up] Deploying (dev operators from group_vars/dev/) ..."
 ansible-playbook -i inventory/local-lima.yml site.yml "${EXTRA_ARGS[@]}"
 
-echo ""
-echo "[dev-up] SSH bastion (порт 2222, после деплоя):"
-echo "  ssh -p 2222 -i lab/keys/engineer-jump.lab engineer-jump@127.0.0.1"
-echo "  ssh -p 2222 -i lab/keys/engineer-shell.lab engineer-shell@127.0.0.1"
-echo "  ssh -p 2222 -i lab/keys/engineer-audit.lab engineer-audit@127.0.0.1"
-echo "  ssh -p 2222 -i lab/keys/breakglass-lab.lab breakglass-lab@127.0.0.1"
-echo "  ssh -p 2222 -i lab/keys/gateway-lab.lab gateway-lab@127.0.0.1"
-if [[ "${BASTION_FIDO_LAB:-0}" == "1" ]] && [[ -f lab/keys/engineer-fido.lab ]]; then
-  echo "  ssh -p 2222 -i lab/keys/engineer-fido.lab engineer-fido@127.0.0.1  # FIDO-sk + TOTP"
-fi
-echo "TOTP: см. otpauth URI в group_vars/dev/lab.yml (engineer-fido — fido_lab.yml)"
+print_lab_summary

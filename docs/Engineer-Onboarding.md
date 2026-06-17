@@ -143,6 +143,7 @@ TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 | Обновить repo | `git pull` |
 | Новая фича | `git checkout -b feature/...` → PR в `main` |
 | Синтаксис playbook | `ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml` |
+| Lab doctor (роль, TOTP, команда) | `./scripts/mt-dostup-doctor.sh engineer-jump` |
 | Lab-образ с nullok (только dev) | `BASTION_LAB_MODE=1 MFA_STRICT=0 ./trusted_download.sh` |
 | Пересборка после Tier 2/3/4 scripts | `./trusted_download.sh` (wrapper, gateway, pty-inspector) → redeploy |
 

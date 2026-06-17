@@ -23,6 +23,7 @@ ClientAliveInterval 300
 ClientAliveCountMax 2
 LogLevel VERBOSE
 SyslogFacility AUTH
+Banner /etc/ssh/bastion-banner.txt
 
 {% if bastion_mfa_mode | default('totp') == 'fido_only' and bastion_fido_only_waiver | default(false) | bool and bastion_require_fido_pubkey | default(false) | bool %}
 # MFA fido_only (CSO waiver): FIDO-sk pubkey/cert only — no TOTP prompt
@@ -57,7 +58,9 @@ Match User {{ operator.name }}
     ForceCommand /usr/local/bin/bastion-ssh-gateway-wrapper.sh
     AllowTcpForwarding no
 {%   else %}
-    # Jump: shell заблокирован через restrict в authorized_keys; только port-forwarding
+    # Jump: restrict in authorized_keys; help on mistaken interactive login
+    PermitTTY no
+    ForceCommand /usr/local/bin/bastion-jump-help-wrapper.sh
     AllowTcpForwarding {{ 'local' if bastion_allow_tcp_forwarding | bool else 'no' }}
 {%     if operator.permit_open | default([]) | length > 0 %}
 {%       for target in operator.permit_open %}

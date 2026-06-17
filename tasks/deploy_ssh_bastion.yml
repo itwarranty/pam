@@ -29,6 +29,15 @@
     mode: "0600"
   notify: Restart ssh bastion container
 
+- name: Pre-login SSH banner (operator UX)
+  ansible.builtin.template:
+    src: ssh-banner.txt.j2
+    dest: "{{ bastion_home }}/.ssh_config/bastion-banner.txt"
+    owner: "{{ bastion_user }}"
+    group: "{{ bastion_user }}"
+    mode: "0644"
+  notify: Restart ssh bastion container
+
 - name: Установка SSH User CA (mtglobal.team / org CA)
   ansible.builtin.copy:
     src: "{{ bastion_trusted_user_ca_file }}"
@@ -42,6 +51,7 @@
   ansible.builtin.set_fact:
     bastion_container_volumes:
       - "{{ bastion_home }}/.ssh_config/sshd_config:/etc/ssh/sshd_config:ro,Z"
+      - "{{ bastion_home }}/.ssh_config/bastion-banner.txt:/etc/ssh/bastion-banner.txt:ro,Z"
       - "{{ operators_home }}:/etc/bastion/operators:ro,Z"
       - "{{ audit_log_dir }}:/var/log/bastion_sessions:rw,Z"
 

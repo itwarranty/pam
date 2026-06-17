@@ -18,6 +18,7 @@ Open-source tier продукта **«МТ Доступ»** — **SSH PAM** (Pri
 
 # Compliance verify (Tier 1 — post-deploy)
 ./scripts/bastion-compliance-verify.sh
+./scripts/mt-dostup-doctor.sh engineer-jump   # lab: role, TOTP, ProxyJump hint
 ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 
 # Gateway session control (Tier 3)
