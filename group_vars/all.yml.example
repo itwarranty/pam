@@ -2,7 +2,7 @@
 # ssh_pam_banner_title: "Acme Secure Access"
 # bastion_totp_issuer: "Acme Secure Access"
 # bastion_cert_domain: acme.example
-# bastion_install_dir: /opt/itwarranty-pam
+# bastion_install_dir: /opt/pam
 # bastion_lab_domain: acme.example
 
 # Tier 3 Free — SSH gateway (v0.6)

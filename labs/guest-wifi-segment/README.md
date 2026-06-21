@@ -61,7 +61,7 @@ Private `10.1.13.0/24` снаружи **не маршрутизируется**.
 ## Быстрый старт
 
 ```bash
-cd itwarranty-pam/labs/guest-wifi-segment
+cd pam/labs/guest-wifi-segment
 chmod +x scripts/*.sh router/entrypoint.sh
 
 ./scripts/up.sh

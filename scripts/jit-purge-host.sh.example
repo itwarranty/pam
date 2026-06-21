@@ -3,7 +3,7 @@
 # Installed by Ansible as {{ bastion_jit_purge_script_path }} when bastion_jit_timer_enabled.
 #
 # Prerequisites on bastion host:
-#   - ansible-playbook, repo at /opt/itwarranty-pam (or set BASTION_ROOT)
+#   - ansible-playbook, repo at /opt/pam (or set BASTION_ROOT)
 #   - inventory/hosts.yml with prod operators
 #
 # Manual run:
@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-ROOT="${BASTION_ROOT:-/opt/itwarranty-pam}"
+ROOT="${BASTION_ROOT:-/opt/pam}"
 INV="${BASTION_INVENTORY:-${ROOT}/inventory/hosts.yml}"
 
 exec ansible-playbook -i "${INV}" "${ROOT}/site.yml" --tags jit_purge "$@"

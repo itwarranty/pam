@@ -13,7 +13,7 @@
 ### Быстрый путь (рекомендуется)
 
 ```bash
-cd itwarranty-pam
+cd pam
 ./scripts/dev-up.sh
 ```
 
@@ -23,7 +23,7 @@ cd itwarranty-pam
 ### Ручной путь
 
 ```bash
-cd itwarranty-pam
+cd pam
 ./trusted_download.sh                                    # MFA_STRICT=1, OCI-label
 ./tests/start-lima.sh                                    # instance: bastion-prod
 ./tests/sync-artifacts.sh                                # tar → Lima VM (при необходимости)

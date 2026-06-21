@@ -11,7 +11,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GITHUB_REPO="${GITHUB_REPO:-itwarranty/itwarranty-pam}"
+GITHUB_REPO="${GITHUB_REPO:-itwarranty/pam}"
 TEST_ACCESS_BASE="${TEST_ACCESS_BASE:-${HOME}/.bastion/test-access}"
 TEST_OPERATORS_YML="${ROOT}/group_vars/dev/test_operators.yml"
 LEGACY_KEYS_DIR="${ROOT}/keys/test"

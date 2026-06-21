@@ -191,7 +191,7 @@ Rocky Linux 9 — единственная утверждённая платфо
 
 ### Фаза 2: деплой в закрытом контуре клиента (Air Gap)
 
-1. Tar-архив и репозиторий `itwarranty-pam/` переносятся на хост назначения.
+1. Tar-архив и репозиторий `pam/` переносятся на хост назначения.
 2. В `group_vars/all.yml` заполняется массив `bastion_operators` (см. `group_vars/all.yml.example`).
 3. Запускается `ansible-galaxy collection install -r requirements.yml`, затем `ansible-playbook site.yml`.
 4. Preflight CSO проверяет Rocky Linux 9, x86_64, SELinux Enforcing, whitelist и операторов. При нарушении — **деплой прерывается**.

@@ -2,7 +2,7 @@
 
 **SSH PAM** — white-label **SSH-only PAM**: запись сессий на target, credential broking, MFA (FIDO + TOTP), JIT, session kill, SIEM/JSONL — Security-as-a-Code.
 
-**Текущий релиз:** [v1.1.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v1.1.0) (Tier 5 FIDO-Anchor MFA).
+**Текущий релиз:** [v1.1.0](https://github.com/itwarranty/pam/releases/tag/v1.1.0) (Tier 5 FIDO-Anchor MFA).
 
 **Целевой сегмент:** организации **200–1000 сотрудников**, Linux-heavy; замена или миграция с коммерческого SSH PAM (СКДПУ и аналоги).
 

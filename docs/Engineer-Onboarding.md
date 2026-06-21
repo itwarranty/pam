@@ -1,6 +1,6 @@
 # Onboarding инженера SSH PAM
 
-Репозиторий **private**: `git@github.com:itwarranty/itwarranty-pam.git`
+Репозиторий **private**: `git@github.com:itwarranty/pam.git`
 
 **Связанные документы:** [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) · [Whitepaper](./Whitepaper.md) · [Workflow](./Troubleshooting-Workflow.md)
 
@@ -14,7 +14,7 @@
 **Prerequisite (admin):** Node.js — QR в onboarding (`npm install` в `scripts/`, автоматически).
 
 ```bash
-cd itwarranty-pam
+cd pam
 
 # Полный цикл: ключ + YAML + bastion (одна команда)
 ./scripts/test-repo-key.sh create tester-01 --bastion --apply
@@ -58,7 +58,7 @@ https://github.com/orgs/itwarranty/teams/itwarranty-engineers
 
 ### Альтернатива — collaborator
 
-https://github.com/itwarranty/itwarranty-pam → Settings → Collaborators — Read или Write.
+https://github.com/itwarranty/pam → Settings → Collaborators — Read или Write.
 
 ### Что не передавать инженерам
 
@@ -82,8 +82,8 @@ https://github.com/settings/ssh-keys
 ### 2. Clone
 
 ```bash
-git clone git@github.com:itwarranty/itwarranty-pam.git
-cd itwarranty-pam
+git clone git@github.com:itwarranty/pam.git
+cd pam
 ```
 
 ### 3. Зависимости (macOS)

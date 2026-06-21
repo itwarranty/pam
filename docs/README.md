@@ -1,6 +1,6 @@
 # Документация SSH PAM
 
-**Repository:** [github.com/itwarranty/itwarranty-pam](https://github.com/itwarranty/itwarranty-pam)
+**Repository:** [github.com/itwarranty/pam](https://github.com/itwarranty/pam)
 
 White-label **SSH PAM** (Privileged Access Management) в модели Security-as-a-Code для Air Gap / КИИ.
 
@@ -20,12 +20,12 @@ White-label **SSH PAM** (Privileged Access Management) в модели Security-
 
 | Tag | Содержание |
 | :--- | :--- |
-| [v0.2.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v0.2.0) | Tier 1 Phase A |
-| [v0.4.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v0.4.0) | Tier 1 Phase B + C |
-| [v0.5.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v0.5.0) | Tier 2 |
-| [v0.6.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v0.6.0) | Tier 3 SSH Gateway |
-| **[v1.0.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v1.0.0)** | Tier 4 SSH PAM GA |
-| **[v1.1.0](https://github.com/itwarranty/itwarranty-pam/releases/tag/v1.1.0)** | **Tier 5 FIDO-Anchor MFA (текущий)** |
+| [v0.2.0](https://github.com/itwarranty/pam/releases/tag/v0.2.0) | Tier 1 Phase A |
+| [v0.4.0](https://github.com/itwarranty/pam/releases/tag/v0.4.0) | Tier 1 Phase B + C |
+| [v0.5.0](https://github.com/itwarranty/pam/releases/tag/v0.5.0) | Tier 2 |
+| [v0.6.0](https://github.com/itwarranty/pam/releases/tag/v0.6.0) | Tier 3 SSH Gateway |
+| **[v1.0.0](https://github.com/itwarranty/pam/releases/tag/v1.0.0)** | Tier 4 SSH PAM GA |
+| **[v1.1.0](https://github.com/itwarranty/pam/releases/tag/v1.1.0)** | **Tier 5 FIDO-Anchor MFA (текущий)** |
 
 Tier 1–5 реализованы в репозитории. Полный перечень контролей — Policy Gate в [Whitepaper](./Whitepaper.md).
 

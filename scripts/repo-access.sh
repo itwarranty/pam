@@ -11,12 +11,12 @@
 #   ./scripts/repo-access.sh grant ivanov --collaborator
 #
 # Переменные:
-#   GITHUB_REPO=itwarranty/itwarranty-pam
+#   GITHUB_REPO=itwarranty/pam
 #   READERS_TEAM=bastion-readers
 
 set -euo pipefail
 
-GITHUB_REPO="${GITHUB_REPO:-itwarranty/itwarranty-pam}"
+GITHUB_REPO="${GITHUB_REPO:-itwarranty/pam}"
 READERS_TEAM="${READERS_TEAM:-bastion-readers}"
 OWNER="${GITHUB_REPO%%/*}"
 REPO="${GITHUB_REPO#*/}"

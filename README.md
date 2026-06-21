@@ -1,6 +1,6 @@
 # SSH PAM
 
-**Repository:** [github.com/itwarranty/itwarranty-pam](https://github.com/itwarranty/itwarranty-pam)
+**Repository:** [github.com/itwarranty/pam](https://github.com/itwarranty/pam)
 
 White-label **SSH PAM** (Privileged Access Management) для Rocky Linux 9: gateway, MFA, JIT, session recording, Security-as-a-Code (Rootless Podman, CSO Policy Gate).
 
