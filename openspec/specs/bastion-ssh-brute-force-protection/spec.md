@@ -1,6 +1,6 @@
-### Requirement: Bastion SSH port SHALL support optional rate limiting
+### Requirement: Gateway SSH port SHALL support optional rate limiting
 
-MT: Bastion Free SHALL offer host-level protection against authentication abuse on `bastion_ssh_port`.
+SSH PAM SHALL offer host-level protection against authentication abuse on `bastion_ssh_port`.
 
 #### Scenario: Rate limit disabled
 - **WHEN** `bastion_ssh_rate_limit_enabled` is `false` (default)

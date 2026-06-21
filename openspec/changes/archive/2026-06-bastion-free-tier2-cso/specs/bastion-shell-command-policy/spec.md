@@ -1,6 +1,6 @@
 ### Requirement: Shell role SHALL enforce configurable command denylist
 
-When command policy is enabled, MT: Bastion Free SHALL block dangerous interactive commands for `access: shell` operators.
+When command policy is enabled, SSH PAM SHALL block dangerous interactive commands for `access: shell` operators.
 
 #### Scenario: Policy enabled with default denylist
 - **WHEN** `bastion_shell_command_policy_enabled` is `true`
@@ -11,7 +11,7 @@ When command policy is enabled, MT: Bastion Free SHALL block dangerous interacti
 #### Scenario: Denied command entered
 - **WHEN** shell operator attempts a command matching a denylist regex
 - **THEN** command SHALL NOT execute
-- **THEN** denial SHALL be logged via syslog tag `mt-bastion-deny`
+- **THEN** denial SHALL be logged via syslog tag `bastion-deny`
 - **AND** operator SHALL receive a clear denial message referencing CSO policy
 
 #### Scenario: Policy disabled
@@ -29,7 +29,7 @@ Operators SHALL NOT edit denylist inside running container by default.
 
 ### Requirement: Command policy limitations SHALL be documented
 
-MT: Bastion Free SHALL document that denylist is best-effort for interactive bash, not a kernel-level MAC control.
+SSH PAM SHALL document that denylist is best-effort for interactive bash, not a kernel-level MAC control.
 
 #### Scenario: CSO review
 - **WHEN** CSO reads Whitepaper or Troubleshooting Workflow

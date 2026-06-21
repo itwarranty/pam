@@ -1,4 +1,4 @@
-# Design: FIDO-Anchor + Bastion TOTP
+# Design: FIDO-Anchor + gateway TOTP
 
 ## Context
 
@@ -20,7 +20,7 @@ Operators authenticate with `pubkey` or SSH **user certificate** (`TrustedUserCA
 | WebAuthn in PAM on bastion | Reject — non-standard, breaks Air Gap audit story |
 | IdP WebAuthn → SSH cert | Keep Tier 4 opt-in; not part of this change |
 
-**Rationale (CSO):** Platform biometric (Touch ID, Windows Hello) gates **use of private key** on managed laptop. Bastion sees standard OpenSSH `sk-ssh-ed25519@openssh.com` public key — auditable, no new runtime deps.
+**Rationale (CSO):** Platform biometric (Touch ID, Windows Hello) gates **use of private key** on managed laptop. Gateway sees standard OpenSSH `sk-ssh-ed25519@openssh.com` public key — auditable, no new runtime deps.
 
 ## Key types
 
@@ -51,7 +51,7 @@ When operator has `valid_from` / `valid_until`:
 
 ```bash
 # sign-operator-cert-jit.sh.example
-ssh-keygen -s "$CA" -I "$name@mtglobal.team" -n "$name" \
+ssh-keygen -s "$CA" -I "$name@example.com" -n "$name" \
   -V "${valid_from}:${valid_until}" "$sk_pubkey"
 ```
 
@@ -76,7 +76,7 @@ Add `group_vars/dev/fido_lab.yml` merged in `operators_merge.yml`.
 
 New check `fido_pubkey` when env `BASTION_REQUIRE_FIDO_PUBKEY=1` or reading deployed ansible vars file on host if present:
 
-- Parse `podman exec mt_ssh_bastion cat /etc/bastion/operators/*/authorized_keys` or mounted operator configs
+- Parse `podman exec ssh_bastion cat /etc/bastion/operators/*/authorized_keys` or mounted operator configs
 - Fail if any prod operator lacks sk prefix (best-effort list from `OPERATORS_HOME`)
 
 ## Security notes

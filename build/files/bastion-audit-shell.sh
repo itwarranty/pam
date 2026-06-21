@@ -32,8 +32,8 @@ _audit_check_line() {
   esac
 
   if ! [[ "${cmd}" =~ ^(${ALLOWED_CMDS})$ ]]; then
-    /usr/local/bin/bastion-syslog.sh mt-bastion-deny "audit user=${USER} denied cmd=${cmd}"
-    echo "[MT Bastion CSO] Command not permitted for audit role." >&2
+    /usr/local/bin/bastion-syslog.sh bastion-deny "audit user=${USER} denied cmd=${cmd}"
+    echo "[SSH PAM CSO] Command not permitted for audit role." >&2
     return 1
   fi
 
@@ -41,31 +41,31 @@ _audit_check_line() {
     ls|pwd|exit|help) ;;
     tail)
       if [[ "${args}" == *"-f"* ]] || [[ "${args}" == *"-F"* ]]; then
-        echo "[MT Bastion CSO] tail -f not permitted (audit read-only)." >&2
+        echo "[SSH PAM CSO] tail -f not permitted (audit read-only)." >&2
         return 1
       fi
       for p in ${args}; do
         case "${p}" in -*) continue ;; esac
-        _audit_resolve_path "${p}" >/dev/null || { echo "[MT Bastion CSO] Path denied." >&2; return 1; }
+        _audit_resolve_path "${p}" >/dev/null || { echo "[SSH PAM CSO] Path denied." >&2; return 1; }
       done
       ;;
     *)
       for p in ${args}; do
         case "${p}" in -*) continue ;; esac
-        _audit_resolve_path "${p}" >/dev/null || { echo "[MT Bastion CSO] Path denied." >&2; return 1; }
+        _audit_resolve_path "${p}" >/dev/null || { echo "[SSH PAM CSO] Path denied." >&2; return 1; }
       done
       ;;
   esac
 
   if [[ "${line}" == *">"* ]] || [[ "${line}" == *"<"* ]]; then
-    echo "[MT Bastion CSO] Redirection not permitted." >&2
+    echo "[SSH PAM CSO] Redirection not permitted." >&2
     return 1
   fi
 
   eval "${line}"
 }
 
-echo "MT Bastion audit shell — read-only under ${AUDIT_DIR}. Type 'help' or 'exit'."
+echo "SSH PAM audit shell — read-only under ${AUDIT_DIR}. Type 'help' or 'exit'."
 while true; do
   read -e -r -p "audit> " line || break
   [ -z "${line}" ] && continue

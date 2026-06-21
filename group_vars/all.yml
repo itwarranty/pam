@@ -13,8 +13,15 @@ container_engine: podman
 # MFA — только strict-образ (MFA_STRICT=1 при сборке)
 bastion_mfa_enforce: true
 
+# White label — необязательный текст баннера (пусто = без названия продукта)
+ssh_pam_banner_title: ""
+bastion_totp_issuer: "SSH PAM"
+bastion_cert_domain: example.com
+bastion_install_dir: /opt/itwarranty-pam
+bastion_lab_domain: example.com
+
 # Именование и пути
-bastion_user: mt_bastion
+bastion_user: bastion
 bastion_ssh_port: 2222
 bastion_home: "/home/{{ bastion_user }}"
 trusted_files_dir: /tmp/trusted_upstream_packages
@@ -45,10 +52,10 @@ bastion_worm_archive_min_age_minutes: 5
 # Tier 1 Phase B (v0.3): JIT access windows
 bastion_jit_timer_enabled: false
 bastion_jit_timer_schedule: hourly
-bastion_jit_purge_script_path: /usr/local/bin/mt-bastion-jit-purge.sh
+bastion_jit_purge_script_path: /usr/local/bin/bastion-jit-purge.sh
 bastion_jit_playbook_command: >-
-  /usr/bin/ansible-playbook -i /opt/mt-bastion/inventory/hosts.yml
-  /opt/mt-bastion/site.yml --tags jit_purge
+  /usr/bin/ansible-playbook -i {{ bastion_install_dir }}/inventory/hosts.yml
+  {{ bastion_install_dir }}/site.yml --tags jit_purge
 
 # Tier 1 Phase C (v0.4): SSH User CA prod policy
 bastion_allow_raw_pubkey_prod: false
@@ -56,7 +63,10 @@ bastion_cert_max_validity_hours: 72
 bastion_ssh_user_ca_qa_complete: false
 
 # Tier 2 Free (v0.5): incident logs, command policy, audit role, rate limit, break-glass
+# CSO: denylist обязателен в prod; enforcement — только v2 (PTY inspector на шлюз).
+# v1 (remote bash --rcfile на target) — migration-only; выключить v2: bastion_command_policy_v2_required: false + risk acceptance.
 bastion_shell_command_policy_enabled: true
+bastion_command_policy_v2_required: true
 bastion_shell_command_denylist:
   - 'rm\s+-rf\s+/'
   - 'iptables\s+-F'
@@ -79,8 +89,8 @@ bastion_targets_home: "{{ bastion_home }}/targets"
 bastion_runtime_dir: "{{ bastion_home }}/runtime"
 bastion_gateway_lab_mode: false
 bastion_gateway_lab_enabled: false
-bastion_gateway_lab_network: mt_bastion_net
-bastion_gateway_lab_target_image: mt_gateway_target:latest
+bastion_gateway_lab_network: bastion_net
+bastion_gateway_lab_target_image: gateway_target:latest
 bastion_require_vault_target_keys: true
 bastion_prod_require_gateway: false
 bastion_prod_target_tags: [prod]
@@ -90,10 +100,11 @@ bastion_kill_gateway_sessions: true
 bastion_gateway_audit_target_keys: true
 
 # Tier 4 Free (v1.0): SSH PAM complete — search, policy v2, watch, Vault, OIDC, HA
+# python3 в образе — load-bearing для policy v2 (bastion-pty-inspector.py), не опциональный runtime.
 bastion_session_search_enabled: true
 bastion_session_watch_enabled: true
-bastion_gateway_command_policy_v2_enabled: true
-bastion_shell_command_policy_v2_enabled: true
+bastion_gateway_command_policy_v2_enabled: true  # prod steady-state: true (preflight + compliance)
+bastion_shell_command_policy_v2_enabled: true   # prod steady-state: true (preflight + compliance)
 bastion_gateway_deny_kill_session: false
 bastion_vault_enabled: false
 bastion_vault_addr: ""
@@ -116,9 +127,9 @@ bastion_fido_waiver_operators: []
 bastion_fido_lab_enabled: false
 
 # Локальный доверенный образ (Air Gap)
-bastion_image_name: mt_bastion_secure
+bastion_image_name: bastion_secure
 bastion_image_tag: latest
-bastion_image_tar: "{{ trusted_files_dir }}/mt_bastion_image.tar"
+bastion_image_tar: "{{ trusted_files_dir }}/bastion_image.tar"
 bastion_required_image_mfa_strict: "1"
 
 # Коммерческий PAM (ветка A)

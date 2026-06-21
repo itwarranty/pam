@@ -1,10 +1,10 @@
 ### Requirement: Session log filenames SHALL include incident_id when configured
 
-When an operator has `incident_id`, MT: Bastion Free SHALL embed a sanitized ticket reference in the session log basename.
+When an operator has `incident_id`, SSH PAM SHALL embed a sanitized ticket reference in the session log basename.
 
 #### Scenario: Operator with incident_id starts shell session
 - **WHEN** operator has non-empty `incident_id`
-- **AND** `sshd_config` sets `MT_BASTION_INCIDENT_ID` for that user
+- **AND** `sshd_config` sets `BASTION_INCIDENT_ID` for that user
 - **THEN** `bastion-shell-wrapper.sh` SHALL create log file matching pattern `session_<SANITIZED_INCIDENT>_<USER>_<YYYYMMDD>_<HHMMSS>.log`
 
 #### Scenario: Operator without incident_id

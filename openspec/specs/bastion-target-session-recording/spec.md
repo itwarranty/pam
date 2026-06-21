@@ -1,6 +1,6 @@
 ### Requirement: Gateway sessions SHALL be recorded on bastion host
 
-MT: Bastion SHALL capture the full interactive PTY stream for `access: gateway` sessions to target systems.
+SSH PAM SHALL capture the full interactive PTY stream for `access: gateway` sessions to target systems.
 
 #### Scenario: Successful gateway session
 - **WHEN** operator completes gateway session to target
@@ -22,7 +22,7 @@ MT: Bastion SHALL capture the full interactive PTY stream for `access: gateway` 
 Recording SHALL occur entirely on bastion host.
 
 #### Scenario: Target has stock OpenSSH server only
-- **WHEN** target runs standard `sshd` without MT Bastion agent
+- **WHEN** target runs standard `sshd` without SSH PAM agent
 - **THEN** gateway recording SHALL still produce full session log on bastion
 
 ### Requirement: Container image rebuild SHALL be required after recording changes

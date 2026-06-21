@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MT Bastion — host-side JIT expiry purge (systemd timer).
+# SSH PAM — host-side JIT expiry purge (systemd timer).
 # Managed by Ansible; override bastion_jit_playbook_command in group_vars.
 set -euo pipefail
 exec {{ bastion_jit_playbook_command }}

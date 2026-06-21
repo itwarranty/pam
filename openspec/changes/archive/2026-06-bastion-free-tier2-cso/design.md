@@ -1,6 +1,6 @@
 ## Context
 
-Tier 2 extends MT: Bastion Free after **v0.4.0 (Tier 1 complete)**. Architecture unchanged: Ansible → Rocky Linux 9 → Rootless Podman → OpenSSH + offline TOTP.
+Tier 2 extends SSH PAM after **v0.4.0 (Tier 1 complete)**. Architecture unchanged: Ansible → Rocky Linux 9 → Rootless Podman → OpenSSH + offline TOTP.
 
 All Tier 2 controls are **Security-as-Code** — no SaaS, no agent on target hosts.
 
@@ -41,8 +41,8 @@ bastion_operators:
 **Enforcement:**
 
 1. **Preflight:** reject `break_glass: true` when `bastion_break_glass_enabled: false`; require `incident_id`, `valid_until`, window ≤ max hours.
-2. **Provisioning:** write marker file `~/.mt-bastion-break-glass` (informational).
-3. **Audit:** extra auditd key `mt_bastion_break_glass_session`; wrapper logs `BREAK_GLASS=1`.
+2. **Provisioning:** write marker file `~/.bastion-break-glass` (informational).
+3. **Audit:** extra auditd key `bastion_break_glass_session`; wrapper logs `BREAK_GLASS=1`.
 4. **Expiry:** existing `jit_filter_operators.yml` + purge (no new timer).
 
 **Simpler v1:** no live sshd time gate beyond JIT purge (same as Tier 1 JIT).
@@ -67,7 +67,7 @@ bastion_shell_command_denylist:
 
 - `build/files/bastion-command-policy.sh` — reads denylist from `/etc/bastion/command_denylist` (mounted RO from host).
 - `bastion-shell-wrapper.sh` sources policy; uses bash `DEBUG` trap or pre-exec hook to match command line against extended regex list.
-- On match: log via `logger -t mt-bastion-deny`, optional auditd, print CSO message to user, do not execute.
+- On match: log via `logger -t bastion-deny`, optional auditd, print CSO message to user, do not execute.
 
 **Non-goal v1:** allowlist mode, per-operator policies, AI moderation.
 
@@ -100,7 +100,7 @@ bastion_fail2ban_bantime: 3600
 
 ## D4: Incident ID in session log filename
 
-**Decision:** Extend existing `MT_BASTION_INCIDENT_ID` env (Tier 1) to **log basename**.
+**Decision:** Extend existing `BASTION_INCIDENT_ID` env (Tier 1) to **log basename**.
 
 | incident_id set | Filename pattern |
 |:---|:---|

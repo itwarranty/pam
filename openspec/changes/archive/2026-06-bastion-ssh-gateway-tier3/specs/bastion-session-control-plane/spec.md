@@ -1,6 +1,6 @@
 ### Requirement: Active gateway sessions SHALL be observable
 
-MT: Bastion SHALL expose active gateway sessions to client CSO without proprietary UI.
+SSH PAM SHALL expose active gateway sessions to client CSO without proprietary UI.
 
 #### Scenario: List sessions
 - **WHEN** client runs `bastion-session-ctl list` on bastion host (documented path)
@@ -16,7 +16,7 @@ MT: Bastion SHALL expose active gateway sessions to client CSO without proprieta
 - **WHEN** CSO runs `bastion-session-ctl kill <session-id>`
 - **THEN** the corresponding gateway session SHALL terminate within documented timeout (default 10s)
 - **THEN** session registry entry SHALL be removed
-- **THEN** syslog event `mt-bastion-session-kill` SHALL be emitted
+- **THEN** syslog event `bastion-session-kill` SHALL be emitted
 
 #### Scenario: Kill by operator
 - **WHEN** CSO runs `bastion-session-ctl kill --operator <name>`

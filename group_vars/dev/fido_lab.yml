@@ -2,7 +2,7 @@
 # Optional FIDO lab operator — merge when bastion_fido_lab_enabled: true (BASTION_FIDO_LAB=1)
 bastion_operators_fido_lab:
   - name: engineer-fido
-    email: engineer-fido@mtglobal.team
+    email: engineer-fido@example.com
     pubkey: "{{ lookup('file', lab_keys_dir + '/engineer-fido.lab.pub') }}"
     mfa_secret: FIDOLABFIDOLABFIDOLABFIDOLABFIDO
     access: jump

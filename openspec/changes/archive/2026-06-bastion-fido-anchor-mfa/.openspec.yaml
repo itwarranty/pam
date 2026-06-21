@@ -7,6 +7,6 @@ depends_on:
 target_release: v1.1.0
 
 product_positioning: |
-  MT: Bastion = open-source tier of «МТ Доступ» — full SSH PAM product.
+  SSH PAM = open-source tier of SSH PAM — full SSH PAM product.
   FIDO-Anchor MFA strengthens phishing resistance without IdP runtime on bastion
   or custom SSH client (no tsh). TOTP on bastion remains default second factor.

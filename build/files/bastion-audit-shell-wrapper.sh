@@ -22,5 +22,5 @@ trap '_write_integrity_sidecar' EXIT
 touch "${LOG}"
 chattr +a "${LOG}" 2>/dev/null || true
 
-logger -t mt-bastion "audit session start user=${USER} log=${LOG} client=${SSH_CLIENT:-unknown}"
+logger -t bastion "audit session start user=${USER} log=${LOG} client=${SSH_CLIENT:-unknown}"
 exec script -q -f -c "/usr/local/bin/bastion-audit-shell.sh" "${LOG}"

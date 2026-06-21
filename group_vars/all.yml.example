@@ -1,9 +1,16 @@
+# White label — необязательный текст баннера (пусто = без названия)
+# ssh_pam_banner_title: "Acme Secure Access"
+# bastion_totp_issuer: "Acme Secure Access"
+# bastion_cert_domain: acme.example
+# bastion_install_dir: /opt/itwarranty-pam
+# bastion_lab_domain: acme.example
+
 # Tier 3 Free — SSH gateway (v0.6)
 # bastion_targets:
 #   - id: prod-app-01
 #     host: 10.0.1.10
 #     port: 22
-#     account: mt_support
+#     account: bastion_support
 #     identity_file: "{{ playbook_dir }}/vault/targets/prod-app-01_ed25519"  # Ansible Vault
 #     host_key_fingerprint: "SHA256:abcdef..."
 #     tags: [prod, linux]
@@ -19,6 +26,7 @@
 # Tier 4 Free — SSH PAM GA (v1.0)
 # bastion_session_search_enabled: true
 # bastion_session_watch_enabled: true
+# bastion_command_policy_v2_required: true   # CSO prod; false = migration-only v1 path
 # bastion_gateway_command_policy_v2_enabled: true
 # bastion_shell_command_policy_v2_enabled: true
 # bastion_gateway_deny_kill_session: false

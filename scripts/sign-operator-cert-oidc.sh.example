@@ -3,7 +3,7 @@
 # Requires: curl, jq, ssh-keygen, org User CA key on admin workstation (never on bastion).
 set -euo pipefail
 
-: "${MT_BASTION_USER_CA_KEY:?Set MT_BASTION_USER_CA_KEY to CA private key path}"
+: "${BASTION_USER_CA_KEY:?Set BASTION_USER_CA_KEY to CA private key path}"
 : "${BASTION_OIDC_ISSUER:?Set BASTION_OIDC_ISSUER e.g. https://idp.example.com/realms/mt}"
 : "${BASTION_OIDC_CLIENT_ID:?Set BASTION_OIDC_CLIENT_ID}"
 : "${BASTION_OIDC_REFRESH_TOKEN:?Export via oidc-offline-token.sh.example}"
@@ -34,7 +34,7 @@ fi
 
 VALID_UNTIL="$(date -u -d "+${VALID_HOURS} hours" +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v+"${VALID_HOURS}"H +%Y-%m-%dT:%M:%S)"
 
-ssh-keygen -s "${MT_BASTION_USER_CA_KEY}" -I "${OPERATOR_NAME}@mtglobal.team" \
+ssh-keygen -s "${BASTION_USER_CA_KEY}" -I "${OPERATOR_NAME}@example.com" \
   -n "${OPERATOR_NAME}" -V "-1d:${VALID_UNTIL}" \
   -O "force-command=/usr/local/bin/bastion-ssh-gateway-wrapper.sh" \
   "${OPERATOR_PUBKEY}"

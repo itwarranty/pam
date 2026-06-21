@@ -1,6 +1,6 @@
 ### Requirement: Target SSH keys MAY be sourced from HashiCorp Vault at deploy time
 
-MT Bastion SHALL support external secret store for `bastion_targets` credentials without runtime Vault dependency in container.
+SSH PAM SHALL support external secret store for `bastion_targets` credentials without runtime Vault dependency in container.
 
 #### Scenario: Vault path configured
 - **WHEN** target entry has `vault_secret_path` and `bastion_vault_enabled: true`

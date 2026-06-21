@@ -1,6 +1,6 @@
-# Battlecard: MT «МТ Доступ» SSH vs СКДПУ SSH
+# Battlecard: SSH PAM vs СКДПУ SSH
 
-| Критерий | СКДПУ «Шлюз SSH» | «МТ Доступ» open-source (v1.0) |
+| Критерий | СКДПУ «Шлюз SSH» | SSH PAM open-source (v1.1) |
 |:---|:---|:---|
 | Запись сессии на target | ✅ | ✅ gateway PTY log + hash |
 | Credential broking | ✅ | ✅ Ansible Vault / HashiCorp |
@@ -18,4 +18,4 @@
 
 ---
 
-*MT Global — Battlecard v1.1*
+* Battlecard v1.1*

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# MT Bastion — offline SSH user certificate signing (EXAMPLE).
+# SSH PAM — offline SSH user certificate signing (EXAMPLE).
 # Private User CA key NEVER on bastion — run on admin workstation / HSM jump.
 #
 # Usage:
-#   export MT_BASTION_USER_CA_KEY=/secure/path/mtglobal.team-user-ca
+#   export BASTION_USER_CA_KEY=/secure/path/user-ca
 #   ./scripts/sign-operator-cert.sh.example engineer-jump ~/.ssh/engineer-jump.key 72
 #   ./scripts/sign-operator-cert.sh.example engineer-jump ~/.ssh/engineer-jump.key 72 2026-12-31T23:59:59Z
 
@@ -13,9 +13,9 @@ NAME="${1:?operator name (Unix account)}"
 PRIV="${2:?path to operator private key}"
 HOURS="${3:-72}"
 VALID_UNTIL="${4:-}"
-DOMAIN="${MT_BASTION_CERT_DOMAIN:-mtglobal.team}"
-CA_KEY="${MT_BASTION_USER_CA_KEY:?set MT_BASTION_USER_CA_KEY to User CA private key path}"
-MAX_HOURS="${MT_BASTION_CERT_MAX_VALIDITY_HOURS:-72}"
+DOMAIN="${BASTION_CERT_DOMAIN:-example.com}"
+CA_KEY="${BASTION_USER_CA_KEY:?set BASTION_USER_CA_KEY to User CA private key path}"
+MAX_HOURS="${BASTION_CERT_MAX_VALIDITY_HOURS:-72}"
 
 if [[ -n "${VALID_UNTIL}" ]]; then
   VALIDITY="-1d:${VALID_UNTIL}"

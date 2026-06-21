@@ -50,7 +50,7 @@
   args:
     creates: "/var/lib/systemd/linger/{{ bastion_user }}"
 
-- name: Создание директории логов сессий (владелец mt_bastion — rootless Podman + SELinux)
+- name: Создание директории логов сессий (владелец bastion — rootless Podman + SELinux)
   ansible.builtin.file:
     path: "{{ audit_log_dir }}"
     state: directory
@@ -71,13 +71,13 @@
 - name: Правила auditd для SSH и записи логов сессий
   ansible.builtin.template:
     src: auditd-bastion.rules.j2
-    dest: /etc/audit/rules.d/mt-bastion.rules
+    dest: /etc/audit/rules.d/bastion.rules
     owner: root
     group: root
     mode: "0640"
   notify: Reload auditd rules
 
-- name: Открытие порта бастиона в firewalld
+- name: Открытие порта шлюза в firewalld
   ansible.posix.firewalld:
     port: "{{ bastion_ssh_port }}/tcp"
     permanent: true

@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: MT Bastion Free SHALL provide automated compliance verification
+### Requirement: SSH PAM SHALL provide automated compliance verification
 
 A verify command SHALL confirm bastion host state matches CSO Policy Gate expectations.
 
@@ -28,8 +28,8 @@ Verification coverage SHALL match Policy Gate decisions.
 #### Scenario: Runtime checks
 - **WHEN** verify runs
 - **THEN** it SHALL assert:
-  - `mt_ssh_bastion` container is running under user `mt_bastion`
-  - loaded image label `mt.global.mfa.strict` equals `1`
+  - `ssh_bastion` container is running under user `bastion`
+  - loaded image label `bastion.mfa.strict` equals `1`
   - `auditd` is active
   - `firewalld` is active
 
@@ -41,7 +41,7 @@ Verification coverage SHALL match Policy Gate decisions.
 
 #### Scenario: Session log directory checks
 - **WHEN** verify runs
-- **THEN** it SHALL assert `/var/log/bastion_sessions` (or `audit_log_dir`) exists with owner `mt_bastion` and mode `0750`
+- **THEN** it SHALL assert `/var/log/bastion_sessions` (or `audit_log_dir`) exists with owner `bastion` and mode `0750`
 
 ### Requirement: Ansible SHALL expose equivalent verify via tag
 

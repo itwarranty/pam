@@ -1,7 +1,7 @@
 {
-  "name": "mt-bastion-admin-scripts",
+  "name": "bastion-admin-scripts",
   "private": true,
-  "description": "Admin tooling for mt-bastion (QR onboarding)",
+  "description": "Admin tooling for bastion (QR onboarding)",
   "dependencies": {
     "qrcode": "^1.5.4"
   }

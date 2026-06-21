@@ -1,6 +1,6 @@
 ### Requirement: Operators MAY authenticate via short-lived SSH certificates from IdP-gated signing
 
-MT Bastion SSH PAM SHALL document and support OIDC-gated operator certificate issuance for production.
+SSH PAM SHALL document and support OIDC-gated operator certificate issuance for production.
 
 #### Scenario: Prod with OIDC policy
 - **WHEN** `bastion_oidc_cert_policy_enabled: true`

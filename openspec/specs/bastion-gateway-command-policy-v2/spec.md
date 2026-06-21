@@ -1,6 +1,6 @@
 ### Requirement: Gateway command policy SHALL enforce denylist on bastion side (v2)
 
-When v2 is enabled, MT Bastion SHALL inspect operator input before forwarding to target SSH, without injecting rc files on target.
+When v2 is enabled, SSH PAM SHALL inspect operator input before forwarding to target SSH, without injecting rc files on target.
 
 #### Scenario: v2 enabled for gateway
 - **WHEN** `bastion_gateway_command_policy_v2_enabled` is `true`
@@ -10,7 +10,7 @@ When v2 is enabled, MT Bastion SHALL inspect operator input before forwarding to
 #### Scenario: Denied command
 - **WHEN** operator types line matching denylist regex
 - **THEN** line SHALL NOT be forwarded to target ssh
-- **THEN** syslog tag `mt-bastion-deny` SHALL include `MODE=gateway` and `policy=v2`
+- **THEN** syslog tag `bastion-deny` SHALL include `MODE=gateway` and `policy=v2`
 
 #### Scenario: Optional session kill on deny
 - **WHEN** `bastion_gateway_deny_kill_session` is `true`
@@ -23,11 +23,17 @@ When v2 is enabled, MT Bastion SHALL inspect operator input before forwarding to
 - **WHEN** `bastion_shell_command_policy_v2_enabled` is `true`
 - **THEN** `bastion-shell-wrapper.sh` SHALL use same inspector for bash session
 
-### Requirement: v1 remote rc path SHALL remain as fallback
+### Requirement: v1 remote rc path SHALL remain as migration fallback only
 
 #### Scenario: v2 disabled
 - **WHEN** `bastion_gateway_command_policy_v2_enabled` is `false`
 - **THEN** Tier 2/3 remote rc injection behavior SHALL remain unchanged
+
+#### Scenario: Prod steady-state
+- **WHEN** `bastion_command_policy_v2_required` is `true` (default)
+- **AND** `bastion_shell_command_policy_enabled` is `true`
+- **THEN** `bastion_gateway_command_policy_v2_enabled` and `bastion_shell_command_policy_v2_enabled` SHALL be `true`
+- **THEN** preflight and compliance verify SHALL fail if v2 runtime markers are absent in container
 
 ### Requirement: Limitations SHALL be documented
 

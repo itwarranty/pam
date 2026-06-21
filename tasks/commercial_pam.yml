@@ -1,6 +1,6 @@
 ---
 # Ветка для клиентов с коммерческим PAM (CyberArk, СКДПУ, BeyondTrust).
-# Open-source компоненты MT Bastion не разворачиваются.
+# Open-source компоненты SSH PAM не разворачиваются.
 
 - name: Проверка параметров коммерческого PAM
   ansible.builtin.assert:
@@ -29,4 +29,4 @@
 
 - name: Результат интеграции с коммерческим PAM
   ansible.builtin.debug:
-    msg: "Bastion {{ inventory_hostname }} зарегистрирован в PAM заказчика (HTTP {{ commercial_pam_register.status }})."
+    msg: "Gateway {{ inventory_hostname }} зарегистрирован в PAM заказчика (HTTP {{ commercial_pam_register.status }})."

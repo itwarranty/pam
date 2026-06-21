@@ -1,8 +1,8 @@
-# HA active-passive (MT: Bastion)
+# HA active-passive (SSH PAM)
 
 ## Topology
 
-- **Primary:** `mt_ssh_bastion` running, accepts SSH :2222.
+- **Primary:** `ssh_bastion` running, accepts SSH :2222.
 - **Standby:** container stopped; same Ansible config; `bastion_ha_role: standby`.
 - **Shared storage:** NFS/WORM mount for `audit_log_dir` (mandatory for log continuity).
 
@@ -27,4 +27,4 @@
 
 ---
 
-*MT Global — HA Runbook v1.0*
+* HA Runbook v1.0*

@@ -2,7 +2,7 @@
 # systemd timer: periodic JIT purge on bastion host (client runs playbook).
 - name: JIT timer — скрипт purge на хосте
   ansible.builtin.template:
-    src: mt-bastion-jit-purge.sh.j2
+    src: bastion-jit-purge.sh.j2
     dest: "{{ bastion_jit_purge_script_path }}"
     owner: root
     group: root
@@ -10,8 +10,8 @@
 
 - name: JIT timer — systemd service
   ansible.builtin.template:
-    src: mt-bastion-jit-purge.service.j2
-    dest: /etc/systemd/system/mt-bastion-jit-purge.service
+    src: bastion-jit-purge.service.j2
+    dest: /etc/systemd/system/bastion-jit-purge.service
     owner: root
     group: root
     mode: "0644"
@@ -19,8 +19,8 @@
 
 - name: JIT timer — systemd timer unit
   ansible.builtin.template:
-    src: mt-bastion-jit-purge.timer.j2
-    dest: /etc/systemd/system/mt-bastion-jit-purge.timer
+    src: bastion-jit-purge.timer.j2
+    dest: /etc/systemd/system/bastion-jit-purge.timer
     owner: root
     group: root
     mode: "0644"
@@ -28,7 +28,7 @@
 
 - name: JIT timer — включение
   ansible.builtin.systemd:
-    name: mt-bastion-jit-purge.timer
+    name: bastion-jit-purge.timer
     enabled: true
     state: started
     daemon_reload: true
@@ -36,7 +36,7 @@
 
 - name: JIT timer — отключение
   ansible.builtin.systemd:
-    name: mt-bastion-jit-purge.timer
+    name: bastion-jit-purge.timer
     enabled: false
     state: stopped
   when: not (bastion_jit_timer_enabled | bool)

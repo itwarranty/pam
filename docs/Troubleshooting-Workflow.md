@@ -1,9 +1,9 @@
-# РЕГЛАМЕНТ И ВОРКФЛОУ ПРОВЕДЕНИЯ ТРАБЛШУТИНГА «MT: BASTION»
+# РЕГЛАМЕНТ И ВОРКФЛОУ ПРОВЕДЕНИЯ ТРАБЛШУТИНГА «SSH PAM»
 
-**Статус:** Enforced (обязателен к исполнению операторами MT Global и ИБ-службами Заказчика)  
+**Статус:** Enforced (обязателен к исполнению операторами  и ИБ-службами Заказчика)  
 **Концепция:** Dual Custody / принцип «четырёх глаз» (Four-Eyes Principle)  
-**Версия:** 1.2  
-**Связанные документы:** [MT-Bastion-Whitepaper.md](./MT-Bastion-Whitepaper.md), [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md), [Engineer-Onboarding.md](./Engineer-Onboarding.md)
+**Версия:** 1.6  
+**Связанные документы:** [Whitepaper.md](./Whitepaper.md), [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md), [Engineer-Onboarding.md](./Engineer-Onboarding.md)
 
 ---
 
@@ -19,7 +19,7 @@
 
 ### 1.1 Регистрация инцидента
 
-При возникновении технического сбоя в закрытом контуре Заказчика дежурный инженер MT Global или администратор Заказчика регистрирует тикет в ITSM-системе (Service Desk) с присвоением уникального ID (например, `INC-2026-8942`).
+При возникновении технического сбоя в закрытом контуре Заказчика дежурный инженер  или администратор Заказчика регистрирует тикет в ITSM-системе (Service Desk) с присвоением уникального ID (например, `INC-2026-8942`).
 
 **Обязательные поля тикета:**
 
@@ -30,14 +30,16 @@
 
 ### 1.2 Запрос временного окна доступа (Just-in-Time)
 
-Операторы MT Global **по умолчанию не имеют** постоянного доступа к бастиону. Старший инженер MT Global формирует запрос на проведение работ, в котором указывает:
+Операторы  **по умолчанию не имеют** постоянного доступа к шлюзу. Старший инженер  формирует запрос на проведение работ, в котором указывает:
 
 - перечень инженеров, привлекаемых к диагностике (строго именные учётные записи из массива `bastion_operators`);
 - временное окно проведения работ (например, с 14:00 до 16:00 UTC+3);
 - список целевых `host:port` оборудования внутри КИИ/Air Gap сети (формат `PermitOpen`, без CIDR);
 - тип доступа каждого инженера:
-  - `access: shell` — интерактивная сессия с записью TTY (сценарий «четырёх глаз»);
-  - `access: jump` — только ProxyJump к whitelist-целям (без интерактивного shell).
+  - **`access: gateway`** — **prod:** интерактив на Linux-target через шлюз, PTY-лог на инфраструктуре Заказчика;
+  - `access: jump` — ProxyJump / automation (connect-audit, без PTY на target);
+  - `access: shell` — работа на шлюз, сценарий «четырёх глаз»;
+  - `access: audit` — чтение логов, live moderation (`bastion-session-watch`).
 
 ### 1.3 Одобрение ИБ-директором (CSO) Заказчика
 
@@ -57,40 +59,40 @@ ansible-playbook site.yml
 
 ## ЭТАП 2: Подключение и двухфакторный барьер
 
-### 2.1 Проверка первого фактора (SSH-ключ)
+### 2.1 Проверка первого фактора (FIDO-sk / SSH-ключ / cert)
 
-Инженер MT Global инициирует SSH-сессию со своего рабочего места на кастомный порт бастиона (по умолчанию `2222`):
+Инженер инициирует SSH на порт шлюза (по умолчанию `2222`):
 
 ```bash
-ssh -p 2222 engineer_support@bastion.client.internal
+ssh -p 2222 -i ~/.ssh/bastion-fido engineer_support@gateway.client.internal
 ```
+
+**Prod (Tier 5, рекомендуется):** перед сетевым подключением — **user verification** на ноутбуке (`ed25519-sk -O verify-required`, Touch ID / YubiKey). См. [FIDO Onboarding](./FIDO-Onboarding.md).
 
 **Цепочка проверок:**
 
-1. **firewalld** (Rocky Linux 9) пропускает трафик на порт `bastion_ssh_port`.
-2. **Rootless Podman** принимает соединение в контейнере `mt_ssh_bastion` (контекст пользователя `mt_bastion` на хосте).
-3. **sshd** (контейнер, `sshd.pam`) сверяет ключ или user certificate с данными оператора:
-   - хост (read-only mount): `{{ bastion_home }}/operators/<operator>/`
-   - entrypoint копирует в контейнер: `/home/<operator>/.ssh/authorized_keys`, `.google_authenticator`
+1. **firewalld** пропускает `bastion_ssh_port`.
+2. **Rootless Podman** — контейнер `ssh_bastion`.
+3. **sshd** сверяет FIDO-sk pubkey или SSH user certificate (`TrustedUserCAKeys`):
+   - конфиг оператора: `{{ bastion_home }}/operators/<operator>/` (RO mount);
+   - в контейнере: `authorized_keys`, `.google_authenticator`.
 
-**Дополнительно для роли `jump`:** в `authorized_keys` применяются опции `restrict,port-forwarding,permitopen="..."` — прямой интерактивный shell **заблокирован** на уровне OpenSSH.
+**Jump:** `restrict,port-forwarding,permitopen` — прямой shell заблокирован.
 
 ### 2.2 Проверка второго фактора (Offline TOTP)
 
-SSH запрашивает одноразовый шестизначный код:
+При `bastion_mfa_mode: fido_totp` или `totp` (default prod) SSH запрашивает TOTP:
 
 ```text
 Verification code:
 ```
 
-Инженер генерирует код в приложении Authenticator или на аппаратном токене на **изолированном устройстве** (без доступа в Интернет на стороне Заказчика).
+**PAM** (`pam_google_authenticator.so`) — локально, Air Gap. Исключение: `fido_only` + CSO waiver (`bastion_fido_only_waiver: true`) — только FIDO-sk, без TOTP prompt.
 
-**PAM** (`pam_google_authenticator.so`) сверяет код локально — без сетевых обращений (Air Gap). Prod-образ: `MFA_STRICT=1`, OCI-label проверяется в `tasks/verify_image_cso.yml` после `podman load`.
-
-| Результат | Действие системы |
+| Результат | Действие |
 | :--- | :--- |
-| Код верен | Переход к этапу 3 (shell) или установка forwarding-канала (jump) |
-| Код неверен / таймаут | Сессия отклоняется; **auditd** на хосте фиксирует событие (`mt_bastion_ssh_connect`) |
+| Верно | ForceCommand по роли `access` |
+| Неверно | Отказ; auditd `bastion_ssh_connect` |
 
 ---
 
@@ -98,7 +100,7 @@ Verification code:
 
 > **Применимость:** данный этап обязателен для инцидентов с `access: shell`. Для чистого ProxyJump (`access: jump`) используется сценарий из п. 4.1 без shared tmux.
 
-После успешной авторизации инженер MT Global попадает во внутренний shell бастиона через `ForceCommand` → `bastion-shell-wrapper.sh`. Назначенный **ИБ-модератор** Заказчика (`client_moderator`, роль `access: shell`) уже находится на бастионе под своей учётной записью.
+После успешной авторизации инженер  попадает во внутренний shell шлюза через `ForceCommand` → `bastion-shell-wrapper.sh`. Назначенный **ИБ-модератор** Заказчика (`client_moderator`, роль `access: shell`) уже находится на шлюзе под своей учётной записью.
 
 ### 3.1 Сборка консольного моста (двойной контроль)
 
@@ -110,10 +112,10 @@ sudo mkdir -p /var/run/shared_tmux && sudo chmod 1770 /var/run/shared_tmux
 tmux -S /var/run/shared_tmux/bridge_INC-2026-8942 new-session -s INC-2026-8942
 ```
 
-Инженер MT Global подключается в режиме **только чтение**:
+Инженер  подключается в режиме **только чтение**:
 
 ```bash
-# Выполняет инженер MT Global
+# Выполняет инженер 
 tmux -S /var/run/shared_tmux/bridge_INC-2026-8942 attach-session -t INC-2026-8942 -r
 ```
 
@@ -128,10 +130,10 @@ exec script -q -f -c "/bin/bash --login" \
   "/var/log/bastion_sessions/session_engineer_support_20260615_143022.log"
 ```
 
-**На хосте** (volume `/var/log/bastion_sessions`, владелец `mt_bastion`, mode `0750`):
+**На хосте** (volume `/var/log/bastion_sessions`, владелец `bastion`, mode `0750`):
 
 - на каждый новый `.log` — атрибут `chattr +a` (append-only) в `bastion-shell-wrapper.sh` и при старте entrypoint;
-- **auditd** регистрирует операции записи (`mt_bastion_session_logs`).
+- **auditd** регистрирует операции записи (`bastion_session_logs`).
 
 ---
 
@@ -139,31 +141,31 @@ exec script -q -f -c "/bin/bash --login" \
 
 ### 4.1 Прозрачный просмотр и экспертиза (режим Read-Only)
 
-Инженер MT Global видит консоль, но **не может вводить символы** (флаг `-r` в tmux). Диагностические команды диктуются модератору голосом или через согласованный текстовый канал вне бастиона.
+Инженер  видит консоль, но **не может вводить символы** (флаг `-r` в tmux). Диагностические команды диктуются модератору голосом или через согласованный текстовый канал вне шлюза.
 
 Модератор Заказчика:
 
 - вводит команды на целевых системах;
-- при необходимости выполняет ProxyJump с бастиона на внутренние хосты из whitelist (`PermitOpen`);
+- при необходимости выполняет ProxyJump с шлюза на внутренние хосты из whitelist (`PermitOpen`);
 - **не раскрывает** административные пароли инфраструктуры третьим лицам.
 
 ### 4.2 Временное делегирование ввода (интерактивный режим)
 
-Если характер неисправности требует прямого ввода со стороны эксперта MT Global, ИБ-модератор **осознанно** снимает режим read-only:
+Если характер неисправности требует прямого ввода со стороны эксперта , ИБ-модератор **осознанно** снимает режим read-only:
 
 ```bash
 # На стороне модератора: переподключение без -r или Ctrl+B → I (switch pane / grant input)
 # Рекомендуется: явная фиксация в тикете «делегирование ввода с HH:MM»
 ```
 
-Инженер MT Global вводит команды напрямую. Модератор **непрерывно** контролирует ввод на своём мониторе. Все действия продолжают записываться в append-only лог.
+Инженер  вводит команды напрямую. Модератор **непрерывно** контролирует ввод на своём мониторе. Все действия продолжают записываться в append-only лог.
 
 ### 4.3 Перехват сессии модератором (защита от ошибки / инсайдера)
 
 При попытке ввести несанкционированную или деструктивную команду:
 
 ```text
-[Инженер MT пытается ввести опасную команду]
+[Инженер пытается ввести опасную команду]
               │
               ▼  (отображается на экране модератора)
 [ИБ-модератор: Ctrl+B → d  или  kill-session]
@@ -179,7 +181,7 @@ exec script -q -f -c "/bin/bash --login" \
 При компрометации или подозрительной активности администратор Заказчика:
 
 ```bash
-sudo -u mt_bastion podman stop mt_ssh_bastion
+sudo -u bastion podman stop ssh_bastion
 ```
 
 Активные SSH-сессии разрываются. Логи в `/var/log/bastion_sessions/` **сохраняются** на хосте.
@@ -194,7 +196,7 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 1. завершает tmux-сессию (`exit` / `tmux kill-session`);
 2. фиксирует время окончания в тикете;
-3. инженер MT Global деавторизуется.
+3. инженер  деавторизуется.
 
 ### 5.2 Just-in-Time блокировка
 
@@ -220,7 +222,7 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 - удаляет каталоги операторов на хосте (`{{ operators_home }}/<name>/`);
 - удаляет TOTP onboarding (`generated/mfa/<host>/<name>.mfa.txt`);
 - удаляет Unix-учётки и `/home/<name>` внутри контейнера;
-- перезапускает `mt_ssh_bastion` (handler в `site.yml`).
+- перезапускает `ssh_bastion` (handler в `site.yml`).
 
 Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет учётки, отсутствующие в read-only mount `/etc/bastion/operators`, при каждом старте контейнера.
 
@@ -246,23 +248,42 @@ Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет �
    less /var/log/bastion_sessions/session_engineer_support_20260615_143022.log
    ```
 
-6. События **auditd** (ключи `mt_bastion_session_logs`, `mt_bastion_ssh_connect`, `mt_bastion_break_glass_session`) направляются в SIEM через rsyslog LOCAL6 при `bastion_siem_forward_enabled: true` (см. Whitepaper §6).
+6. События **auditd** (ключи `bastion_session_logs`, `bastion_ssh_connect`, `bastion_break_glass_session`) направляются в SIEM через rsyslog LOCAL6 при `bastion_siem_forward_enabled: true` (см. Whitepaper §6).
 
-### 5.4 Shell command policy (Tier 2)
+### 5.4 Shell command policy (Tier 2 + Tier 4 v2)
 
-При `bastion_shell_command_policy_enabled: true` опасные интерактивные команды в shell-сессии блокируются denylist (`/etc/bastion/command_denylist`).
+При `bastion_shell_command_policy_enabled: true` опасные интерактивные команды блокируются denylist (`/etc/bastion/command_denylist`).
 
-1. Отказ фиксируется в syslog/journal с тегом `mt-bastion-deny`.
-2. Сессия **не** прерывается — оператор получает сообщение об отказе.
+**Prod (решение CSO):** enforcement только **policy v2** — PTY inspector на шлюз (`bastion-pty-inspector.py`, `python3` в образе). Denylist сканируется **до** пересылки ввода на target или в shell bash.
+
+**Migration-only (v1):** remote `bash --rcfile` на target — слабее (политика за audit boundary, обход через `/bin/sh`). Допустимо только при `bastion_command_policy_v2_required: false` и formal risk acceptance.
+
+Переменные steady-state prod:
+
+```yaml
+bastion_shell_command_policy_enabled: true
+bastion_command_policy_v2_required: true
+bastion_gateway_command_policy_v2_enabled: true
+bastion_shell_command_policy_v2_enabled: true
+```
+
+1. Отказ фиксируется в syslog/journal с тегом `bastion-deny` (`policy=v2`, `MODE=gateway|shell`).
+2. Сессия **не** прерывается по умолчанию — оператор получает сообщение об отказе (`bastion_gateway_deny_kill_session` — opt-in kill).
 3. Denylist редактируется только через Ansible (`bastion_shell_command_denylist`), не вручную в контейнере.
-4. Jump-операторы (`access: jump`) не затрагиваются.
+4. Jump-операторы (`access: jump`) не затрагиваются denylist.
 
 **Диагностика:**
 
 ```bash
-journalctl -t mt-bastion-deny --since "1 hour ago"
-podman exec mt_ssh_bastion cat /etc/bastion/command_denylist
+journalctl -t bastion-deny --since "1 hour ago"
+podman exec ssh_bastion cat /run/bastion/command_denylist
+podman exec ssh_bastion test -f /run/bastion/policy_v2_enabled && echo gateway-v2-ok
+podman exec ssh_bastion test -f /run/bastion/shell_policy_v2_enabled && echo shell-v2-ok
+./scripts/bastion-compliance-verify.sh  # check command_policy_v2
+./scripts/test-shell-policy-v2.sh       # non-interactive smoke (без TTY)
 ```
+
+**QA / отладка:** не запускайте `script -q -f -c "bastion-pty-inspector.sh ..."` через `podman exec` **без `-t`** — `script(1)` ждёт controlling TTY и зависает без вывода. Для smoke используйте `scripts/test-shell-policy-v2.sh` (piped stdin → inspector напрямую) или `podman exec -it`.
 
 ### 5.5 Break-glass emergency access (Tier 2)
 
@@ -274,15 +295,15 @@ podman exec mt_ssh_bastion cat /etc/bastion/command_denylist
 
 При входе:
 
-1. Shell wrapper выставляет `MT_BASTION_BREAK_GLASS=1` и пишет syslog `mt-bastion-break-glass`.
-2. auditd (при `bastion_break_glass_audit_enabled`) логирует ключ `mt_bastion_break_glass_session`.
-3. Маркер `.mt-bastion-break-glass` в каталоге оператора на хосте.
+1. Shell wrapper выставляет `BASTION_BREAK_GLASS=1` и пишет syslog `bastion-break-glass`.
+2. auditd (при `bastion_break_glass_audit_enabled`) логирует ключ `bastion_break_glass_session`.
+3. Маркер `.bastion-break-glass` в каталоге оператора на хосте.
 
 **Закрытие окна:** по истечении `valid_until` — `jit_purge` удаляет оператора (как Tier 1 JIT).
 
 ### 5.6 Gateway session kill (Tier 3)
 
-Активные gateway-сессии регистрируются в `{{ bastion_runtime_dir }}/sessions/` (mount в контейнер `/run/mt-bastion/sessions/`).
+Активные gateway-сессии регистрируются в `{{ bastion_runtime_dir }}/sessions/` (mount в контейнер `/run/bastion/sessions/`).
 
 ```bash
 bastion-session-ctl list
@@ -320,9 +341,9 @@ bastion-session-watch <session-id>
 # JSONL: moderator_watch_start в sessions.jsonl
 ```
 
-Модератор: пользователь с `access: audit` или член группы `mt_bastion_moderators` (sudo на host CLI).
+Модератор: пользователь с `access: audit` или член группы `bastion_moderators` (sudo на host CLI).
 
-**Command policy v2** (gateway): destructive команды блокируются на бастion PTY до SSH к target; v1 remote rc — fallback при `bastion_gateway_command_policy_v2_enabled: false`.
+См. §5.4 — command policy v2 обязателен в prod; gateway и shell используют один PTY inspector.
 
 ---
 
@@ -332,35 +353,37 @@ bastion-session-watch <session-id>
 [1. Service Desk: тикет INC-XXXX]
               │
               v
-[2. Одобрение CSO + Ansible: bastion_operators / PermitOpen]
+[2. Одобрение CSO + Ansible: bastion_operators / bastion_targets]
               │
               v
 [3. Вход: SSH-ключ + Offline TOTP]
               │
               v
-[4. Tmux «4 глаза»: модератор контролирует ввод]
+[4. Gateway на target ИЛИ shell four-eyes / jump ProxyJump]
               │
               v
-[5. exit / kill-switch → закрытие сессии]
+[5. exit / bastion-session-ctl kill → закрытие сессии]
               │
               v
-[6. JIT-отзыв прав + SHA-256 лога → тикет + SIEM]
+[6. JIT-отзыв + SHA-256 / JSONL → тикет + SIEM]
 ```
 
 ---
 
 ## Матрица соответствия: этап регламента → контроль продукта
 
-| Этап регламента | Технический контроль MT: Bastion | Компонент |
+| Этап регламента | Технический контроль SSH PAM | Компонент |
 | :--- | :--- | :--- |
 | 1.3 JIT whitelist | `bastion_operators`, `permit_open`, `ansible-playbook` | `group_vars/all.yml`, `site.yml` |
-| 2.1 SSH-ключ | `authorized_keys` (+ `restrict` для jump) | `templates/authorized_keys.j2` |
-| 2.2 TOTP | PAM, `MFA_STRICT=1` | `build/Containerfile`, preflight |
+| 2.1 FIDO / SSH-ключ | `ed25519-sk` + cert (opt.); preflight FIDO | `preflight_fido_operators.yml`, [FIDO Onboarding](./FIDO-Onboarding.md) |
+| 2.2 TOTP | PAM, `MFA_STRICT=1`; `fido_only` waiver | `build/Containerfile`, `sshd_config.j2` |
 | 3.2 Append-only лог | `script` + `chattr +a` на `.log`; каталог `0750` | `bastion-shell-wrapper.sh`, `bastion-entrypoint.sh`, `prepare_os.yml` |
 | 2.1 SSH User CA (опц.) | `bastion_trusted_user_ca_file`, operator `certificate` | `templates/sshd_config.j2`, `templates/authorized_keys.j2` |
 | 5.2 JIT-отзыв | `valid_until` + jit_filter + purge + timer | `tasks/jit_filter_operators.yml`, `tasks/jit_purge.yml` |
-| 4.3 Kill-switch | `podman stop mt_ssh_bastion` | Runbook §7 Whitepaper |
-| 5.3 Аудит | auditd + session logs + SHA-256 sidecar | `auditd-bastion.rules.j2`, `bastion-shell-wrapper.sh` |
+| 4.3 Kill-switch | `podman stop ssh_bastion` | Runbook §7 Whitepaper |
+| 5.3 Аудит | auditd + session/gateway logs + SHA-256 + JSONL | `auditd-bastion.rules.j2`, `sessions.jsonl` |
+| Gateway (prod) | `access: gateway`, `bastion_targets`, PTY log | `bastion-ssh-gateway-wrapper.sh` |
+| Session kill / search | `bastion-session-ctl`, `bastion-session-search` | `scripts/bastion-session-*.sh` |
 
 ---
 
@@ -368,7 +391,7 @@ bastion-session-watch <session-id>
 
 | Роль | Ответственность |
 | :--- | :--- |
-| **Инженер MT Global** | Работа строго в рамках тикета и окна доступа; соблюдение режима read-only до делегирования |
+| **Инженер ** | Работа строго в рамках тикета и окна доступа; соблюдение режима read-only до делегирования |
 | **ИБ-модератор Заказчика** | Контроль ввода, инициация/завершение tmux-моста, ProxyJump к внутренним системам |
 | **CSO / офицер ИБ Заказчика** | Одобрение JIT-окна, whitelist, приёмка аудиторского следа |
 | **Администратор Ansible** | Декларативное применение `bastion_operators` и отзыв прав по окончании окна |
@@ -385,4 +408,4 @@ bastion-session-watch <session-id>
 
 ---
 
-*MT Global — MT: Bastion Troubleshooting Workflow v1.4.*
+* Troubleshooting Workflow v1.6.*

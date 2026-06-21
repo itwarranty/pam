@@ -26,7 +26,7 @@
 ## 4. SSH brute-force protection (Phase D — v0.5.3)
 
 - [x] 4.1 Create `tasks/configure_ssh_brute_force.yml` (firewalld rate limit path).
-- [x] 4.2 Optional fail2ban: `templates/fail2ban-mt-bastion.conf.j2` + filter.
+- [x] 4.2 Optional fail2ban: `templates/fail2ban-bastion.conf.j2` + filter.
 - [x] 4.3 Group vars: `bastion_ssh_rate_limit_*`.
 - [x] 4.4 Include task in `site.yml` when enabled.
 - [x] 4.5 Extend `verify_compliance_cso.yml` + `bastion-compliance-verify.sh`.
@@ -37,7 +37,7 @@
 - [x] 5.1 Group vars: `bastion_break_glass_enabled`, `bastion_break_glass_max_hours`.
 - [x] 5.2 Extend `preflight_cso.yml` for break-glass rules.
 - [x] 5.3 Extend `jit_filter_operators.yml` if needed (no change expected).
-- [x] 5.4 Audit: `templates/auditd-bastion.rules.j2` key `mt_bastion_break_glass_session`.
+- [x] 5.4 Audit: `templates/auditd-bastion.rules.j2` key `bastion_break_glass_session`.
 - [x] 5.5 Shell wrapper / syslog: `BREAK_GLASS=1` marker.
 - [x] 5.6 Lab fixture `group_vars/dev/break_glass_lab.yml` + CSO Demo block.
 - [x] 5.7 Troubleshooting break-glass runbook + Whitepaper row 25.

@@ -19,11 +19,11 @@
     mode: "0640"
     setype: container_file_t
   when: bastion_shell_command_policy_enabled | default(true) | bool
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: Удаление denylist при отключённой policy
   ansible.builtin.file:
     path: "{{ bastion_home }}/command_policy/command_denylist"
     state: absent
   when: not (bastion_shell_command_policy_enabled | default(true) | bool)
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container

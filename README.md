@@ -1,6 +1,8 @@
-# MT: Bastion
+# SSH PAM
 
-Open-source tier продукта **«МТ Доступ»** — **SSH PAM** (Privileged Access Management) для Rocky Linux 9: gateway, MFA, JIT, session recording, Security-as-a-Code (Rootless Podman, CSO Policy Gate).
+**Repository:** [github.com/itwarranty/itwarranty-pam](https://github.com/itwarranty/itwarranty-pam)
+
+White-label **SSH PAM** (Privileged Access Management) для Rocky Linux 9: gateway, MFA, JIT, session recording, Security-as-a-Code (Rootless Podman, CSO Policy Gate).
 
 ## Quick start (dev)
 
@@ -11,14 +13,14 @@ Open-source tier продукта **«МТ Доступ»** — **SSH PAM** (Pri
 ## Admin tools
 
 ```bash
-# Тестовый доступ (Git + Bastion, onboarding + QR)
+# Тестовый доступ (Git + gateway, onboarding + QR)
 ./scripts/test-repo-key.sh create <name> --bastion --apply
 ./scripts/test-repo-key.sh revoke <name> --apply      # declarative purge + restart
 ./scripts/test-repo-key.sh apply-dev
 
 # Compliance verify (Tier 1 — post-deploy)
 ./scripts/bastion-compliance-verify.sh
-./scripts/mt-dostup-doctor.sh engineer-jump   # lab: role, TOTP, ProxyJump hint
+./scripts/bastion-doctor.sh engineer-jump   # lab: role, TOTP, ProxyJump hint
 ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 
 # Gateway session control (Tier 3)
@@ -40,14 +42,14 @@ bastion-session-watch <session-id>
 | :--- | :--- |
 | [docs/README.md](docs/README.md) | Индекс документации |
 | [Engineer Onboarding](docs/Engineer-Onboarding.md) | Доступ к repo + dev-стенд |
-| [Whitepaper](docs/MT-Bastion-Whitepaper.md) | Техпаспорт для CSO |
-| [Troubleshooting Workflow](docs/MT-Bastion-Troubleshooting-Workflow.md) | Регламент инцидента |
+| [Whitepaper](docs/Whitepaper.md) | Техпаспорт для CSO |
+| [Troubleshooting Workflow](docs/Troubleshooting-Workflow.md) | Регламент инцидента |
 | [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | Пресейл demo |
-| [МТ Доступ SSH PAM Overview](docs/MT-Dostup-SSH-PAM-Overview.md) | PAM positioning для заказчика |
-| [FIDO Onboarding](docs/MT-Bastion-FIDO-Onboarding.md) | FIDO-sk + TOTP (Tier 5) |
-| [Battlecard vs СКДПУ SSH](docs/MT-Bastion-Battlecard-SKDPU-SSH.md) | Пресейл сравнение |
-| [HA Runbook](docs/MT-Bastion-HA-Runbook.md) | Active-passive failover |
-| [OpenSpec specs](openspec/specs/) | GA specs Tier 1–4 |
+| [SSH PAM Overview](docs/SSH-PAM-Overview.md) | PAM positioning для заказчика |
+| [FIDO Onboarding](docs/FIDO-Onboarding.md) | FIDO-sk + TOTP (Tier 5) |
+| [Battlecard vs СКДПУ SSH](docs/Battlecard-SKDPU-SSH.md) | Пресейл сравнение |
+| [HA Runbook](docs/HA-Runbook.md) | Active-passive failover |
+| [OpenSpec specs](openspec/specs/) | GA specs Tier 1–5 |
 | [OpenSpec archive](openspec/changes/archive/) | Completed change history |
 
 ## Prod deploy
@@ -70,7 +72,7 @@ bastion-session-watch <session-id>
 | **`v1.0.0`** | **Tier 4 — SSH PAM GA:** search, policy v2, watch, Vault, OIDC examples, HA |
 | **`v1.1.0`** | **Tier 5 — FIDO-Anchor MFA:** `ed25519-sk` + TOTP, JIT sk certs |
 
-Tier 1–5 реализованы в репозитории. FIDO onboarding: [docs/MT-Bastion-FIDO-Onboarding.md](docs/MT-Bastion-FIDO-Onboarding.md).
+Tier 1–5 реализованы в репозитории. FIDO onboarding: [docs/FIDO-Onboarding.md](docs/FIDO-Onboarding.md).
 
 ## CI
 

@@ -1,6 +1,6 @@
 ## Why
 
-MT: Bastion Free **Tier 1** (`v0.4.0`) delivers CSO-grade SSH jump controls: JIT windows, tamper-evident logs, SIEM forward, source IP, compliance verify, and SSH User CA prod policy. Enterprise buyers still ask for **emergency access**, **command safety on shell role**, **brute-force hardening**, **ITSM-correlated log filenames**, and **read-only auditor accounts** — without a paid portal or multi-protocol PAM.
+SSH PAM **Tier 1** (`v0.4.0`) delivers CSO-grade SSH jump controls: JIT windows, tamper-evident logs, SIEM forward, source IP, compliance verify, and SSH User CA prod policy. Enterprise buyers still ask for **emergency access**, **command safety on shell role**, **brute-force hardening**, **ITSM-correlated log filenames**, and **read-only auditor accounts** — without a paid portal or multi-protocol PAM.
 
 Tier 2 closes these objections **within SSH-only Free scope**: declarative Ansible, Air Gap compatible, Rocky Linux 9 only.
 
@@ -62,7 +62,7 @@ Tier 2 closes these objections **within SSH-only Free scope**: declarative Ansib
 - **Group vars:** `bastion_break_glass_*`, `bastion_shell_command_denylist`, `bastion_ssh_rate_limit_*`
 - **Docs:** Whitepaper Control Matrix rows 21–25, CSO Demo blocks, Troubleshooting §5.x
 
-## Non-Goals (remain Paid / «МТ Доступ»)
+## Non-Goals (remain Paid / SSH PAM)
 
 - ITSM approval workflow UI, OIDC/SAML, credential vault
 - Full session command indexing / video replay

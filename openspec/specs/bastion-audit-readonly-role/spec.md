@@ -1,6 +1,6 @@
 ### Requirement: Operators SHALL support access mode audit
 
-MT: Bastion Free SHALL allow a read-only auditor role for reviewing session artifacts without target access.
+SSH PAM SHALL allow a read-only auditor role for reviewing session artifacts without target access.
 
 #### Scenario: Audit operator provisioned
 - **WHEN** operator entry has `access: audit`

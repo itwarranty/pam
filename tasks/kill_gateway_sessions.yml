@@ -5,7 +5,7 @@
     argv:
       - podman
       - exec
-      - mt_ssh_bastion
+      - ssh_bastion
       - /usr/local/bin/bastion-session-ctl-internal
       - kill
       - --operator
@@ -31,7 +31,7 @@
     argv:
       - podman
       - exec
-      - mt_ssh_bastion
+      - ssh_bastion
       - /usr/local/bin/bastion-session-ctl-internal
       - kill
       - "{{ bastion_session_kill_id }}"

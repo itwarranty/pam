@@ -9,7 +9,7 @@
 ## 2. Tamper-evident session logs (Phase A)
 
 - [x] 2.1 Extend `build/files/bastion-shell-wrapper.sh`: trap on EXIT writes `*.sha256` sidecar.
-- [x] 2.2 Support optional env `MT_BASTION_INCIDENT_ID` (from operator `incident_id` via sshd `SetEnv` Match block — if feasible).
+- [x] 2.2 Support optional env `BASTION_INCIDENT_ID` (from operator `incident_id` via sshd `SetEnv` Match block — if feasible).
 - [x] 2.3 Document verification in Troubleshooting Workflow §5.3.
 - [x] 2.4 Optional: `tasks/archive_session_logs_worm.yml` when `bastion_worm_archive_dir` set.
 - [x] 2.5 Rebuild image via `trusted_download.sh`; update CSO demo ls + sha256 check.
@@ -38,9 +38,9 @@
 - [x] 5.5 Update Troubleshooting Workflow §5.2 with automatic expiry path.
 - [x] 5.6 Lab test: operator with `valid_until` in past → removed on playbook run.
 
-## 6. SSH User CA prod Free (Phase C — depends on ssh-user-ca-qa-mtglobal)
+## 6. SSH User CA prod Free (Phase C — depends on ssh-user-ca-qa)
 
-- [x] 6.1 Complete QA tasks in `ssh-user-ca-qa-mtglobal` (PKI access required).
+- [x] 6.1 Complete QA tasks in `ssh-user-ca-qa` (PKI access required).
 - [x] 6.2 Add preflight warning when prod uses raw `pubkey` without CSO waiver flag.
 - [x] 6.3 Add `bastion_allow_raw_pubkey_prod: false` default in `group_vars/all.yml`.
 - [x] 6.4 Document cert renewal SOP in Whitepaper §7.

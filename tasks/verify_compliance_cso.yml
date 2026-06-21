@@ -36,8 +36,8 @@
   when: bastion_selinux_enforcing | bool
   tags: [verify_compliance]
 
-- name: "[Verify] mt_ssh_bastion container running"
-  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' mt_ssh_bastion
+- name: "[Verify] ssh_bastion container running"
+  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' ssh_bastion
   register: verify_container_running
   changed_when: false
   become: true
@@ -51,14 +51,14 @@
   ansible.builtin.assert:
     that:
       - verify_container_running.stdout == 'true'
-    fail_msg: "FAIL:container — mt_ssh_bastion not running"
+    fail_msg: "FAIL:container — ssh_bastion not running"
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
 - name: "[Verify] Image MFA strict label"
   ansible.builtin.command: >-
     podman image inspect {{ bastion_image_name }}:{{ bastion_image_tag }}
-    --format '{{ "{{" }} index .Config.Labels "mt.global.mfa.strict" {{ "}}" }}'
+    --format '{{ "{{" }} index .Config.Labels "bastion.mfa.strict" {{ "}}" }}'
   register: verify_mfa_label
   changed_when: false
   become: true
@@ -106,7 +106,7 @@
     set -e
     allowed=" {{ bastion_operator_names | join(' ') }} "
     orphans=""
-    for u in $(podman exec mt_ssh_bastion sh -c 'ls -1 /home 2>/dev/null || true'); do
+    for u in $(podman exec ssh_bastion sh -c 'ls -1 /home 2>/dev/null || true'); do
       case "${allowed}" in
         *" ${u} "*) ;;
         *) orphans="${orphans} ${u}" ;;
@@ -176,7 +176,7 @@
       FAIL:session_log_dir — expected {{ audit_log_dir }} dir {{ bastion_audit_log_dir_mode | default('0750') }} owner {{ bastion_user }}
   tags: [verify_compliance]
 
-- name: "[Verify] Bastion SSH port open in firewalld"
+- name: "[Verify] Gateway SSH port open in firewalld"
   ansible.builtin.command: firewall-cmd --query-port={{ bastion_ssh_port }}/tcp
   register: verify_fw_port
   changed_when: false
@@ -249,6 +249,70 @@
   when: bastion_targets | default([]) | length > 0
   tags: [verify_compliance]
 
+- name: "[Verify] Command policy v2 runtime (gateway)"
+  ansible.builtin.command: podman exec ssh_bastion test -f /run/bastion/policy_v2_enabled
+  register: verify_policy_v2_gateway
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when:
+    - bastion_command_policy_v2_required | default(true) | bool
+    - bastion_shell_command_policy_enabled | default(true) | bool
+    - bastion_gateway_command_policy_v2_enabled | default(true) | bool
+    - not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Command policy v2 runtime (shell)"
+  ansible.builtin.command: podman exec ssh_bastion test -f /run/bastion/shell_policy_v2_enabled
+  register: verify_policy_v2_shell
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when:
+    - bastion_command_policy_v2_required | default(true) | bool
+    - bastion_shell_command_policy_enabled | default(true) | bool
+    - bastion_shell_command_policy_v2_enabled | default(true) | bool
+    - not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] PTY inspector in image"
+  ansible.builtin.command: podman exec ssh_bastion test -f /usr/local/bin/bastion-pty-inspector.py
+  register: verify_pty_inspector
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ bastion_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+  when:
+    - bastion_command_policy_v2_required | default(true) | bool
+    - bastion_shell_command_policy_enabled | default(true) | bool
+    - not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Command policy v2 active"
+  ansible.builtin.assert:
+    that:
+      - verify_policy_v2_gateway.rc == 0
+      - verify_policy_v2_shell.rc == 0
+      - verify_pty_inspector.rc == 0
+    fail_msg: >-
+      FAIL:command_policy_v2 — PTY inspector v2 not active in container
+      (gateway rc={{ verify_policy_v2_gateway.rc | default('skip') }},
+      shell rc={{ verify_policy_v2_shell.rc | default('skip') }},
+      inspector rc={{ verify_pty_inspector.rc | default('skip') }})
+  when:
+    - bastion_command_policy_v2_required | default(true) | bool
+    - bastion_shell_command_policy_enabled | default(true) | bool
+    - not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
 - name: "[Verify] FIDO-sk operator keys (Tier 5)"
   ansible.builtin.slurp:
     src: "{{ operators_home }}/{{ item.name }}/.ssh/authorized_keys"
@@ -288,5 +352,5 @@
   ansible.builtin.debug:
     msg: >-
       PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist,
-      auditd, firewalld, session logs{% if bastion_require_fido_pubkey | default(false) %}, FIDO-sk operators{% endif %})
+      auditd, firewalld, session logs{% if bastion_command_policy_v2_required | default(true) and bastion_shell_command_policy_enabled | default(true) %}, command policy v2{% endif %}{% if bastion_require_fido_pubkey | default(false) %}, FIDO-sk operators{% endif %})
   tags: [verify_compliance]

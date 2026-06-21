@@ -1,10 +1,10 @@
 ---
 # AUTO: scripts/test-repo-key.sh --bastion (не редактировать)
-# Pubkey: ~/.mt-bastion/test-access/<name>/ (admin HOME при ansible-playbook)
+# Pubkey: ~/.bastion/test-access/<name>/ (admin HOME при ansible-playbook)
 bastion_operators_test:
   - name: tester-01
-    email: tester-01@mtglobal.team
-    pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.mt-bastion/test-access/tester-01/tester-01.key.pub') }}"
+    email: tester-01@example.com
+    pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.bastion/test-access/tester-01/tester-01.key.pub') }}"
     mfa_secret: NSLSL4QRNUO4SDOB2AKIOR53VH366HHL
     access: jump
     permit_open:

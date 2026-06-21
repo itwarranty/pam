@@ -1,6 +1,6 @@
 ### Requirement: Gateway lifecycle events SHALL be exportable as structured records
 
-MT: Bastion SHALL append machine-readable session events for client SIEM indexing.
+SSH PAM SHALL append machine-readable session events for client SIEM indexing.
 
 #### Scenario: Gateway session start
 - **WHEN** gateway session starts

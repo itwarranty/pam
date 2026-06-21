@@ -3,7 +3,7 @@
 set -euo pipefail
 
 LOG="${BASTION_SYSLOG_FILE:-/var/log/bastion_sessions/bastion.syslog}"
-STATE="${BASTION_SYSLOG_JOURNAL_STATE:-/var/lib/mt-bastion/syslog-journal.offset}"
+STATE="${BASTION_SYSLOG_JOURNAL_STATE:-/var/lib/bastion/syslog-journal.offset}"
 
 mkdir -p "$(dirname "${STATE}")"
 touch "${LOG}" 2>/dev/null || true

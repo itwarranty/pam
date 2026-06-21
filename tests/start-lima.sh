@@ -4,14 +4,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-INSTANCE_NAME="${LIMA_INSTANCE_NAME:-mt-bastion-prod}"
-RENDERED="/tmp/mt-bastion-lima-${INSTANCE_NAME}.yaml"
+INSTANCE_NAME="${LIMA_INSTANCE_NAME:-bastion-prod}"
+RENDERED="/tmp/bastion-lima-${INSTANCE_NAME}.yaml"
 
-sed "s|__MT_BASTION_REPO__|${REPO_ROOT}|g" "${SCRIPT_DIR}/lima-rocky9.yaml" > "${RENDERED}"
+sed "s|__BASTION_REPO__|${REPO_ROOT}|g" "${SCRIPT_DIR}/lima-rocky9.yaml" > "${RENDERED}"
 
-echo "[mt-bastion] Lima config: ${RENDERED}"
-echo "[mt-bastion] Repo mount:   ${REPO_ROOT}"
-echo "[mt-bastion] Starting VM:  ${INSTANCE_NAME}"
+echo "[bastion] Lima config: ${RENDERED}"
+echo "[bastion] Repo mount:   ${REPO_ROOT}"
+echo "[bastion] Starting VM:  ${INSTANCE_NAME}"
 
 if limactl list "${INSTANCE_NAME}" 2>/dev/null | grep -q "${INSTANCE_NAME}"; then
   limactl start "${INSTANCE_NAME}"

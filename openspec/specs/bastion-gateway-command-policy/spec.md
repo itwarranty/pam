@@ -5,7 +5,7 @@ When `bastion_shell_command_policy_enabled` is `true`, gateway PTY SHALL apply t
 #### Scenario: Denied command on target via gateway
 - **WHEN** operator types interactive command matching denylist regex
 - **THEN** command SHALL NOT be executed on target
-- **THEN** denial SHALL be logged via syslog tag `mt-bastion-deny`
+- **THEN** denial SHALL be logged via syslog tag `bastion-deny`
 - **THEN** log metadata SHALL include `MODE=gateway`
 
 #### Scenario: Policy disabled

@@ -75,7 +75,7 @@
     mode: "0640"
     setype: container_file_t
   when: bastion_targets | default([]) | length > 0
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: SSH known_hosts for targets
   ansible.builtin.template:
@@ -86,7 +86,7 @@
     mode: "0644"
     setype: container_file_t
   when: bastion_targets | default([]) | length > 0
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: SELinux container_file_t для targets
   ansible.builtin.command:

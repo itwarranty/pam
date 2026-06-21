@@ -1,6 +1,6 @@
 ## Why
 
-MT: Bastion Free **v0.5.0** (Tier 1 + Tier 2) delivers strong **bastion-side** controls: MFA, JIT, purge, tamper-evident logs, SIEM hook, audit role, break-glass. For the market segment **without PAM** (~200–1000 employees, Linux-heavy support contracts), adoption stalls on one CSO question:
+SSH PAM **v0.5.0** (Tier 1 + Tier 2) delivers strong **bastion-side** controls: MFA, JIT, purge, tamper-evident logs, SIEM hook, audit role, break-glass. For the market segment **without PAM** (~200–1000 employees, Linux-heavy support contracts), adoption stalls on one CSO question:
 
 > «Что делал инженер **на целевом сервере** при инциденте?»
 
@@ -12,7 +12,7 @@ Current `access: jump` uses OpenSSH **transparent TCP forwarding** (`restrict` +
 
 ### 1. New access mode: `access: gateway`
 
-- Operator authenticates to bastion (key/cert + MFA) as today.
+- Operator authenticates to gateway (key/cert + MFA) as today.
 - `ForceCommand` invokes **SSH session proxy** — bastion opens a **second** SSH session to the target using **broked credentials**.
 - Operator receives a PTY; all bytes recorded on bastion host with tamper-evident sidecars (reuse Tier 1/2 patterns).
 
@@ -79,7 +79,7 @@ Current `access: jump` uses OpenSSH **transparent TCP forwarding** (`restrict` +
 - **Group vars:** `bastion_targets`, `bastion_prod_require_gateway`, `bastion_gateway_*`
 - **Docs:** Whitepaper §4 scenario C, Policy Gate #26–28, client 1-pager
 
-## Non-Goals (remain Paid / «МТ Доступ» / out of scope)
+## Non-Goals (remain Paid / SSH PAM / out of scope)
 
 - RDP, VNC, web, database protocols
 - Self-service approval portal / ITSM API

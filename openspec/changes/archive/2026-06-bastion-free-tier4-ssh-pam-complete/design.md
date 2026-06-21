@@ -1,8 +1,8 @@
 ## Context
 
-**Product:** «МТ Доступ» — PAM for SSH. MT: Bastion Free is the open-source tier, **not** a crippled edition. Tier 4 adds enterprise ergonomics that commercial PAM buyers expect, while preserving Security-as-a-Code and Air Gap.
+**Product:** SSH PAM — PAM for SSH. SSH PAM is the open-source tier, **not** a crippled edition. Tier 4 adds enterprise ergonomics that commercial PAM buyers expect, while preserving Security-as-a-Code and Air Gap.
 
-**Internal prod:** MT Global deploys v1.0 on internal Rocky 9; Tier 4 specs must be lab-verifiable on `inventory/local-lima.yml`.
+**Internal prod:**  deploys v1.0 on internal Rocky 9; Tier 4 specs must be lab-verifiable on `inventory/local-lima.yml`.
 
 ---
 
@@ -44,7 +44,7 @@ Options:
 
 ### Permissions
 
-- Run as root or `mt_bastion` read-only on log dir; auditors invoke via sudo documented in runbook.
+- Run as root or `bastion` read-only on log dir; auditors invoke via sudo documented in runbook.
 
 ---
 
@@ -71,7 +71,7 @@ Operator PTY <-> bastion-pty-inspector <-> ssh -tt target
 
 - `build/files/bastion-pty-inspector.sh` — Python 3 **not** in Alpine container today; use **shell + stty** or add `python3` to Containerfile (prefer **C/shell** for minimal image: use `script` + FIFO + sidecar reader process).
 - **Pragmatic v1:** add `python3` to Containerfile (small Alpine package) for `bastion-pty-inspector.py` — readable, testable.
-- On deny: log `mt-bastion-deny`, optionally `kill` child ssh if `bastion_gateway_deny_kill_session: true`.
+- On deny: log `bastion-deny`, optionally `kill` child ssh if `bastion_gateway_deny_kill_session: true`.
 
 ### Variables
 
@@ -103,7 +103,7 @@ bastion-session-watch --list          # active sessions (delegate to session-ctl
 
 ### Security
 
-- Only users with `access: audit` SSH account OR host-side sudo group `mt_bastion_moderators` (documented).
+- Only users with `access: audit` SSH account OR host-side sudo group `bastion_moderators` (documented).
 - Log moderator attach: JSONL `event=moderator_watch_start`, syslog.
 - Read-only: no inject into PTY (no write to FIFO).
 
@@ -126,11 +126,11 @@ bastion_targets:
   - id: prod-db-01
     host: 10.0.1.20
     port: 22
-    account: mt_support
+    account: bastion_support
     # Option A — Ansible Vault file (existing)
     identity_file: "{{ playbook_dir }}/vault/targets/prod-db-01_ed25519"
     # Option B — HashiCorp Vault (mutually exclusive)
-    vault_secret_path: "secret/data/mt-bastion/targets/prod-db-01"
+    vault_secret_path: "secret/data/bastion/targets/prod-db-01"
     vault_secret_key: "ssh_private_key"   # default private_key
 ```
 
@@ -174,7 +174,7 @@ bastion_vault_namespace: ""
 
 ```yaml
 bastion_oidc_issuer: "https://idp.example.com/realms/mt"
-bastion_oidc_client_id: "mt-bastion-ssh"
+bastion_oidc_client_id: "bastion-ssh"
 bastion_oidc_required_group: "bastion-operators"
 bastion_oidc_username_claim: "preferred_username"  # maps to operator.name
 ```
@@ -227,7 +227,7 @@ bastion_oidc_username_claim: "preferred_username"  # maps to operator.name
 
 ### PKI QA
 
-Complete `openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/tasks.md` §3–5, 6.2.
+Complete `openspec/changes/archive/2026-06-ssh-user-ca-qa/tasks.md` §3–5, 6.2.
 
 ### Prod profile
 
@@ -244,9 +244,9 @@ bastion_ssh_user_ca_qa_complete: true  # after internal QA
 
 ### Positioning docs
 
-- Rename `MT-Bastion-Client-Without-PAM.md` → `MT-Dostup-SSH-PAM-Overview.md`
-- Add `docs/MT-Bastion-Battlecard-SKDPU-SSH.md`
-- Add `docs/MT-Bastion-SoW-SSH-Access.md` (snippet)
+- Client overview doc → `SSH-PAM-Overview.md`
+- Add `docs/Battlecard-SKDPU-SSH.md`
+- Add `docs/SoW-SSH-Access.md` (snippet)
 
 ### Compliance
 

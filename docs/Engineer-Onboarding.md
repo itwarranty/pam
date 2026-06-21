@@ -1,25 +1,25 @@
-# Onboarding инженера MT: Bastion
+# Onboarding инженера SSH PAM
 
-Репозиторий **private**: `git@github.com:MT-Global-Team/mt-bastion.git`
+Репозиторий **private**: `git@github.com:itwarranty/itwarranty-pam.git`
 
-**Связанные документы:** [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) · [Whitepaper](./MT-Bastion-Whitepaper.md) · [Workflow](./MT-Bastion-Troubleshooting-Workflow.md)
+**Связанные документы:** [CSO-Demo-Runbook.md](./CSO-Demo-Runbook.md) · [Whitepaper](./Whitepaper.md) · [Workflow](./Troubleshooting-Workflow.md)
 
 ---
 
 ## Часть A. Для администратора (выдача доступа)
 
-### Тестовый доступ — один ключ на Git + Bastion
+### Тестовый доступ — один ключ на Git + gateway
 
 **Prerequisite (org owner):** Deploy keys → Enabled в Member privileges.  
 **Prerequisite (admin):** Node.js — QR в onboarding (`npm install` в `scripts/`, автоматически).
 
 ```bash
-cd mt-bastion
+cd itwarranty-pam
 
 # Полный цикл: ключ + YAML + bastion (одна команда)
 ./scripts/test-repo-key.sh create tester-01 --bastion --apply
 
-# Отзыв: GitHub + YAML + purge на bastion + restart контейнера
+# Отзыв: GitHub + YAML + purge на шлюзе + restart контейнера
 ./scripts/test-repo-key.sh revoke tester-01 --apply
 
 # Или вручную применить после create/revoke
@@ -29,7 +29,7 @@ cd mt-bastion
 ./scripts/test-repo-key.sh onboarding tester-01
 ```
 
-Передать тестировщику каталог **`~/.mt-bastion/test-access/<name>/`**:
+Передать тестировщику каталог **`~/.bastion/test-access/<name>/`**:
 
 | Файл | Назначение |
 |:---|:---|
@@ -50,20 +50,20 @@ cd mt-bastion
 
 Инженер клонирует своим SSH-ключом из GitHub Settings.
 
-### Write — team `bastion-engineers`
+### Write — team `itwarranty-engineers`
 
-https://github.com/orgs/MT-Global-Team/teams/bastion-engineers
+https://github.com/orgs/itwarranty/teams/itwarranty-engineers
 
-**Добавить инженера:** Members → Add member (пользователь должен быть в org MT-Global-Team).
+**Добавить инженера:** Members → Add member (пользователь должен быть в org itwarranty).
 
 ### Альтернатива — collaborator
 
-https://github.com/MT-Global-Team/mt-bastion → Settings → Collaborators — Read или Write.
+https://github.com/itwarranty/itwarranty-pam → Settings → Collaborators — Read или Write.
 
 ### Что не передавать инженерам
 
 - Prod-секреты (`group_vars/all.yml`, Ansible Vault)
-- Private SSH User CA — см. `openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/`
+- Private SSH User CA — см. `openspec/changes/archive/2026-06-ssh-user-ca-qa/`
 - Prod TOTP из `generated/mfa/`
 
 ---
@@ -73,7 +73,7 @@ https://github.com/MT-Global-Team/mt-bastion → Settings → Collaborators — 
 ### 1. SSH-ключ GitHub
 
 ```bash
-ssh-keygen -t ed25519 -C "you@mtglobal.team"
+ssh-keygen -t ed25519 -C "you@example.com"
 cat ~/.ssh/id_ed25519.pub
 ```
 
@@ -82,8 +82,8 @@ https://github.com/settings/ssh-keys
 ### 2. Clone
 
 ```bash
-git clone git@github.com:MT-Global-Team/mt-bastion.git
-cd mt-bastion
+git clone git@github.com:itwarranty/itwarranty-pam.git
+cd itwarranty-pam
 ```
 
 ### 3. Зависимости (macOS)
@@ -101,7 +101,7 @@ brew install lima podman ansible
 Скрипт выполняет:
 
 1. `lab/keys/*.lab` (jump, shell, gateway, audit, break-glass — при отсутствии)
-2. Lima VM `mt-bastion-prod` (`./tests/start-lima.sh`)
+2. Lima VM `bastion-prod` (`./tests/start-lima.sh`)
 3. Сборку/синхронизацию образа (`trusted_download.sh`, `tests/sync-artifacts.sh`)
 4. `ansible-playbook -i inventory/local-lima.yml site.yml`
 
@@ -114,9 +114,9 @@ brew install lima podman ansible
 | `group_vars/dev/audit_lab.yml`, `break_glass_lab.yml` | audit / break-glass |
 | `group_vars/dev/operators_merge.yml` | Слияние всех lab-операторов |
 | `group_vars/local_lima.yml` | Путь к tar на Lima |
-| `inventory/local-lima.yml` | Host `mt-bastion-lima` через Lima SSH |
+| `inventory/local-lima.yml` | Host `bastion-lima` через Lima SSH |
 
-### 5. Проверка SSH к бастion-контейнеру
+### 5. Проверка SSH к шлюз-контейнеру
 
 ```bash
 ssh -p 2222 -i lab/keys/gateway-lab.lab gateway-lab@127.0.0.1
@@ -143,7 +143,7 @@ TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 | Обновить repo | `git pull` |
 | Новая фича | `git checkout -b feature/...` → PR в `main` |
 | Синтаксис playbook | `ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml` |
-| Lab doctor (роль, TOTP, команда) | `./scripts/mt-dostup-doctor.sh engineer-jump` |
+| Lab doctor (роль, TOTP, команда) | `./scripts/bastion-doctor.sh engineer-jump` |
 | Lab-образ с nullok (только dev) | `BASTION_LAB_MODE=1 MFA_STRICT=0 ./trusted_download.sh` |
 | Пересборка после Tier 2/3/4 scripts | `./trusted_download.sh` (wrapper, gateway, pty-inspector) → redeploy |
 
@@ -165,7 +165,7 @@ Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только п�
 
 | Действие | Команда / документ |
 | :--- | :--- |
-| Onboarding | [MT-Bastion-FIDO-Onboarding.md](./MT-Bastion-FIDO-Onboarding.md) |
+| Onboarding | [FIDO-Onboarding.md](./FIDO-Onboarding.md) |
 | Lab FIDO operator | `BASTION_FIDO_LAB=1 ./scripts/dev-up.sh` |
 | Preflight check | `python3 scripts/preflight-fido-key.py < test/fixtures/fido-pubkey.txt` |
 | JIT cert (sk) | `scripts/sign-operator-cert-jit.sh.example` |
@@ -177,12 +177,12 @@ Dev lab по умолчанию: `bastion_require_fido_pubkey: false` — `.lab`
 
 ## Troubleshooting
 
-- Инциденты и four-eyes: [MT-Bastion-Troubleshooting-Workflow.md](./MT-Bastion-Troubleshooting-Workflow.md)
+- Инциденты и four-eyes: [Troubleshooting-Workflow.md](./Troubleshooting-Workflow.md)
 - Command denylist: см. Workflow §5.4; проверьте `bastion_shell_command_policy_enabled` и mount `/etc/bastion/command_denylist`
 - Break-glass: см. Workflow §5.5; preflight требует `incident_id`, `valid_until`, окно ≤ `bastion_break_glass_max_hours`
-- Lima VM: `tests/README.md`, `limactl shell mt-bastion-prod`
+- Lima VM: `tests/README.md`, `limactl shell bastion-prod`
 - Preflight fail: проверьте Rocky 9, Enforcing, whitelist, `bastion_operators`
 
 ---
 
-*MT Global — Engineer Onboarding v1.5*
+* Engineer Onboarding v1.6*

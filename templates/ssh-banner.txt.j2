@@ -1,7 +1,9 @@
-MT Bastion / «МТ Доступ» — SSH PAM (Rocky Linux 9, MFA strict)
+{% if ssh_pam_banner_title | default('') | trim | length > 0 %}{{ ssh_pam_banner_title | trim }}
+
+{% endif %}Privileged SSH access (Rocky Linux 9, MFA strict)
 
   • MFA: SSH key + TOTP (6 digits, 30s window)
   • jump operators: use ProxyJump (-J), not direct shell login
-  • Lab help: ./scripts/mt-dostup-doctor.sh <operator>
+  • Lab help: ./scripts/bastion-doctor.sh <operator>
 
 Unauthorized access is prohibited and audited.

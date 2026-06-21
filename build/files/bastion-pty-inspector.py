@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Bastion-side PTY inspector: denylist on operator input before forward to child (ssh/bash)."""
+"""Gateway-side PTY inspector: denylist on operator input before forward to child (ssh/bash)."""
+import errno
 import fcntl
 import os
 import pty
@@ -44,7 +45,7 @@ def main():
 
     denylist = os.environ.get("BASTION_DENYLIST", "/etc/bastion/command_denylist")
     kill_on_deny = os.environ.get("BASTION_GATEWAY_DENY_KILL", "0") == "1"
-    mode = os.environ.get("MT_BASTION_GATEWAY_MODE", "shell")
+    mode = os.environ.get("BASTION_GATEWAY_MODE", "shell")
     patterns = load_patterns(denylist)
 
     cmd = sys.argv[1:]
@@ -78,7 +79,9 @@ def main():
         if sys.stdin in readable:
             try:
                 data = os.read(sys.stdin.fileno(), 4096)
-            except OSError:
+            except OSError as exc:
+                if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                    continue
                 data = b""
             if not data:
                 break
@@ -91,12 +94,12 @@ def main():
                     line = line_buf.decode("utf-8", errors="replace")
                     matched = deny_match(line, patterns) if patterns else None
                     if matched:
-                        msg = f"[MT Bastion CSO] Command denied by policy (mode={mode}).\n"
+                        msg = f"[SSH PAM CSO] Command denied by policy (mode={mode}).\n"
                         os.write(sys.stdout.fileno(), msg.encode())
                         subprocess.run(
                             [
                                 "/usr/local/bin/bastion-syslog.sh",
-                                "mt-bastion-deny",
+                                "bastion-deny",
                                 f"mode={mode} user={os.environ.get('USER', 'unknown')} "
                                 f"denied pattern={matched} cmd={line!r}",
                             ],

@@ -14,7 +14,7 @@
     argv:
       - podman
       - stop
-      - mt_ssh_bastion
+      - ssh_bastion
   become: true
   become_user: "{{ bastion_user }}"
   environment:

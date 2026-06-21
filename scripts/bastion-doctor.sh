@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# MT «МТ Доступ» — pre-flight checks for lab operators (local workstation).
+# SSH PAM — pre-flight checks for lab operators (local workstation).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${ROOT}"
 
 NAME="${1:-}"
-BASTION_HOST="${MT_BASTION_HOST:-127.0.0.1}"
-BASTION_PORT="${MT_BASTION_PORT:-2222}"
-KEYS_DIR="${MT_BASTION_KEYS_DIR:-${ROOT}/lab/keys}"
+BASTION_HOST="${BASTION_HOST:-127.0.0.1}"
+BASTION_PORT="${BASTION_PORT:-2222}"
+KEYS_DIR="${BASTION_KEYS_DIR:-${ROOT}/lab/keys}"
 
 usage() {
   cat <<EOF
-Usage: mt-dostup-doctor.sh <operator> [operator2 ...]
-       mt-dostup-doctor.sh --list
+Usage: bastion-doctor.sh <operator> [operator2 ...]
+       bastion-doctor.sh --list
 
 Lab operators from group_vars/dev/*.yml. Examples:
-  ./scripts/mt-dostup-doctor.sh engineer-jump
-  ./scripts/mt-dostup-doctor.sh gateway-lab
+  ./scripts/bastion-doctor.sh engineer-jump
+  ./scripts/bastion-doctor.sh gateway-lab
 EOF
 }
 
@@ -50,7 +50,7 @@ describe_access() {
   case "${access}" in
     jump)
       printf '  Role jump: interactive shell on bastion is DISABLED.\n'
-      printf '  Use ProxyJump (-J), not: ssh %s@bastion\n' "${name}"
+      printf '  Use ProxyJump (-J), not: ssh %s@gateway\n' "${name}"
       if [[ -n "${permits}" ]]; then
         local first target host port
         first="$(printf '%s' "${permits}" | python3 -c 'import json,sys; p=json.load(sys.stdin); print(p[0] if p else "")')"
@@ -63,11 +63,11 @@ describe_access() {
       fi
       ;;
     gateway)
-      printf '  Role gateway: interactive SSH to bastion → target menu / session.\n'
+      printf '  Role gateway: interactive SSH to gateway → target menu / session.\n'
       printf '    ssh -p %s -i %s/%s.lab %s@%s\n' "${BASTION_PORT}" "${KEYS_DIR}" "${name}" "${name}" "${BASTION_HOST}"
       ;;
     shell|audit)
-      printf '  Role %s: direct SSH to bastion (ForceCommand wrapper).\n' "${access}"
+      printf '  Role %s: direct SSH to gateway (ForceCommand wrapper).\n' "${access}"
       printf '    ssh -p %s -i %s/%s.lab %s@%s\n' "${BASTION_PORT}" "${KEYS_DIR}" "${name}" "${name}" "${BASTION_HOST}"
       ;;
     *)
@@ -114,7 +114,7 @@ PY
   port_status="$(check_port)"
   totp="$(totp_now "${secret}")"
 
-  printf '=== MT Dostup doctor: %s ===\n\n' "${name}"
+  printf '=== PAM doctor: %s ===\n\n' "${name}"
 
   if [[ -f "${key}" ]]; then
     printf '[PASS] Private key: %s\n' "${key}"
@@ -122,7 +122,7 @@ PY
     printf '[FAIL] Private key missing: %s (run ./scripts/dev-up.sh)\n' "${key}"
   fi
 
-  printf '[%s] Bastion %s:%s — %s\n' \
+  printf '[%s] Gateway %s:%s — %s\n' \
     "$( [[ "${port_status}" == open ]] && echo PASS || echo WARN )" \
     "${BASTION_HOST}" "${BASTION_PORT}" "${port_status}"
 

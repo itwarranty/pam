@@ -2,7 +2,7 @@
 
 ### Requirement: Prod Free tier SHALL recommend SSH user certificates over long-lived raw pubkeys
 
-When CSO Policy Gate is enabled for production deployment, MT: Bastion Free SHALL treat SSH User CA certificates as the preferred authentication material for operators.
+When CSO Policy Gate is enabled for production deployment, SSH PAM SHALL treat SSH User CA certificates as the preferred authentication material for operators.
 
 #### Scenario: Prod default disallows raw pubkeys without waiver
 - **WHEN** `ansible-playbook site.yml` runs for prod inventory
@@ -17,7 +17,7 @@ When CSO Policy Gate is enabled for production deployment, MT: Bastion Free SHAL
 
 ### Requirement: Production user certificate validity SHALL NOT exceed 72 hours by default
 
-MT: Bastion Free prod documentation and preflight SHALL enforce short-lived credentials aligned with CSO expectations.
+SSH PAM prod documentation and preflight SHALL enforce short-lived credentials aligned with CSO expectations.
 
 #### Scenario: Certificate max validity documented
 - **WHEN** operator prepares prod certificates via offline signing
@@ -27,15 +27,15 @@ MT: Bastion Free prod documentation and preflight SHALL enforce short-lived cred
 - **WHEN** operator presents expired user certificate and valid TOTP
 - **THEN** sshd SHALL reject authentication
 
-### Requirement: User CA private key SHALL NOT be deployed to bastion
+### Requirement: User CA private key SHALL NOT be deployed to gateway
 
-This requirement is inherited from `bastion-ssh-user-ca-trust` in change `ssh-user-ca-qa-mtglobal`. Tier 1 prod Free SHALL NOT alter that constraint.
+This requirement is inherited from `bastion-ssh-user-ca-trust` in change `ssh-user-ca-qa`. Tier 1 prod Free SHALL NOT alter that constraint.
 
 #### Scenario: Only CA public key on bastion
 - **WHEN** prod CA mode is enabled
 - **THEN** only the User CA **public** key SHALL be present on bastion host/container
 
-### Requirement: Tier 1 prod Free SHALL depend on completed QA from ssh-user-ca-qa-mtglobal
+### Requirement: Tier 1 prod Free SHALL depend on completed QA from ssh-user-ca-qa
 
 Production certificate mode SHALL NOT be marked GA until QA acceptance scenarios in sibling change pass.
 

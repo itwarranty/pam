@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Единый тестовый SSH-ключ: GitHub (read) + MT Bastion (оператор).
+# Единый тестовый SSH-ключ: GitHub (read) + SSH PAM (оператор).
 #
 #   ./scripts/test-repo-key.sh create tester-01 --bastion --apply
 #   ./scripts/test-repo-key.sh revoke tester-01 --apply
@@ -11,11 +11,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GITHUB_REPO="${GITHUB_REPO:-MT-Global-Team/mt-bastion}"
-TEST_ACCESS_BASE="${TEST_ACCESS_BASE:-${HOME}/.mt-bastion/test-access}"
+GITHUB_REPO="${GITHUB_REPO:-itwarranty/itwarranty-pam}"
+TEST_ACCESS_BASE="${TEST_ACCESS_BASE:-${HOME}/.bastion/test-access}"
 TEST_OPERATORS_YML="${ROOT}/group_vars/dev/test_operators.yml"
 LEGACY_KEYS_DIR="${ROOT}/keys/test"
-KEY_TITLE_PREFIX="mt-bastion-test"
+KEY_TITLE_PREFIX="bastion-test"
 BASTION_SSH_HOST="${BASTION_SSH_HOST:-127.0.0.1}"
 BASTION_SSH_PORT="${BASTION_SSH_PORT:-2222}"
 BASTION_TEST_PERMIT_OPEN="${BASTION_TEST_PERMIT_OPEN:-10.0.1.10:22}"
@@ -112,7 +112,7 @@ pubkey_file_for() {
   local pub
   pub="$(user_pub_key "${name}")"
   [[ -f "${pub}" ]] && printf '%s' "${pub}" && return 0
-  # legacy (до ~/.mt-bastion/test-access)
+  # legacy (до ~/.bastion/test-access)
   pub="${LEGACY_KEYS_DIR}/${name}.key.pub"
   [[ -f "${pub}" ]] && printf '%s' "${pub}" && return 0
   pub="${LEGACY_KEYS_DIR}/${name}.pub"
@@ -144,17 +144,17 @@ register_bastion_operator() {
 
   if [[ -f "${reg}" ]]; then
     mfa="$(grep '^mfa_secret:' "${reg}" | awk '{print $2}')"
-    log "Бастion: оператор ${name} уже в registry"
+    log "шлюз: оператор ${name} уже в registry"
   else
     mfa="$(gen_mfa_secret)"
     cat >"${reg}" <<EOF
 # AUTO: test-repo-key.sh — не редактировать
 access: ${access}
 mfa_secret: ${mfa}
-email: ${name}@mtglobal.team
+email: ${name}@example.com
 pubkey_file: ${pub_file}
 EOF
-    log "Бастion: добавлен оператор ${name} (${access})"
+    log "шлюз: добавлен оператор ${name} (${access})"
   fi
 
   sync_test_operators_yml
@@ -167,7 +167,7 @@ unregister_bastion_operator() {
   reg="$(registry_file "${name}")"
   if [[ -f "${reg}" ]]; then
     rm -f "${reg}"
-    log "Бастion: удалён оператор ${name} из registry"
+    log "шлюз: удалён оператор ${name} из registry"
     sync_test_operators_yml
   fi
 }
@@ -185,7 +185,7 @@ sync_test_operators_yml() {
   {
     echo "---"
     echo "# AUTO: scripts/test-repo-key.sh --bastion (не редактировать)"
-    echo "# Pubkey: ~/.mt-bastion/test-access/<name>/ (admin HOME при ansible-playbook)"
+    echo "# Pubkey: ~/.bastion/test-access/<name>/ (admin HOME при ansible-playbook)"
     echo "bastion_operators_test:"
     if [[ ${#names[@]} -eq 0 ]]; then
       echo "  []"
@@ -199,7 +199,7 @@ sync_test_operators_yml() {
         cat <<YAML
   - name: ${name}
     email: ${email}
-    pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.mt-bastion/test-access/${name}/${name}.key.pub') }}"
+    pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.bastion/test-access/${name}/${name}.key.pub') }}"
     mfa_secret: ${mfa}
     access: ${access}
     permit_open:
@@ -214,7 +214,10 @@ YAML
 otpauth_uri_for() {
   local name="$1"
   local mfa="$2"
-  printf 'otpauth://totp/MT%%20Bastion:%s@mtglobal.team?secret=%s&issuer=MT+Bastion+Test' "${name}" "${mfa}"
+  printf 'otpauth://totp/%s:%s@example.com?secret=%s&issuer=%s+Test' \
+    "$(python3 -c "import urllib.parse; print(urllib.parse.quote('${BASTION_TOTP_ISSUER:-SSH PAM}'))")" \
+    "${name}" "${mfa}" \
+    "$(python3 -c "import urllib.parse; print(urllib.parse.quote('${BASTION_TOTP_ISSUER:-SSH PAM}'))")"
 }
 
 generate_totp_qr() {
@@ -247,7 +250,7 @@ write_onboarding_package() {
 
   {
     cat <<HDR
-MT: Bastion — тестовый onboarding: ${name}
+SSH PAM — тестовый onboarding: ${name}
 Каталог: ${udir}
 Сгенерировано: $(date -u +"%Y-%m-%dT%H:%M:%SZ") UTC
 
@@ -270,13 +273,13 @@ HDR
 ================================================================================
 HDR2
     cat <<CFG
-Host github.com-mt-bastion-test
+Host github.com-bastion-test
   HostName github.com
   User git
   IdentityFile ~/.ssh/${name}.key
   IdentitiesOnly yes
 
-Host mt-bastion-test
+Host bastion-test
   HostName ${BASTION_SSH_HOST}
   Port ${BASTION_SSH_PORT}
   User ${name}
@@ -289,7 +292,7 @@ CFG
 3. GIT (read-only)
 ================================================================================
 HDR3
-    echo "  git clone git@github.com-mt-bastion-test:${GITHUB_REPO}.git"
+    echo "  git clone git@github.com-bastion-test:${GITHUB_REPO}.git"
     echo ""
   } >"${onboarding}"
 
@@ -314,12 +317,12 @@ HDR4
       cat "${qr_ascii}"
       cat <<HDR5
 
-При ssh mt-bastion-test введите 6 цифр из приложения (к вам не обращаться).
+При ssh bastion-test введите 6 цифр из приложения (к вам не обращаться).
 
 ================================================================================
 5. BASTION SSH
 ================================================================================
-  ssh mt-bastion-test
+  ssh bastion-test
 
 Access: ${access}
 Admin: create/revoke с --apply применяет bastion автоматически.
@@ -395,18 +398,18 @@ print_usage_instructions() {
 
 --- Единый тестовый доступ: ${name} ---
 
-Private key (один файл на Git + Bastion):
+Private key (один файл на Git + gateway):
   ${priv}
 
 ~/.ssh/config:
 
-  Host github.com-mt-bastion-test
+  Host github.com-bastion-test
     HostName github.com
     User git
     IdentityFile ${priv}
     IdentitiesOnly yes
 
-  Host mt-bastion-test
+  Host bastion-test
     HostName ${BASTION_SSH_HOST}
     Port ${BASTION_SSH_PORT}
     User ${name}
@@ -414,17 +417,17 @@ Private key (один файл на Git + Bastion):
     IdentitiesOnly yes
 
 Git:
-  git clone git@github.com-mt-bastion-test:${GITHUB_REPO}.git
+  git clone git@github.com-bastion-test:${GITHUB_REPO}.git
 
 EOF
 
   if [[ -n "${mfa}" ]]; then
     cat <<EOF
-Bastion (тот же ключ + TOTP):
-  ssh mt-bastion-test
+Gateway (тот же ключ + TOTP):
+  ssh bastion-test
 
   TOTP secret (Google Authenticator): ${mfa}
-  otpauth://totp/MT%20Bastion:${name}@mtglobal.team?secret=${mfa}&issuer=MT+Bastion+Test
+  otpauth://totp/SSH%20PAM:${name}@example.com?secret=${mfa}&issuer=SSH+PAM+Test
 
   Dev: после create --bastion выполните redeploy:
   ansible-playbook -i inventory/local-lima.yml site.yml
@@ -513,7 +516,7 @@ cmd_create() {
   fi
 
   log "Генерация ed25519: ${priv}"
-  ssh-keygen -t ed25519 -f "${priv}" -N "" -C "$(key_title "${name}")@mtglobal.team"
+  ssh-keygen -t ed25519 -f "${priv}" -N "" -C "$(key_title "${name}")@example.com"
 
   if ! register_deploy_key "${name}" "${pub}"; then
     rm -f "${priv}" "${pub}"
@@ -663,7 +666,7 @@ cmd_revoke() {
     remove_user_data "${local_name}"
   fi
 
-  log "Доступ отозван (Git + YAML). Bastion: apply-dev или --apply."
+  log "Доступ отозван (Git + YAML). Gateway: apply-dev или --apply."
   maybe_apply_dev
 }
 
@@ -671,7 +674,7 @@ usage() {
   cat <<EOF
 Usage: $0 <command> [args]
 
-Единый SSH-ключ: GitHub read + (опционально) MT Bastion operator.
+Единый SSH-ключ: GitHub read + (опционально) SSH PAM operator.
 
 Commands:
   create <name> [--bastion] [--access jump|shell] [--force] [--apply]
@@ -683,7 +686,7 @@ Commands:
   list
   revoke <name|key-id> [--apply]
 
-Файлы: ${TEST_ACCESS_BASE}/<name>/  (default: ~/.mt-bastion/test-access/)
+Файлы: ${TEST_ACCESS_BASE}/<name>/  (default: ~/.bastion/test-access/)
 
 Пример (полный цикл):
   $0 create tester-01 --bastion --apply

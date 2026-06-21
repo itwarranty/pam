@@ -1,23 +1,23 @@
-# MT: Bastion — FIDO-Anchor MFA (Tier 5)
+# SSH PAM — FIDO-Anchor MFA (Tier 5)
 
-Онбординг оператора и CSO для **FIDO2 / platform SSH key** + **offline TOTP** на бастion.
+Онбординг оператора и CSO для **FIDO2 / platform SSH key** + **offline TOTP** на шлюз.
 
 ## Модель (dual-anchor)
 
 | # | Фактор | Где |
 |:-:|:---|:---|
 | 1 | FIDO2 / Touch ID / YubiKey (`ed25519-sk -O verify-required`) | ноутбук оператора |
-| 2 | TOTP (`pam_google_authenticator`) | контейнер бастion |
+| 2 | TOTP (`pam_google_authenticator`) | контейнер шлюз |
 | 3 (opt.) | SSH user cert, окно JIT (`valid_until`) | offline CA |
 
-**Не реализуется:** WebAuthn в PAM, `mt-ssh`/`tsh`, IdP на бастion (Tier 4 OIDC — отдельный opt-in).
+**Не реализуется:** WebAuthn в PAM, `mt-ssh`/`tsh`, IdP на шлюз (Tier 4 OIDC — отдельный opt-in).
 
 ## 1. Генерация ключа (оператор)
 
 ```bash
 ssh-keygen -t ed25519-sk -O verify-required \
-  -C "engineer1@mtglobal.team" \
-  -f ~/.ssh/mt-bastion-fido
+  -C "engineer1@example.com" \
+  -f ~/.ssh/bastion-fido
 ```
 
 - **macOS:** Touch ID / Secure Enclave при каждом `ssh`.
@@ -48,9 +48,9 @@ bastion_mfa_mode: fido_totp
 ## 3. JIT + сертификат (opt.)
 
 ```bash
-export MT_BASTION_USER_CA_KEY=/secure/mtglobal.team-user-ca
+export BASTION_USER_CA_KEY=/secure/user-ca
 export OPERATOR_NAME=engineer1
-export SK_PUBKEY_PATH=~/.ssh/mt-bastion-fido.pub
+export SK_PUBKEY_PATH=~/.ssh/bastion-fido.pub
 export VALID_UNTIL=2026-06-01T20:00:00Z
 ./scripts/sign-operator-cert-jit.sh.example
 ```
@@ -95,15 +95,15 @@ Preflight пропускает listed operators при strict FIDO. Удалит
 
 | Избегать | Говорить |
 |:---|:---|
-| «FIDO на сервере бастion» | «FIDO привязан к ключу на рабочей станции; бастion проверяет sk-pubkey + TOTP» |
+| «FIDO на сервере шлюз» | «FIDO привязан к ключу на рабочей станции; шлюз проверяет sk-pubkey + TOTP» |
 | «Как Teleport tsh» | «Стандартный OpenSSH + Security-as-a-Code, без vendor client» |
-| «Биометрия хранится на бастion» | «Touch ID/PIN только на устройстве оператора (client-side verification)» |
+| «Биометрия хранится на шлюз» | «Touch ID/PIN только на устройстве оператора (client-side verification)» |
 
 ## 9. vs Teleport / СКДПУ
 
 - **Teleport:** FIDO через proprietary client.
-- **MT «МТ Доступ»:** `ssh` + `ed25519-sk` + Git/Ansible policy — см. [Battlecard](./MT-Bastion-Battlecard-SKDPU-SSH.md).
+- **SSH PAM:** `ssh` + `ed25519-sk` + Git/Ansible policy — см. [Battlecard](./Battlecard-SKDPU-SSH.md).
 
 ---
 
-*MT Global — FIDO Onboarding v1.1*
+* FIDO Onboarding v1.1*

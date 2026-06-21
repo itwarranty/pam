@@ -1,6 +1,6 @@
 ### Requirement: Target credentials SHALL be declared separately from operators
 
-MT: Bastion SHALL maintain `bastion_targets` inventory distinct from `bastion_operators`.
+SSH PAM SHALL maintain `bastion_targets` inventory distinct from `bastion_operators`.
 
 #### Scenario: Target inventory entry
 - **WHEN** `bastion_targets` contains an entry with `id`, `host`, `port`, `account`, `identity_file`
@@ -21,7 +21,7 @@ MT: Bastion SHALL maintain `bastion_targets` inventory distinct from `bastion_op
 
 ### Requirement: Operators SHALL NOT receive target secrets at login
 
-#### Scenario: Operator authenticates to bastion
+#### Scenario: Operator authenticates to gateway
 - **WHEN** gateway session starts
 - **THEN** operator SHALL NOT see target private key material in environment, files, or ForceCommand output
 
@@ -38,7 +38,7 @@ MT: Bastion SHALL maintain `bastion_targets` inventory distinct from `bastion_op
 
 ### Requirement: Target service accounts SHALL use least privilege
 
-Documentation SHALL require target accounts dedicated to bastion (not shared root) where possible.
+Documentation SHALL require target accounts dedicated to gateway (not shared root) where possible.
 
 #### Scenario: CSO review
 - **WHEN** client reads Whitepaper gateway section

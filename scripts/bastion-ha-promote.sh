@@ -2,8 +2,8 @@
 # Promote standby bastion to primary (manual HA failover).
 set -euo pipefail
 
-CONTAINER="${BASTION_CONTAINER_NAME:-mt_ssh_bastion}"
-BASTION_USER="${BASTION_USER:-mt_bastion}"
+CONTAINER="${BASTION_CONTAINER_NAME:-ssh_bastion}"
+BASTION_USER="${BASTION_USER:-bastion}"
 
 echo "[ha-promote] Starting ${CONTAINER} on this host..."
 sudo -u "${BASTION_USER}" podman start "${CONTAINER}" || podman start "${CONTAINER}"

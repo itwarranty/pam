@@ -1,15 +1,16 @@
-# MT: Bastion — декларативный манифест сборки для ИБ-аудита.
+# SSH PAM — декларативный манифест сборки для ИБ-аудита.
 # Сборка один раз на build-машине; при старте контейнера пакеты не скачиваются.
 
 FROM docker.io/library/alpine:3.19
 
 ARG MFA_STRICT=1
 
-LABEL org.opencontainers.image.title="MT Bastion Secure"
-LABEL org.opencontainers.image.vendor="MT Global"
+LABEL org.opencontainers.image.title="SSH PAM Secure"
+LABEL org.opencontainers.image.vendor="White Label"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
-LABEL mt.global.mfa.strict="${MFA_STRICT}"
+LABEL bastion.mfa.strict="${MFA_STRICT}"
 
+# python3 — load-bearing for command policy v2 (bastion-pty-inspector.py); CSO prod policy.
 RUN apk add --no-cache \
       openssh \
       openssh-keygen \
@@ -39,7 +40,7 @@ COPY build/files/bastion-pty-inspector.sh /usr/local/bin/bastion-pty-inspector.s
 COPY build/files/bastion-jump-help-wrapper.sh /usr/local/bin/bastion-jump-help-wrapper.sh
 COPY build/files/bastion-syslog.sh /usr/local/bin/bastion-syslog.sh
 
-RUN mkdir -p /run/mt-bastion/sessions \
+RUN mkdir -p /run/bastion/sessions \
     && chmod 0755 /usr/local/bin/bastion-shell-wrapper.sh /usr/local/bin/bastion-entrypoint.sh \
     /usr/local/bin/bastion-command-policy.sh /usr/local/bin/bastion-command-policy-rc.sh \
     /usr/local/bin/bastion-audit-shell-wrapper.sh /usr/local/bin/bastion-audit-shell.sh \

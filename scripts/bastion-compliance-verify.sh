@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MT: Bastion — post-deploy compliance verify (host-local).
+# SSH PAM — post-deploy compliance verify (host-local).
 # Mirrors tasks/verify_compliance_cso.yml. Exit 0 = pass, 1 = any failure.
 #
 # Usage (on Rocky 9 bastion host or via limactl shell):
@@ -7,23 +7,27 @@
 #
 # Env overrides:
 #   BASTION_USER, BASTION_SSH_PORT, AUDIT_LOG_DIR, OPERATORS_HOME,
-#   BASTION_IMAGE_NAME, BASTION_IMAGE_TAG, BASTION_REQUIRED_MFA_LABEL
+#   BASTION_IMAGE_NAME, BASTION_IMAGE_TAG, BASTION_REQUIRED_MFA_LABEL,
+#   BASTION_SHELL_COMMAND_POLICY_ENABLED, BASTION_COMMAND_POLICY_V2_REQUIRED,
+#   BASTION_AUDIT_LOG_DIR_MODE (dev lab gateway: 1777 per group_vars/dev/gateway_lab.yml)
 
 set -euo pipefail
 
-BASTION_USER="${BASTION_USER:-mt_bastion}"
+BASTION_USER="${BASTION_USER:-bastion}"
 BASTION_SSH_PORT="${BASTION_SSH_PORT:-2222}"
 AUDIT_LOG_DIR="${AUDIT_LOG_DIR:-/var/log/bastion_sessions}"
 OPERATORS_HOME="${OPERATORS_HOME:-/home/${BASTION_USER}/operators}"
-BASTION_IMAGE_NAME="${BASTION_IMAGE_NAME:-mt_bastion_secure}"
+BASTION_IMAGE_NAME="${BASTION_IMAGE_NAME:-bastion_secure}"
 BASTION_IMAGE_TAG="${BASTION_IMAGE_TAG:-latest}"
 BASTION_REQUIRED_MFA_LABEL="${BASTION_REQUIRED_MFA_LABEL:-1}"
-CONTAINER_NAME="${BASTION_CONTAINER_NAME:-mt_ssh_bastion}"
+CONTAINER_NAME="${BASTION_CONTAINER_NAME:-ssh_bastion}"
 BASTION_TARGETS_HOME="${BASTION_TARGETS_HOME:-/home/${BASTION_USER}/targets}"
 BASTION_SESSION_SEARCH_ENABLED="${BASTION_SESSION_SEARCH_ENABLED:-false}"
 BASTION_REQUIRE_FIDO_PUBKEY="${BASTION_REQUIRE_FIDO_PUBKEY:-false}"
 BASTION_FIDO_ECDSA_SK_ALLOWED="${BASTION_FIDO_ECDSA_SK_ALLOWED:-false}"
 BASTION_FIDO_WAIVER_OPERATORS="${BASTION_FIDO_WAIVER_OPERATORS:-}"
+BASTION_SHELL_COMMAND_POLICY_ENABLED="${BASTION_SHELL_COMMAND_POLICY_ENABLED:-true}"
+BASTION_COMMAND_POLICY_V2_REQUIRED="${BASTION_COMMAND_POLICY_V2_REQUIRED:-true}"
 
 PASS=0
 FAIL=0
@@ -90,12 +94,12 @@ check_container() {
 check_mfa_label() {
   local label
   if ! label="$(run_as_bastion podman image inspect "${BASTION_IMAGE_NAME}:${BASTION_IMAGE_TAG}" \
-    --format '{{ index .Config.Labels "mt.global.mfa.strict" }}' 2>/dev/null)"; then
+    --format '{{ index .Config.Labels "bastion.mfa.strict" }}' 2>/dev/null)"; then
     log_fail "mfa_label — image ${BASTION_IMAGE_NAME}:${BASTION_IMAGE_TAG} not found"
     return
   fi
   if [[ "${label}" == "${BASTION_REQUIRED_MFA_LABEL}" ]]; then
-    log_pass "mfa_label — mt.global.mfa.strict=${label}"
+    log_pass "mfa_label — bastion.mfa.strict=${label}"
   else
     log_fail "mfa_label — expected ${BASTION_REQUIRED_MFA_LABEL}, got ${label:-empty}"
   fi
@@ -223,9 +227,31 @@ check_tier4_cli() {
   fi
 }
 
+check_command_policy_v2() {
+  [[ "${BASTION_COMMAND_POLICY_V2_REQUIRED}" != "true" ]] && return 0
+  [[ "${BASTION_SHELL_COMMAND_POLICY_ENABLED}" != "true" ]] && return 0
+
+  local missing=""
+  if ! run_as_bastion podman exec "${CONTAINER_NAME}" test -f /usr/local/bin/bastion-pty-inspector.py 2>/dev/null; then
+    log_fail "command_policy_v2 — bastion-pty-inspector.py missing (python3 required in image)"
+    return
+  fi
+  if ! run_as_bastion podman exec "${CONTAINER_NAME}" test -f /run/bastion/policy_v2_enabled 2>/dev/null; then
+    missing="gateway"
+  fi
+  if ! run_as_bastion podman exec "${CONTAINER_NAME}" test -f /run/bastion/shell_policy_v2_enabled 2>/dev/null; then
+    missing="${missing:+$missing, }shell"
+  fi
+  if [[ -n "${missing}" ]]; then
+    log_fail "command_policy_v2 — PTY inspector v2 not active (${missing}); set BASTION_COMMAND_POLICY_V2_REQUIRED=false only for migration"
+    return
+  fi
+  log_pass "command_policy_v2 — gateway + shell PTY inspector active (CSO prod policy)"
+}
+
 check_fido_pubkey() {
   [[ "${BASTION_REQUIRE_FIDO_PUBKEY}" != "true" ]] && return 0
-  local script="${BASTION_FIDO_CHECK_SCRIPT:-/usr/local/lib/mt-bastion/preflight-fido-key.py}"
+  local script="${BASTION_FIDO_CHECK_SCRIPT:-/usr/local/lib/bastion/preflight-fido-key.py}"
   local waiver=" ${BASTION_FIDO_WAIVER_OPERATORS} "
   local op ak line name failures=0
 
@@ -271,7 +297,7 @@ check_fido_pubkey() {
 }
 
 main() {
-  printf '=== MT Bastion compliance verify ===\n\n'
+  printf '=== SSH PAM compliance verify ===\n\n'
   check_os
   check_arch
   check_selinux
@@ -287,6 +313,7 @@ main() {
   check_gateway_manifest
   check_jq_optional
   check_tier4_cli
+  check_command_policy_v2
   check_fido_pubkey
 
   printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"

@@ -1,6 +1,6 @@
 ---
 # JIT access windows: filter bastion_operators → bastion_operators_active (purge-only v1).
-- name: JIT — epoch на хосте бастиона
+- name: JIT — epoch на хосте шлюза
   ansible.builtin.command: date +%s
   register: bastion_jit_now_cmd
   changed_when: false

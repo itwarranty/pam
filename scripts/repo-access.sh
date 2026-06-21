@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only доступ к mt-bastion через GitHub (не deploy keys).
+# Read-only доступ к bastion через GitHub (не deploy keys).
 # Инженер использует свой SSH-ключ в https://github.com/settings/ssh-keys
 # Вы выдаёте/отзываете доступ к репозиторию (permission=pull).
 #
@@ -11,12 +11,12 @@
 #   ./scripts/repo-access.sh grant ivanov --collaborator
 #
 # Переменные:
-#   GITHUB_REPO=MT-Global-Team/mt-bastion
+#   GITHUB_REPO=itwarranty/itwarranty-pam
 #   READERS_TEAM=bastion-readers
 
 set -euo pipefail
 
-GITHUB_REPO="${GITHUB_REPO:-MT-Global-Team/mt-bastion}"
+GITHUB_REPO="${GITHUB_REPO:-itwarranty/itwarranty-pam}"
 READERS_TEAM="${READERS_TEAM:-bastion-readers}"
 OWNER="${GITHUB_REPO%%/*}"
 REPO="${GITHUB_REPO#*/}"
@@ -96,7 +96,7 @@ print_engineer_instructions() {
 --- Инструкция для ${user} ---
 
 1. SSH-ключ (если ещё нет):
-   ssh-keygen -t ed25519 -C "${user}@mtglobal.team"
+   ssh-keygen -t ed25519 -C "${user}@example.com"
    → добавить ~/.ssh/id_ed25519.pub в https://github.com/settings/ssh-keys
 
 2. Clone:
@@ -193,7 +193,7 @@ cmd_list() {
   fi
   echo
   echo "Team bastion-engineers (Write):"
-  gh api "orgs/${OWNER}/teams/bastion-engineers/members" \
+  gh api "orgs/${OWNER}/teams/pam-engineers/members" \
     --paginate \
     --jq '.[] | "  \(.login)"' 2>/dev/null || echo "  (team не найден)"
 }

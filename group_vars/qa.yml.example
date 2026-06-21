@@ -1,23 +1,23 @@
 ---
-# QA SSH User CA — copy to group_vars/qa_mtglobal.yml when PKI access granted.
-# Deploy: ansible-playbook -i inventory/qa-mtglobal.yml site.yml
+# QA SSH User CA — copy to group_vars/qa.yml when PKI access granted.
+# Deploy: ansible-playbook -i inventory/qa.yml site.yml
 
-bastion_lab_domain: mtglobal.team
+bastion_lab_domain: example.com
 bastion_allow_raw_pubkey_prod: true
 bastion_ssh_user_ca_qa_complete: false
 
-bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
+bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/user-ca.pub"
 
 bastion_operators:
   - name: engineer-jump
-    email: engineer-jump@mtglobal.team
+    email: engineer-jump@example.com
     certificate: "{{ lookup('file', playbook_dir + '/lab/certs/engineer-jump-cert.pub') }}"
     mfa_secret: ""   # Vault or generated/mfa/
     access: jump
     permit_open:
       - "10.0.1.10:22"
   - name: engineer-shell
-    email: engineer-shell@mtglobal.team
+    email: engineer-shell@example.com
     certificate: "{{ lookup('file', playbook_dir + '/lab/certs/engineer-shell-cert.pub') }}"
     mfa_secret: ""
     access: shell

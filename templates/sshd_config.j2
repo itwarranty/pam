@@ -36,17 +36,17 @@ AuthenticationMethods publickey,keyboard-interactive
 {% endif %}
 
 {% if bastion_trusted_user_ca_file | default('') | length > 0 %}
-# User certificates, подписанные CA организации (например *.mtglobal.team)
+# User certificates, подписанные CA организации (например *.example.com)
 TrustedUserCAKeys /etc/ssh/trusted_user_ca.pub
 {% endif %}
 
 {% for operator in bastion_operators_effective | default(bastion_operators) %}
 Match User {{ operator.name }}
 {%   if operator.break_glass | default(false) | bool %}
-    SetEnv MT_BASTION_BREAK_GLASS=1
+    SetEnv BASTION_BREAK_GLASS=1
 {%   endif %}
 {%   if operator.incident_id | default('') | length > 0 %}
-    SetEnv MT_BASTION_INCIDENT_ID={{ operator.incident_id }}
+    SetEnv BASTION_INCIDENT_ID={{ operator.incident_id }}
 {%   endif %}
 {%   if operator.access | default('jump') == 'audit' %}
     ForceCommand /usr/local/bin/bastion-audit-shell-wrapper.sh

@@ -5,7 +5,7 @@
       - ansible_facts['distribution'] == bastion_required_os
       - ansible_facts['distribution_major_version'] == bastion_required_os_major
     fail_msg: >
-      MT Bastion поддерживается только на {{ bastion_required_os }}
+      SSH PAM поддерживается только на {{ bastion_required_os }}
       {{ bastion_required_os_major }}.x (Enterprise LTS).
       Обнаружено: {{ ansible_facts['distribution'] }}
       {{ ansible_facts['distribution_version'] }}.
@@ -61,12 +61,26 @@
       bastion_mfa_enforce=false запрещён политикой CSO.
       Образ должен быть собран с MFA_STRICT=1 (./trusted_download.sh).
 
+- name: "[CSO] Command policy v2 обязателен при включённом denylist"
+  ansible.builtin.assert:
+    that:
+      - bastion_gateway_command_policy_v2_enabled | default(true) | bool
+      - bastion_shell_command_policy_v2_enabled | default(true) | bool
+    fail_msg: >
+      bastion_command_policy_v2_required=true: gateway/shell policy v2 MUST be enabled.
+      v1 (remote bash --rcfile на target) — только migration с bastion_command_policy_v2_required: false
+      и formal risk acceptance.
+  when:
+    - bastion_command_policy_v2_required | default(true) | bool
+    - bastion_shell_command_policy_enabled | default(true) | bool
+    - not (is_commercial_pam | bool)
+
 - name: "[CSO] Операторы должны быть определены до деплоя"
   ansible.builtin.assert:
     that:
       - bastion_operators | length > 0
     fail_msg: >
-      bastion_operators пуст. Бастион без явного списка операторов не разворачивается.
+      bastion_operators пуст. Шлюз без явного списка операторов не разворачивается.
   when: not (is_commercial_pam | bool)
 
 - name: "[CSO] Source IP обязателен для каждого оператора (strict mode)"
@@ -112,7 +126,7 @@
   ansible.builtin.debug:
     msg: >
       ВНИМАНИЕ: bastion_ssh_user_ca_qa_complete=false — prod certificate mode не прошёл QA
-      (openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal). Raw pubkey waiver активен только
+      (openspec/changes/archive/2026-06-ssh-user-ca-qa). Raw pubkey waiver активен только
       при bastion_allow_raw_pubkey_prod=true.
   when:
     - not (bastion_ssh_user_ca_qa_complete | default(false) | bool)
@@ -227,7 +241,7 @@
     label: "{{ target_item.id }}"
   when: not (is_commercial_pam | bool)
 
-- name: "[CSO] Gateway operator permit_open resolves to bastion_targets"
+- name: "[CSO] Gateway operator permit_open resolves to gateway_targets"
   ansible.builtin.assert:
     that:
       - permit_entry in bastion_target_host_ports

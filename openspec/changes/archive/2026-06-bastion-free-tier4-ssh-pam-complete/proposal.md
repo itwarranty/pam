@@ -1,10 +1,10 @@
 ## Why
 
-MT: Bastion **v0.6.0** (Tiers 1–3) delivers complete **SSH PAM core**: gateway recording on targets, credential broking, JIT, MFA, session kill, SIEM/JSONL, audit role, break-glass, jump/gateway policy.
+SSH PAM **v0.6.0** (Tiers 1–3) delivers complete **SSH PAM core**: gateway recording on targets, credential broking, JIT, MFA, session kill, SIEM/JSONL, audit role, break-glass, jump/gateway policy.
 
-Remaining gaps vs commercial PAM gateways (СКДПУ SSH, CyberArk SSH) are **operational and enterprise ergonomics**, not missing protocol support. Because **«МТ Доступ» is SSH-only PAM** (not a slice missing RDP), these capabilities belong in **Bastion Free** — not a separate paid SSH tier.
+Remaining gaps vs commercial PAM gateways (СКДПУ SSH, CyberArk SSH) are **operational and enterprise ergonomics**, not missing protocol support. Because **SSH PAM is SSH-only PAM** (not a slice missing RDP), these capabilities belong in **SSH PAM** — not a separate paid SSH tier.
 
-**Tier 4** closes the SSH PAM parity gap for **v1.0 GA** (internal prod at MT Global + customer self-host).
+**Tier 4** closes the SSH PAM parity gap for **v1.0 GA** (internal prod at  + customer self-host).
 
 ## What Changes
 
@@ -72,7 +72,7 @@ Remaining gaps vs commercial PAM gateways (СКДПУ SSH, CyberArk SSH) are **o
 
 ## Non-Goals
 
-- RDP, VNC, web, database protocols (commercial «МТ Доступ» multi-protocol — separate product line if ever).
+- RDP, VNC, web, database protocols (commercial SSH PAM multi-protocol — separate product line if ever).
 - Video replay player UI.
 - ФСТЭК certification of product (organizational; not implemented by code tasks).
 - Rocky Linux platform change (Astra) — not in Tier 4.

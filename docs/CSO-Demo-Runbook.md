@@ -1,10 +1,10 @@
-# Сценарий демонстрации «МТ Доступ» для CSO (~10 мин)
+# Сценарий демонстрации SSH PAM для CSO (~10 мин)
 
 **Аудитория:** CSO, архитектор ИБ, аудитор  
 **Цель:** показать Policy Gate, изоляцию и аудит — не «скрипт», а корпоративный control  
 **Платформа:** Rocky Linux 9.x (x86_64), SELinux Enforcing, Rootless Podman  
 
-**Связанные документы:** [Whitepaper](./MT-Bastion-Whitepaper.md) · [Workflow](./MT-Bastion-Troubleshooting-Workflow.md) · [Onboarding](./Engineer-Onboarding.md)
+**Связанные документы:** [Whitepaper](./Whitepaper.md) · [Workflow](./Troubleshooting-Workflow.md) · [Onboarding](./Engineer-Onboarding.md)
 
 ---
 
@@ -13,7 +13,7 @@
 ### Быстрый путь (рекомендуется)
 
 ```bash
-cd mt-bastion
+cd itwarranty-pam
 ./scripts/dev-up.sh
 ```
 
@@ -23,9 +23,9 @@ cd mt-bastion
 ### Ручной путь
 
 ```bash
-cd mt-bastion
+cd itwarranty-pam
 ./trusted_download.sh                                    # MFA_STRICT=1, OCI-label
-./tests/start-lima.sh                                    # instance: mt-bastion-prod
+./tests/start-lima.sh                                    # instance: bastion-prod
 ./tests/sync-artifacts.sh                                # tar → Lima VM (при необходимости)
 ansible-galaxy collection install -r requirements.yml
 ansible-playbook -i inventory/local-lima.yml site.yml
@@ -60,8 +60,8 @@ ansible-playbook -i inventory/local-lima.yml site.yml
 **Показать CSO:** Rocky 9, x86_64, `getenforce` = Enforcing, whitelist не пуст, операторы заданы.
 
 ```bash
-limactl shell mt-bastion-prod -- getenforce
-limactl shell mt-bastion-prod -- cat /etc/redhat-release
+limactl shell bastion-prod -- getenforce
+limactl shell bastion-prod -- cat /etc/redhat-release
 ```
 
 ### 1.2 Fail на нарушении политики (опционально)
@@ -117,7 +117,7 @@ ssh -p 2222 -i lab/keys/engineer-jump.lab engineer-jump@127.0.0.1
 ### 3.2 Verify образа
 
 ```bash
-limactl shell mt-bastion-prod -- sudo -u mt_bastion podman image inspect mt_bastion_secure:latest --format '{{ index .Config.Labels "mt.global.mfa.strict" }}'
+limactl shell bastion-prod -- sudo -u bastion podman image inspect bastion_secure:latest --format '{{ index .Config.Labels "bastion.mfa.strict" }}'
 ```
 
 **Ожидание:** `1`
@@ -140,20 +140,20 @@ ssh -p 2222 -i lab/keys/engineer-shell.lab engineer-shell@127.0.0.1
 ### 4.2 Проверка лога на хосте
 
 ```bash
-limactl shell mt-bastion-prod -- sudo ls -la /var/log/bastion_sessions/
-limactl shell mt-bastion-prod -- sudo lsattr /var/log/bastion_sessions/*.log
+limactl shell bastion-prod -- sudo ls -la /var/log/bastion_sessions/
+limactl shell bastion-prod -- sudo lsattr /var/log/bastion_sessions/*.log
 ```
 
-**Ожидание:** файл `session_engineer-shell_*.log`, атрибут `a` (append-only). Каталог — `0750`, владелец `mt_bastion`.
+**Ожидание:** файл `session_engineer-shell_*.log`, атрибут `a` (append-only). Каталог — `0750`, владелец `bastion`.
 
 ### 4.2a Tamper-evident sidecar (Tier 1)
 
 После `exit` из shell-сессии:
 
 ```bash
-limactl shell mt-bastion-prod -- sudo ls -la /var/log/bastion_sessions/*.sha256 /var/log/bastion_sessions/*.meta
-limactl shell mt-bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/session_engineer-shell_*.log.sha256
-limactl shell mt-bastion-prod -- sudo cat /var/log/bastion_sessions/session_engineer-shell_*.log.meta
+limactl shell bastion-prod -- sudo ls -la /var/log/bastion_sessions/*.sha256 /var/log/bastion_sessions/*.meta
+limactl shell bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/session_engineer-shell_*.log.sha256
+limactl shell bastion-prod -- sudo cat /var/log/bastion_sessions/session_engineer-shell_*.log.meta
 ```
 
 **Ожидание:** `sha256sum -c` → OK; `.meta` содержит `SHA256=`, `UTC=`, `USER=`, `CLIENT=`.
@@ -163,7 +163,7 @@ limactl shell mt-bastion-prod -- sudo cat /var/log/bastion_sessions/session_engi
 ### 4.3 auditd
 
 ```bash
-limactl shell mt-bastion-prod -- sudo ausearch -k mt_bastion_session_logs | tail -5
+limactl shell bastion-prod -- sudo ausearch -k bastion_session_logs | tail -5
 ```
 
 **Ожидание:** события записи в каталог логов.
@@ -175,7 +175,7 @@ limactl shell mt-bastion-prod -- sudo ausearch -k mt_bastion_session_logs | tail
 **Что сказать CSO:** «Kill-switch без потери доказательств.»
 
 ```bash
-limactl shell mt-bastion-prod -- sudo -u mt_bastion podman stop mt_ssh_bastion
+limactl shell bastion-prod -- sudo -u bastion podman stop ssh_bastion
 ```
 
 **Ожидание:** SSH-сессии обрываются; файлы в `/var/log/bastion_sessions/` остаются.
@@ -188,7 +188,7 @@ limactl shell mt-bastion-prod -- sudo -u mt_bastion podman stop mt_ssh_bastion
 
 ```bash
 sha256sum -c /tmp/trusted_upstream_packages/SHA256SUMS
-limactl shell mt-bastion-prod -- sudo -u mt_bastion podman exec mt_ssh_bastion ps aux
+limactl shell bastion-prod -- sudo -u bastion podman exec ssh_bastion ps aux
 ```
 
 **Ожидание:** checksum OK; в контейнере `sshd.pam`, без `apk`/`dnf` в runtime.
@@ -209,14 +209,14 @@ limactl shell mt-bastion-prod -- sudo -u mt_bastion podman exec mt_ssh_bastion p
 
 - [ ] `./scripts/dev-up.sh` или эквивалентный ручной деплой
 - [ ] Lima Rocky 9: `getenforce` = Enforcing
-- [ ] `./trusted_download.sh` — label `mt.global.mfa.strict=1`
+- [ ] `./trusted_download.sh` — label `bastion.mfa.strict=1`
 - [ ] Preflight pass, deploy complete
 - [ ] Jump: direct shell fail, ProxyJump pass/fail по whitelist
 - [ ] Shell: log file + `chattr +a` + `.sha256` / `.meta` sidecars (после rebuild образа)
 - [ ] Compliance verify: `--tags verify_compliance` или `bastion-compliance-verify.sh`
 - [ ] MFA без TOTP — fail
 - [ ] Declarative revoke (опционально): `test-repo-key.sh revoke … --apply`
-- [ ] [Whitepaper](./MT-Bastion-Whitepaper.md) · [Workflow](./MT-Bastion-Troubleshooting-Workflow.md)
+- [ ] [Whitepaper](./Whitepaper.md) · [Workflow](./Troubleshooting-Workflow.md)
 
 ---
 
@@ -229,21 +229,21 @@ limactl shell mt-bastion-prod -- sudo -u mt_bastion podman exec mt_ssh_bastion p
 # или: удалить из bastion_operators → ansible-playbook -i inventory/local-lima.yml site.yml
 ```
 
-**Ожидание:** каталог оператора удалён с хоста; `podman restart mt_ssh_bastion`; SSH под отозванным ключом — отказ.
+**Ожидание:** каталог оператора удалён с хоста; `podman restart ssh_bastion`; SSH под отозванным ключом — отказ.
 
 ---
 
 ## Блок 8 — Compliance verify (Tier 1, 1 мин)
 
-**Что сказать CSO:** «Периодический аудит состояния бастиона — одной командой, exit code для мониторинга.»
+**Что сказать CSO:** «Периодический аудит состояния шлюза — одной командой, exit code для мониторинга.»
 
 ```bash
 ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 # или на хосте:
-limactl shell mt-bastion-prod -- sudo bash -c 'cd /path/to/mt-bastion && ./scripts/bastion-compliance-verify.sh'
+limactl shell bastion-prod -- sudo bash -c 'cd /path/to/bastion && ./scripts/bastion-compliance-verify.sh'
 ```
 
-**Ожидание:** все checks PASS, exit 0. При deliberate drift (например `podman stop mt_ssh_bastion`) — FAIL.
+**Ожидание:** все checks PASS, exit 0. При deliberate drift (например `podman stop ssh_bastion`) — FAIL.
 
 ---
 
@@ -253,7 +253,7 @@ limactl shell mt-bastion-prod -- sudo bash -c 'cd /path/to/mt-bastion && ./scrip
 
 ```bash
 # Пример prod: allowed_sources в bastion_operators
-grep from= /home/mt_bastion/operators/*/.ssh/authorized_keys
+grep from= /home/bastion/operators/*/.ssh/authorized_keys
 ```
 
 **Демо отказа:** задайте `allowed_sources: ["203.0.113.0/24"]` (без 127.0.0.0/8) → SSH с localhost получит `Permission denied (publickey)` до MFA.
@@ -269,7 +269,7 @@ Strict mode: `bastion_require_source_ip: true` — preflight fail без `allowe
 ```bash
 # Lab: jit-expired-test в group_vars/dev/jit_lab.yml (valid_until 2020)
 ansible-playbook -i inventory/local-lima.yml site.yml
-limactl shell mt-bastion-prod -- sudo test ! -d /home/mt_bastion/operators/jit-expired-test && echo OK
+limactl shell bastion-prod -- sudo test ! -d /home/bastion/operators/jit-expired-test && echo OK
 
 # Периодический purge на prod
 ansible-playbook site.yml --tags jit_purge
@@ -281,15 +281,15 @@ ansible-playbook site.yml --tags jit_purge
 
 ## Блок 11 — SSH User CA (Phase C, опционально, 1 мин)
 
-**Что сказать CSO:** «Prod — короткоживущие user certificates; private CA никогда не на бастионе.»
+**Что сказать CSO:** «Prod — короткоживущие user certificates; private CA никогда не на шлюзе.»
 
 ```bash
 # Offline signing (admin workstation):
-export MT_BASTION_USER_CA_KEY=/secure/mtglobal.team-user-ca
+export BASTION_USER_CA_KEY=/secure/user-ca
 ./scripts/sign-operator-cert.sh.example engineer-jump ~/.ssh/engineer-jump.key 72
 
-# QA deploy (after copying qa_mtglobal.yml.example → group_vars/qa_mtglobal.yml):
-ansible-playbook -i inventory/qa-mtglobal.yml site.yml
+# QA deploy (after copying qa.yml.example → group_vars/qa.yml):
+ansible-playbook -i inventory/qa.yml site.yml
 ```
 
 **Ожидание:** `TrustedUserCAKeys` в контейнере; вход по cert + TOTP. Live QA — после выдачи org CA pubkey.
@@ -321,10 +321,10 @@ ssh -p 2222 engineer-shell@127.0.0.1
 rm -rf /
 # ожидается отказ, сессия продолжается
 exit
-journalctl -t mt-bastion-deny --since "5 min ago" | tail -5
+journalctl -t bastion-deny --since "5 min ago" | tail -5
 ```
 
-**Ожидание:** сообщение об отказе в PTY; запись в journal с тегом `mt-bastion-deny`.
+**Ожидание:** сообщение об отказе в PTY; запись в journal с тегом `bastion-deny`.
 
 ---
 
@@ -366,23 +366,23 @@ firewall-cmd --list-rich-rules | grep limit
 ```bash
 ssh -p 2222 breakglass-lab@127.0.0.1
 exit
-ausearch -k mt_bastion_break_glass_session 2>/dev/null | tail -3
-journalctl -t mt-bastion-break-glass --since "5 min ago" | tail -3
+ausearch -k bastion_break_glass_session 2>/dev/null | tail -3
+journalctl -t bastion-break-glass --since "5 min ago" | tail -3
 ```
 
-**Ожидание:** syslog/journal с маркером break-glass; auditd key `mt_bastion_break_glass_session` при `bastion_break_glass_audit_enabled: true`.
+**Ожидание:** syslog/journal с маркером break-glass; auditd key `bastion_break_glass_session` при `bastion_break_glass_audit_enabled: true`.
 
 ---
 
 ## Блок 17 — SSH Gateway (Tier 3, 2 мин)
 
-**Что сказать CSO:** «Инженер работает на target через бастion; полный TTY-лог на нашей стороне; ключ target оператор не видит.»
+**Что сказать CSO:** «Инженер работает на target через шлюз; полный TTY-лог на нашей стороне; ключ target оператор не видит.»
 
 ```bash
 ssh -p 2222 -i lab/keys/gateway-lab.lab gateway-lab@127.0.0.1
 # interactive on mock target (gateway-target), then exit
-limactl shell mt-bastion-prod -- sudo ls /var/log/bastion_sessions/gateway_INC-LAB-GW-01_*
-limactl shell mt-bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/gateway_*.log.sha256
+limactl shell bastion-prod -- sudo ls /var/log/bastion_sessions/gateway_INC-LAB-GW-01_*
+limactl shell bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/gateway_*.log.sha256
 ```
 
 **Ожидание:** log + sidecars; `.meta` содержит `MODE=gateway`, `TARGET=lab-mock-01`.
@@ -393,17 +393,17 @@ limactl shell mt-bastion-prod -- sudo sha256sum -c /var/log/bastion_sessions/gat
 
 ## Блок 18 — Session kill (Tier 3, 1 мин)
 
-**Что сказать CSO:** «Активную gateway-сессию можно разорвать без остановки всего бастиона.»
+**Что сказать CSO:** «Активную gateway-сессию можно разорвать без остановки всего шлюза.»
 
 ```bash
 # Terminal 1: gateway-lab session (keep open)
 # Terminal 2:
-limactl shell mt-bastion-prod -- sudo bastion-session-ctl list
-limactl shell mt-bastion-prod -- sudo bastion-session-ctl kill <session-id>
-journalctl -t mt-bastion-session-kill --since "2 min ago" | tail -3
+limactl shell bastion-prod -- sudo bastion-session-ctl list
+limactl shell bastion-prod -- sudo bastion-session-ctl kill <session-id>
+journalctl -t bastion-session-kill --since "2 min ago" | tail -3
 ```
 
-**Ожидание:** сессия завершена ≤10s; syslog `mt-bastion-session-kill`.
+**Ожидание:** сессия завершена ≤10s; syslog `bastion-session-kill`.
 
 ---
 
@@ -411,7 +411,7 @@ journalctl -t mt-bastion-session-kill --since "2 min ago" | tail -3
 
 **Что сказать CSO:** «Jump — для automation и connect-audit; gateway — для интерактива на prod с полным доказательством.»
 
-См. [MT-Dostup-SSH-PAM-Overview.md](./MT-Dostup-SSH-PAM-Overview.md) — five auditor questions.
+См. [SSH-PAM-Overview.md](./SSH-PAM-Overview.md) — five auditor questions.
 
 ---
 
@@ -420,8 +420,8 @@ journalctl -t mt-bastion-session-kill --since "2 min ago" | tail -3
 **Что сказать CSO:** «Историю gateway-сессий ищем по оператору и дате без SIEM.»
 
 ```bash
-limactl shell mt-bastion-prod -- sudo bastion-session-search --operator gateway-lab --since 7d
-limactl shell mt-bastion-prod -- sudo bastion-session-search --json | jq -r '.[].session_id' | head
+limactl shell bastion-prod -- sudo bastion-session-search --operator gateway-lab --since 7d
+limactl shell bastion-prod -- sudo bastion-session-search --json | jq -r '.[].session_id' | head
 ```
 
 **Ожидание:** строки из `sessions.jsonl` за окно; `--json` — machine-readable.
@@ -430,13 +430,14 @@ limactl shell mt-bastion-prod -- sudo bastion-session-search --json | jq -r '.[]
 
 ## Блок 21 — Command policy v2 (Tier 4, 1 мин)
 
-**Что сказать CSO:** «Опасная команда блокируется на бастion до попадания на target — без remote rc на сервере.»
+**Что сказать CSO:** «Опасная команда блокируется на шлюз до попадания на target — без remote rc на сервере. v2 обязателен в prod; compliance проверяет PTY inspector в runtime.»
 
 ```bash
+./scripts/bastion-compliance-verify.sh | grep command_policy_v2
 # gateway-lab session on mock target:
 rm -rf /
 # ожидается отказ в PTY
-journalctl -t mt-bastion-deny --since "5 min ago" | tail -5
+journalctl -t bastion-deny --since "5 min ago" | tail -5
 ```
 
 **Ожидание:** deny message; v2 enabled in `gateway_lab.yml`.
@@ -450,8 +451,8 @@ journalctl -t mt-bastion-deny --since "5 min ago" | tail -5
 ```bash
 # Terminal 1: gateway session (keep open)
 # Terminal 2:
-limactl shell mt-bastion-prod -- sudo bastion-session-ctl list
-limactl shell mt-bastion-prod -- sudo bastion-session-watch <session-id>
+limactl shell bastion-prod -- sudo bastion-session-ctl list
+limactl shell bastion-prod -- sudo bastion-session-watch <session-id>
 grep moderator_watch_start /var/log/bastion_sessions/sessions.jsonl | tail -1
 ```
 
@@ -461,7 +462,7 @@ grep moderator_watch_start /var/log/bastion_sessions/sessions.jsonl | tail -1
 
 ## Блок 23 — FIDO-Anchor MFA (Tier 5, опционально, 1 мин)
 
-**Что сказать CSO:** «Phishing-resistant первый фактор — Touch ID / YubiKey на ноутбуке; TOTP остаётся на бастion. Без proprietary client.»
+**Что сказать CSO:** «Phishing-resistant первый фактор — Touch ID / YubiKey на ноутбуке; TOTP остаётся на шлюз. Без proprietary client.»
 
 ```bash
 # Требуется FIDO hardware + BASTION_FIDO_LAB=1 deploy:
@@ -476,4 +477,4 @@ python3 scripts/preflight-fido-key.py < test/fixtures/fido-pubkey.txt
 
 ---
 
-*MT Global — CSO Demo v1.9 (v1.1.0)*
+* CSO Demo v1.9 (v1.1.0)*

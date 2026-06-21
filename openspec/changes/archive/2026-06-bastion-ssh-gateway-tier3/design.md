@@ -32,7 +32,7 @@
 |:---|:---|:---:|:---:|
 | `jump` | Transparent ProxyJump; automation; low-risk transit | ❌ | N/A (operator may use own key) |
 | `gateway` | **Prod interactive** support on Linux targets | ✅ | ❌ |
-| `shell` | Bastion-only / four-eyes / break-glass on bastion | ✅ (bastion) | N/A |
+| `shell` | Gateway-only / four-eyes / break-glass on bastion | ✅ (bastion) | N/A |
 | `audit` | Client read-only log review | ❌ | ❌ |
 
 **CSO default policy (recommended):**
@@ -50,7 +50,7 @@ bastion_jump_risk_acceptance_required: false  # when true, jump ops need bastion
 
 ```text
 [Operator laptop]
-    |  ssh -p 2222 operator@bastion  (+ MFA)
+    |  ssh -p 2222 operator@gateway  (+ MFA)
     v
 [Container sshd]
     |  Match User operator → ForceCommand /usr/local/bin/bastion-ssh-gateway-wrapper.sh
@@ -58,7 +58,7 @@ bastion_jump_risk_acceptance_required: false  # when true, jump ops need bastion
 [gateway-wrapper.sh]
     |  1. Resolve permit_open ∩ bastion_targets
     |  2. If single target → auto; else interactive menu (numbered list)
-    |  3. Register session in /run/mt-bastion/sessions/<id>.json
+    |  3. Register session in /run/bastion/sessions/<id>.json
     |  4. exec script → gateway.sh
     v
 [gateway.sh]
@@ -97,7 +97,7 @@ Non-interactive CI: **out of scope v1** (future `BASTION_GATEWAY_TARGET=host:por
 
 ### D2.5 Container packages
 
-Add to `Containerfile`: ensure `openssh-client` present (Alpine: `openssh-client` or full `openssh` client binary). Verify `ssh` in PATH for `mt_bastion` user inside container.
+Add to `Containerfile`: ensure `openssh-client` present (Alpine: `openssh-client` or full `openssh` client binary). Verify `ssh` in PATH for `bastion` user inside container.
 
 ---
 
@@ -109,7 +109,7 @@ bastion_targets:
   - id: prod-app-01                    # stable id for paths and logs
     host: 10.0.1.10
     port: 22
-    account: mt_support                # Unix account ON TARGET
+    account: bastion_support                # Unix account ON TARGET
     identity_file: "{{ playbook_dir }}/vault/targets/prod-app-01_ed25519"  # Vault-encrypted repo OR host path
     host_key_fingerprint: "SHA256:abcdef..."  # optional pin; preflight warn if absent
     tags: [prod, linux]
@@ -125,14 +125,14 @@ bastion_operators:
 
 **Provisioning:**
 
-1. Ansible copies/decrypts identity to `{{ bastion_home }}/targets/<id>/id_ed25519` mode `0600`, owner `mt_bastion`, SELinux `container_file_t`.
+1. Ansible copies/decrypts identity to `{{ bastion_home }}/targets/<id>/id_ed25519` mode `0600`, owner `bastion`, SELinux `container_file_t`.
 2. Mount RO: `.../targets:/etc/bastion/targets:ro,Z`
 3. Container entrypoint never copies target keys to operator `$HOME`.
 
 **Preflight:**
 
 - Every `gateway` operator `permit_open` entry MUST resolve to `bastion_targets`.
-- Target identity files MUST exist and be unreadable by non-`mt_bastion`.
+- Target identity files MUST exist and be unreadable by non-`bastion`.
 - Warn if `host_key_fingerprint` missing (MITM risk on first connect).
 
 ---
@@ -165,7 +165,7 @@ SHA256=... UTC=... USER=... INCIDENT=... CLIENT=... TARGET=<id> TARGET_HOST=... 
 
 ### D5.1 Session registry
 
-Path on **host** (writable by container via mount): `/run/mt-bastion/sessions/` or `{{ bastion_home }}/runtime/sessions/`
+Path on **host** (writable by container via mount): `/run/bastion/sessions/` or `{{ bastion_home }}/runtime/sessions/`
 
 ```json
 {
@@ -238,7 +238,7 @@ When `bastion_jump_risk_acceptance_required: true` and `access: jump`:
 
 `group_vars/dev/gateway_lab.yml`:
 
-- Second container `mt_gateway_target` (sshd) on Lima network OR static VM `10.89.0.5`
+- Second container `gateway_target` (sshd) on Lima network OR static VM `10.89.0.5`
 - `bastion_targets` with lab key
 - Operator `gateway-lab` with `access: gateway`
 
@@ -265,7 +265,7 @@ Phases A+B = **minimum market adoption** gate.
 | Risk | Mitigation |
 |:---|:---|
 | Target keys on bastion = high value | RO mount, SELinux, 0600, auditd on key read, separate target SA with least privilege |
-| Bastion compromise → all targets | Document; recommend per-target keys + no root; network ACL target←bastion only |
+| Gateway compromise → all targets | Document; recommend per-target keys + no root; network ACL target←bastion only |
 | `ssh -tt` latency / escape | Accept; document mosh not supported |
 | Operator bypass via `jump` if both enabled | Policy Gate `bastion_prod_require_gateway` |
 | StrictHostKeyChecking friction | Provision known_hosts in Ansible |
@@ -274,7 +274,7 @@ Phases A+B = **minimum market adoption** gate.
 
 ## D12: Comparison anchor (СКДПУ SSH)
 
-| Control | СКДПУ Шлюз SSH | MT Bastion gateway (Tier 3) |
+| Control | СКДПУ Шлюз SSH | SSH PAM gateway (Tier 3) |
 |:---|:---|:---|
 | Session video | ✅ | ❌ (TTY + hash) |
 | Command log on target | ✅ | ✅ (gateway PTY log) |

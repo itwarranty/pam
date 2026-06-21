@@ -1,6 +1,6 @@
 ### Requirement: Gateway command policy SHALL enforce denylist on bastion side (v2)
 
-When v2 is enabled, MT Bastion SHALL inspect operator input before forwarding to target SSH, without injecting rc files on target.
+When v2 is enabled, SSH PAM SHALL inspect operator input before forwarding to target SSH, without injecting rc files on target.
 
 #### Scenario: v2 enabled for gateway
 - **WHEN** `bastion_gateway_command_policy_v2_enabled` is `true`
@@ -10,7 +10,7 @@ When v2 is enabled, MT Bastion SHALL inspect operator input before forwarding to
 #### Scenario: Denied command
 - **WHEN** operator types line matching denylist regex
 - **THEN** line SHALL NOT be forwarded to target ssh
-- **THEN** syslog tag `mt-bastion-deny` SHALL include `MODE=gateway` and `policy=v2`
+- **THEN** syslog tag `bastion-deny` SHALL include `MODE=gateway` and `policy=v2`
 
 #### Scenario: Optional session kill on deny
 - **WHEN** `bastion_gateway_deny_kill_session` is `true`

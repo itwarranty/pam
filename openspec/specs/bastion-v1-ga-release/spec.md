@@ -1,6 +1,6 @@
-### Requirement: v1.0.0 SHALL mark GA of MT Bastion as complete SSH PAM product
+### Requirement: v1.0.0 SHALL mark GA of SSH PAM as complete SSH PAM product
 
-Release v1.0.0 SHALL bundle Tier 4 capabilities and organizational gates for MT Global internal prod.
+Release v1.0.0 SHALL bundle Tier 4 capabilities and organizational gates for  internal prod.
 
 #### Scenario: Version tag
 - **WHEN** Tier 4 phases A–G complete per tasks.md
@@ -9,22 +9,22 @@ Release v1.0.0 SHALL bundle Tier 4 capabilities and organizational gates for MT 
 
 #### Scenario: PKI QA completion
 - **WHEN** v1.0.0 is declared
-- **THEN** tasks in `ssh-user-ca-qa-mtglobal` §3–5 SHALL be marked complete for internal org CA
+- **THEN** tasks in `ssh-user-ca-qa` §3–5 SHALL be marked complete for internal org CA
 - **THEN** `bastion_ssh_user_ca_qa_complete: true` SHALL be set in internal prod group_vars
 
 ### Requirement: Product positioning SHALL describe PAM replacement
 
 #### Scenario: Client documentation
-- **WHEN** customer reads `docs/MT-Dostup-SSH-PAM-Overview.md` (renamed from Without-PAM)
-- **THEN** text SHALL state MT: Bastion / «МТ Доступ» is SSH PAM replacing commercial gateways
+- **WHEN** customer reads `docs/SSH-PAM-Overview.md` (renamed from Without-PAM)
+- **THEN** text SHALL state SSH PAM / SSH PAM is SSH PAM replacing commercial gateways
 - **THEN** text SHALL NOT frame product as «for organizations without PAM»
 
 #### Scenario: Battlecard
-- **WHEN** presales opens `docs/MT-Bastion-Battlecard-SKDPU-SSH.md`
+- **WHEN** presales opens `docs/Battlecard-SKDPU-SSH.md`
 - **THEN** document SHALL compare SSH controls fairly vs СКДПУ Шлюз
 
 #### Scenario: SoW snippet
-- **WHEN** legal uses `docs/MT-Bastion-SoW-SSH-Access.md`
+- **WHEN** legal uses `docs/SoW-SSH-Access.md`
 - **THEN** scope SHALL specify SSH, gateway mode for prod interactive, audit obligations
 
 ### Requirement: Prod example profile SHALL exist
@@ -42,6 +42,6 @@ Release v1.0.0 SHALL bundle Tier 4 capabilities and organizational gates for MT 
 
 ### Requirement: Internal prod acceptance checklist SHALL pass
 
-#### Scenario: MT Global internal bastion
+#### Scenario:  internal bastion
 - **WHEN** acceptance checklist in tasks.md §10 is executed
 - **THEN** all items SHALL pass on internal Rocky 9 deployment before v1.0.0 tag

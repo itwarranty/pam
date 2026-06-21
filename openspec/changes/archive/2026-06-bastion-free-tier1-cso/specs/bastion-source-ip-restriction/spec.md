@@ -2,7 +2,7 @@
 
 ### Requirement: Operators MAY restrict authentication source IP addresses
 
-MT: Bastion Free SHALL support optional per-operator network source allowlists.
+SSH PAM SHALL support optional per-operator network source allowlists.
 
 #### Scenario: Operator allowed_sources field
 - **WHEN** administrator configures operator with:

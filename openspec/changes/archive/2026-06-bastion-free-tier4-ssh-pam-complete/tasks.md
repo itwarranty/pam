@@ -21,7 +21,7 @@
 
 - [x] 3.1 Create `scripts/bastion-session-watch.sh` (tail -f registry log_path).
 - [x] 3.2 JSONL `moderator_watch_start` events.
-- [x] 3.3 Sudo/group doc: `mt_bastion_moderators` or audit SSH user.
+- [x] 3.3 Sudo/group doc: `bastion_moderators` or audit SSH user.
 - [x] 3.4 CSO Demo four-eyes block; Troubleshooting §5.7.
 - [x] 3.5 Whitepaper row 30.
 
@@ -42,11 +42,11 @@
 - [x] 5.4 Vars: `bastion_oidc_*`, `bastion_oidc_cert_policy_enabled` in example.
 - [x] 5.5 Preflight when OIDC policy enabled: certificate required.
 - [x] 5.6 Whitepaper §OIDC; link to existing User CA trust specs.
-- [ ] 5.7 Complete internal PKI QA tasks (ssh-user-ca-qa-mtglobal §3–5) on MT Global CA.
+- [ ] 5.7 Complete internal PKI QA tasks (ssh-user-ca-qa §3–5) on  CA.
 
 ## 6. HA active-passive (Phase F — v0.7.5)
 
-- [x] 6.1 Create `docs/MT-Bastion-HA-Runbook.md`.
+- [x] 6.1 Create `docs/HA-Runbook.md`.
 - [x] 6.2 Create `group_vars/ha.yml.example`, inventory `ha-cluster.yml.example`.
 - [x] 6.3 Create `scripts/bastion-ha-promote.sh`.
 - [x] 6.4 Ansible: shared mount task for `audit_log_dir` when `bastion_ha_enabled`.
@@ -54,9 +54,9 @@
 
 ## 7. v1.0 GA release (Phase G)
 
-- [x] 7.1 Rename `MT-Bastion-Client-Without-PAM.md` → `MT-Dostup-SSH-PAM-Overview.md`; update all links.
-- [x] 7.2 Create `docs/MT-Bastion-Battlecard-SKDPU-SSH.md`.
-- [x] 7.3 Create `docs/MT-Bastion-SoW-SSH-Access.md`.
+- [x] 7.1 Client overview → `SSH-PAM-Overview.md`; update all links.
+- [x] 7.2 Create `docs/Battlecard-SKDPU-SSH.md`.
+- [x] 7.3 Create `docs/SoW-SSH-Access.md`.
 - [x] 7.4 Create `group_vars/prod.yml.example`.
 - [x] 7.5 Create `CHANGELOG.md` (v0.1 → v1.0.0).
 - [x] 7.6 Extend `bastion-compliance-verify.sh` (gateway manifest, jq optional).
@@ -88,7 +88,7 @@
 ## R&D agent prompt (copy to Cursor)
 
 ```
-Implement MT: Bastion Tier 4 — complete SSH PAM in Free (target v1.0.0).
+Implement SSH PAM Tier 4 — complete SSH PAM in Free (target v1.0.0).
 
 OpenSpec: openspec/changes/archive/2026-06-bastion-free-tier4-ssh-pam-complete/
 Read: proposal.md, design.md, tasks.md, all specs/*.

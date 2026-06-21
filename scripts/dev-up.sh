@@ -10,13 +10,13 @@ ensure_lab_keys() {
   for u in gateway-target-support; do
     if [[ ! -f "lab/keys/${u}.lab" ]]; then
       echo "[dev-up] Generating lab/keys/${u}.lab (target SA key) ..."
-      ssh-keygen -t ed25519 -f "lab/keys/${u}.lab" -N "" -C "${u}@mtglobal.team"
+      ssh-keygen -t ed25519 -f "lab/keys/${u}.lab" -N "" -C "${u}@example.com"
     fi
   done
   for u in engineer-jump engineer-shell engineer-audit breakglass-lab gateway-lab; do
     if [[ ! -f "lab/keys/${u}.lab" ]]; then
       echo "[dev-up] Generating lab/keys/${u}.lab ..."
-      ssh-keygen -t ed25519 -f "lab/keys/${u}.lab" -N "" -C "${u}@mtglobal.team"
+      ssh-keygen -t ed25519 -f "lab/keys/${u}.lab" -N "" -C "${u}@example.com"
     fi
   done
 }
@@ -28,15 +28,15 @@ ensure_fido_lab_keys() {
     return 0
   fi
   echo "[dev-up] Generating FIDO sk key lab/keys/engineer-fido.lab (verify-required) ..."
-  if ssh-keygen -t ed25519-sk -O verify-required -f lab/keys/engineer-fido.lab -N "" -C "engineer-fido@mtglobal.team" 2>/dev/null; then
+  if ssh-keygen -t ed25519-sk -O verify-required -f lab/keys/engineer-fido.lab -N "" -C "engineer-fido@example.com" 2>/dev/null; then
     echo "[dev-up] FIDO lab key OK — enable bastion_fido_lab_enabled for deploy"
   else
     echo "[dev-up] SKIP FIDO key: no sk/FIDO support on this host."
-    echo "[dev-up] See docs/MT-Bastion-FIDO-Onboarding.md — use Mac Touch ID or YubiKey manually."
+    echo "[dev-up] See docs/FIDO-Onboarding.md — use Mac Touch ID or YubiKey manually."
   fi
 }
 
-INSTANCE="${LIMA_INSTANCE_NAME:-mt-bastion-prod}"
+INSTANCE="${LIMA_INSTANCE_NAME:-bastion-prod}"
 
 ensure_lima() {
   chmod +x tests/*.sh 2>/dev/null || true
@@ -49,11 +49,11 @@ ensure_lima() {
 }
 
 ensure_image() {
-  if limactl shell "${INSTANCE}" -- test -f /tmp/trusted_upstream_packages/mt_bastion_image.tar 2>/dev/null; then
+  if limactl shell "${INSTANCE}" -- test -f /tmp/trusted_upstream_packages/bastion_image.tar 2>/dev/null; then
     echo "[dev-up] Image already in Lima VM"
     return
   fi
-  if [[ -f /tmp/trusted_upstream_packages/mt_bastion_image.tar ]]; then
+  if [[ -f /tmp/trusted_upstream_packages/bastion_image.tar ]]; then
     echo "[dev-up] Syncing image to Lima ..."
     ./tests/sync-artifacts.sh
     return
@@ -70,7 +70,7 @@ ensure_image() {
 
 print_lab_summary() {
   echo ""
-  echo "=== Lab operators (MT Dostup) ==="
+  echo "=== Lab operators (SSH PAM) ==="
   printf '%-18s %-8s  %s\n' "OPERATOR" "ACCESS" "HOW TO CONNECT"
   printf '%-18s %-8s  %s\n' "----------" "------" "--------------"
   python3 - "${ROOT}" <<'PY' | while IFS=$'\t' read -r name access hint; do
@@ -83,7 +83,7 @@ root = Path(sys.argv[1])
 script = root / "scripts" / "lib" / "parse-lab-operators.py"
 ops = json.loads(subprocess.check_output([sys.executable, str(script), str(root / "group_vars" / "dev")], text=True))
 hints = {
-    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/mt-dostup-doctor.sh NAME",
+    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/bastion-doctor.sh NAME",
     "gateway": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
     "shell": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
     "audit": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
@@ -94,7 +94,7 @@ for o in sorted(ops, key=lambda x: x["name"]):
     print(f"{o['name']}\t{acc}\t{hint}")
 PY
   echo ""
-  echo "TOTP: ./scripts/mt-dostup-doctor.sh <operator>  (live 6-digit code)"
+  echo "TOTP: ./scripts/bastion-doctor.sh <operator>  (live 6-digit code)"
   echo "Pre-login banner on bastion reminds: jump → use -J"
   echo ""
 }

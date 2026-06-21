@@ -2,7 +2,7 @@
 # Tier 2 lab: read-only auditor (access: audit)
 bastion_operators_audit_lab:
   - name: engineer-audit
-    email: engineer-audit@mtglobal.team
+    email: engineer-audit@example.com
     pubkey: "{{ lookup('file', lab_keys_dir + '/engineer-audit.lab.pub') }}"
     mfa_secret: AUDITLABAUDITLABAUDITLABAUDITLABA
     access: audit

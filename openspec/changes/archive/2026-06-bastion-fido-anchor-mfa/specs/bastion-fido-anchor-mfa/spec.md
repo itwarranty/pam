@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: MT Bastion SHALL support FIDO2-bound SSH operator keys as phishing-resistant first factor
+### Requirement: SSH PAM SHALL support FIDO2-bound SSH operator keys as phishing-resistant first factor
 
 Production deployments MAY require operators to use OpenSSH security key types (`sk-ssh-ed25519@openssh.com` or optionally `sk-ecdsa-sha2-nistp256@openssh.com`) with user verification.
 
@@ -8,7 +8,7 @@ Production deployments MAY require operators to use OpenSSH security key types (
 - **WHEN** CSO enables FIDO anchor policy for an operator
 - **THEN** documentation SHALL instruct:
   ```bash
-  ssh-keygen -t ed25519-sk -O verify-required -C "operator@mtglobal.team" -f ~/.ssh/mt-bastion-fido
+  ssh-keygen -t ed25519-sk -O verify-required -C "operator@example.com" -f ~/.ssh/bastion-fido
   ```
 - **THEN** operator SHALL register the resulting `.pub` in `bastion_operators[].pubkey` via Ansible
 
@@ -102,7 +102,7 @@ FIDO strengthens the **first** factor; offline TOTP remains the default **second
 
 #### Scenario: FIDO onboarding doc
 - **WHEN** change is complete
-- **THEN** `docs/MT-Bastion-FIDO-Onboarding.md` SHALL exist with: key generation, Ansible registration, pilot rollout, waiver process, audit wording
+- **THEN** `docs/FIDO-Onboarding.md` SHALL exist with: key generation, Ansible registration, pilot rollout, waiver process, audit wording
 
 #### Scenario: Policy Gate update
 - **WHEN** Whitepaper is updated

@@ -6,16 +6,16 @@ _sanitize() {
   printf '%s' "${1}" | tr -cd 'A-Za-z0-9._-' | cut -c1-64
 }
 
-SESSIONS_DIR="${MT_BASTION_SESSIONS_DIR:-/run/mt-bastion/sessions}"
-TARGETS_ROOT="${MT_BASTION_TARGETS_DIR:-/run/mt-bastion/targets-runtime}"
+SESSIONS_DIR="${BASTION_SESSIONS_DIR:-/run/bastion/sessions}"
+TARGETS_ROOT="${BASTION_TARGETS_DIR:-/run/bastion/targets-runtime}"
 [ -d "${TARGETS_ROOT}" ] || TARGETS_ROOT="/etc/bastion/targets"
 PERMIT_FILE="/home/${USER}/permit_open"
-JSONL="${MT_BASTION_JSONL:-/var/log/bastion_sessions/sessions.jsonl}"
-TARGETS_LIST="/tmp/.mt-gw-targets.$$"
+JSONL="${BASTION_JSONL:-/var/log/bastion_sessions/sessions.jsonl}"
+TARGETS_LIST="/tmp/.bastion-gw-targets.$$"
 
 _fail() {
-  /usr/local/bin/bastion-syslog.sh mt-bastion-gateway "user=${USER} error=$* client=${SSH_CLIENT:-unknown}"
-  printf '[MT Bastion Gateway] %s\n' "$*" >&2
+  /usr/local/bin/bastion-syslog.sh bastion-gateway "user=${USER} error=$* client=${SSH_CLIENT:-unknown}"
+  printf '[SSH PAM Gateway] %s\n' "$*" >&2
   exit 1
 }
 
@@ -48,7 +48,7 @@ _select_target() {
     return
   fi
 
-  printf '\n[MT Bastion Gateway] Select target:\n' >&2
+  printf '\n[SSH PAM Gateway] Select target:\n' >&2
   n=1
   while IFS="$(printf '\t')" read -r tid hp; do
     printf '  %s) %s (%s)\n' "${n}" "${tid}" "${hp}" >&2
@@ -68,7 +68,7 @@ rm -f "${TARGETS_LIST}"
 # shellcheck disable=SC1090
 . "${TARGETS_ROOT}/${TARGET_ID}/target.env"
 
-INCIDENT_RAW="${MT_BASTION_INCIDENT_ID:-}"
+INCIDENT_RAW="${BASTION_INCIDENT_ID:-}"
 INCIDENT_TAG=""
 [ -n "${INCIDENT_RAW}" ] && [ "${INCIDENT_RAW}" != "-" ] && INCIDENT_TAG="$(_sanitize "${INCIDENT_RAW}")"
 
@@ -89,7 +89,7 @@ printf '{"id":"%s","operator":"%s","target_id":"%s","target_host":"%s","target_p
   "${SESSION_ID}" "${USER}" "${TARGET_ID}" "${HOST}" "${PORT}" "${ACCOUNT}" "$$" "${UTC_START}" "${LOG}" \
   > "${REG_FILE}"
 
-/usr/local/bin/bastion-syslog.sh mt-bastion-gateway \
+/usr/local/bin/bastion-syslog.sh bastion-gateway \
   "session start id=${SESSION_ID} user=${USER} target=${TARGET_ID} host=${HOST}:${PORT} log=${LOG} client=${CLIENT}"
 
 _append_jsonl "$(printf \
@@ -99,9 +99,9 @@ _append_jsonl "$(printf \
 touch "${LOG}"
 chattr +a "${LOG}" 2>/dev/null || true
 
-export MT_BASTION_SESSION_ID="${SESSION_ID}"
-export MT_BASTION_LOG_PATH="${LOG}"
-export MT_BASTION_TARGET_ID="${TARGET_ID}"
+export BASTION_SESSION_ID="${SESSION_ID}"
+export BASTION_LOG_PATH="${LOG}"
+export BASTION_TARGET_ID="${TARGET_ID}"
 
 /usr/local/bin/bastion-ssh-gateway.sh "${TARGET_ID}" "${SESSION_ID}" "${LOG}"
 EXIT_CODE=$?
@@ -124,5 +124,5 @@ _append_jsonl "$(printf \
   "${UTC_END}" "${SESSION_ID}" "${USER}" "${TARGET_ID}" "${EXIT_CODE}" "${LOG_SHA}")"
 
 rm -f "${REG_FILE}" 2>/dev/null || true
-/usr/local/bin/bastion-syslog.sh mt-bastion-gateway "session end id=${SESSION_ID} user=${USER} exit=${EXIT_CODE}"
+/usr/local/bin/bastion-syslog.sh bastion-gateway "session end id=${SESSION_ID} user=${USER} exit=${EXIT_CODE}"
 exit "${EXIT_CODE}"

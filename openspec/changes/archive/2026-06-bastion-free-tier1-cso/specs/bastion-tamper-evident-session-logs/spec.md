@@ -2,7 +2,7 @@
 
 ### Requirement: Shell session logs SHALL receive cryptographic integrity sidecar at session end
 
-MT: Bastion Free SHALL produce verifiable hashes for TTY session recordings.
+SSH PAM SHALL produce verifiable hashes for TTY session recordings.
 
 #### Scenario: SHA256 sidecar created on session close
 - **WHEN** shell operator session ends (access shell via `bastion-shell-wrapper.sh`)

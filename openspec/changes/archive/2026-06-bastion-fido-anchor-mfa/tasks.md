@@ -46,11 +46,11 @@
 
 ## 7. Documentation (Phase G)
 
-- [x] 7.1 Create `docs/MT-Bastion-FIDO-Onboarding.md` (RU): generation, Touch ID/YubiKey, Ansible, pilot, waivers, audit text.
-- [x] 7.2 Update `docs/MT-Bastion-Whitepaper.md` — Policy Gate #32–33, Executive MFA paragraph.
+- [x] 7.1 Create `docs/FIDO-Onboarding.md` (RU): generation, Touch ID/YubiKey, Ansible, pilot, waivers, audit text.
+- [x] 7.2 Update `docs/Whitepaper.md` — Policy Gate #32–33, Executive MFA paragraph.
 - [x] 7.3 Update `docs/Engineer-Onboarding.md` §FIDO.
 - [x] 7.4 Update `docs/README.md` index + releases row `v1.1.0`.
-- [x] 7.5 Update `docs/MT-Bastion-Battlecard-SKDPU-SSH.md` — row FIDO2 / platform key.
+- [x] 7.5 Update `docs/Battlecard-SKDPU-SSH.md` — row FIDO2 / platform key.
 - [x] 7.6 Update root `README.md` releases table.
 
 ## 8. Release (Phase H)

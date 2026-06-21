@@ -5,12 +5,12 @@ QA SSH User CA testing SHALL NOT alter default lab raw-key configuration.
 
 #### Scenario: QA group isolation
 - **WHEN** QA testing begins
-- **THEN** configuration SHALL live in `group_vars/qa_mtglobal.yml` and inventory group `qa_mtglobal`
+- **THEN** configuration SHALL live in `group_vars/qa.yml` and inventory group `qa`
 - **THEN** `group_vars/local_lima.yml` SHALL remain on raw pubkeys until QA sign-off
 
 #### Scenario: QA template files exist
 - **WHEN** engineer prepares QA environment
-- **THEN** QA configuration examples SHALL be documented in `openspec/changes/ssh-user-ca-qa-mtglobal/design.md`
+- **THEN** QA configuration examples SHALL be documented in `openspec/changes/ssh-user-ca-qa/design.md`
 
 ### Requirement: QA acceptance tests SHALL validate CA authentication paths
 Before CSO sign-off for prod CA mode, QA SHALL execute the following verifications.
@@ -28,7 +28,7 @@ Before CSO sign-off for prod CA mode, QA SHALL execute the following verificatio
 - **THEN** authentication SHALL fail
 
 #### Scenario: Jump direct shell remains blocked with certificate
-- **WHEN** jump operator runs interactive `ssh engineer-jump@bastion` without ProxyJump
+- **WHEN** jump operator runs interactive `ssh engineer-jump@gateway` without ProxyJump
 - **THEN** PTY/shell allocation SHALL fail (restrict in authorized_keys)
 
 #### Scenario: ProxyJump to whitelist succeeds
@@ -36,7 +36,7 @@ Before CSO sign-off for prod CA mode, QA SHALL execute the following verificatio
 - **THEN** forwarded connection SHALL be permitted per sshd policy
 
 ### Requirement: Rollback from CA mode SHALL be supported without image rebuild
-MT: Bastion SHALL allow reverting QA/prod from certificates to raw pubkeys via Ansible only.
+SSH PAM SHALL allow reverting QA/prod from certificates to raw pubkeys via Ansible only.
 
 #### Scenario: Rollback procedure
 - **WHEN** operator removes `bastion_trusted_user_ca_file` and restores `pubkey` fields

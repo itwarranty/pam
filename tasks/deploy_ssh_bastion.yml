@@ -27,7 +27,7 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0600"
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: Pre-login SSH banner (operator UX)
   ansible.builtin.template:
@@ -36,9 +36,9 @@
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0644"
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
-- name: Установка SSH User CA (mtglobal.team / org CA)
+- name: Установка SSH User CA (example.com / org CA)
   ansible.builtin.copy:
     src: "{{ bastion_trusted_user_ca_file }}"
     dest: "{{ bastion_home }}/.ssh_config/trusted_user_ca.pub"
@@ -83,7 +83,7 @@
     bastion_container_volumes: >-
       {{
         bastion_container_volumes
-        + [bastion_runtime_dir + '/sessions:/run/mt-bastion/sessions:rw,Z']
+        + [bastion_runtime_dir + '/sessions:/run/bastion/sessions:rw,Z']
       }}
   when: bastion_targets | default([]) | length > 0
 
@@ -104,7 +104,7 @@
     - bastion_container_mount_dev_log | default(false) | bool
     - bastion_dev_log_stat.stat.exists | default(false)
 
-- name: Загрузка доверенного образа бастиона из локального архива (Air Gap)
+- name: Загрузка доверенного образа шлюза из локального архива (Air Gap)
   containers.podman.podman_load:
     input: "{{ bastion_image_tar }}"
   become: true
@@ -118,7 +118,7 @@
 
 - name: Запуск контейнера ssh_bastion (lab network)
   containers.podman.podman_container:
-    name: mt_ssh_bastion
+    name: ssh_bastion
     image: "{{ bastion_image_name }}:{{ bastion_image_tag }}"
     state: started
     restart_policy: always
@@ -142,7 +142,7 @@
 
 - name: Запуск контейнера ssh_bastion (default network)
   containers.podman.podman_container:
-    name: mt_ssh_bastion
+    name: ssh_bastion
     image: "{{ bastion_image_name }}:{{ bastion_image_tag }}"
     state: started
     restart_policy: always

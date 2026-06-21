@@ -1,6 +1,6 @@
 ### Requirement: Jump and gateway modes SHALL coexist with documented semantics
 
-MT: Bastion SHALL NOT remove `access: jump` when gateway is introduced.
+SSH PAM SHALL NOT remove `access: jump` when gateway is introduced.
 
 #### Scenario: Jump operator unchanged
 - **WHEN** operator has `access: jump`

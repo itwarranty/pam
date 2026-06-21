@@ -1,10 +1,10 @@
-# MT Bastion — fail2ban jail (optional; requires auth log visibility on host).
+# SSH PAM — fail2ban jail (optional; requires auth log visibility on host).
 # Rocky 9: point logpath at forwarded container auth or journal — see Whitepaper §Tier 2.
 
-[mt-bastion-ssh]
+[bastion-ssh]
 enabled = true
 port = {{ bastion_ssh_port }}
-filter = mt-bastion-ssh
+filter = bastion-ssh
 logpath = {{ bastion_fail2ban_logpath | default('/var/log/secure') }}
 maxretry = {{ bastion_fail2ban_maxretry }}
 bantime = {{ bastion_fail2ban_bantime }}

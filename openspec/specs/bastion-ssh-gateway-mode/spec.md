@@ -1,6 +1,6 @@
 ### Requirement: Operators SHALL support access mode gateway
 
-MT: Bastion SHALL provide `access: gateway` for interactive SSH to whitelisted targets with bastion-originated sessions.
+SSH PAM SHALL provide `access: gateway` for interactive SSH to whitelisted targets with bastion-originated sessions.
 
 #### Scenario: Gateway operator connects
 - **WHEN** operator has `access: gateway`
@@ -18,7 +18,7 @@ MT: Bastion SHALL provide `access: gateway` for interactive SSH to whitelisted t
 - **WHEN** gateway wrapper resolves operator targets
 - **AND** no `bastion_targets` entry matches `permit_open`
 - **THEN** connection SHALL fail with clear error
-- **THEN** failure SHALL be logged via syslog tag `mt-bastion-gateway`
+- **THEN** failure SHALL be logged via syslog tag `bastion-gateway`
 
 ### Requirement: Gateway SHALL only allow targets from operator permit_open
 

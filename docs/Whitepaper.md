@@ -1,11 +1,11 @@
 # ТЕХНИЧЕСКИЙ ПАСПОРТ ПРОДУКТА (WHITEPAPER)
 
-## Архитектура и защитные контроли шлюза удаленного доступа «MT: Bastion»
+## Архитектура и защитные контроли шлюза удаленного доступа «SSH PAM»
 
-**Версия документа:** 1.7  
+**Версия документа:** 1.8  
 **Статус:** Релиз (Tier 5 FIDO-Anchor — v1.1.0)  
 **Продукт (git tags):** `v1.1.0` — см. § «Версии релиза»  
-**Разработчик:** MT Global  
+**Разработчик:**   
 
 ---
 
@@ -26,14 +26,14 @@
 
 ### Вне репозитория (организационно)
 
-- Получить `mtglobal.team-user-ca.pub`, прогнать QA deploy и acceptance scenarios (`openspec/changes/archive/2026-06-ssh-user-ca-qa-mtglobal/tasks.md` §3–5).
+- Получить `user-ca.pub`, прогнать QA deploy и acceptance scenarios (`openspec/changes/archive/2026-06-ssh-user-ca-qa/tasks.md` §3–5).
 - На prod клиента: включить opt-in при необходимости — `bastion_jit_timer_enabled`, `bastion_siem_forward_enabled`, `bastion_worm_archive_dir`.
 
 ---
 
 ## 1. Executive Summary (Общее описание)
 
-**MT: Bastion** — open-source tier продукта **«МТ Доступ»**: полноценный **SSH PAM** (Privileged Access Management) в модели *Security-as-a-Code*. Заменяет коммерческий PAM-шлюз для Linux: контролируемый, изолированный и полностью аудируемый доступ инженеров поддержки во внутренний периметр заказчика.
+**SSH PAM** — open-source tier продукта **SSH PAM**: полноценный **SSH PAM** (Privileged Access Management) в модели *Security-as-a-Code*. Заменяет коммерческий PAM-шлюз для Linux: контролируемый, изолированный и полностью аудируемый доступ инженеров поддержки во внутренний периметр заказчика.
 
 Решение спроектировано по методологии **Zero Trust (микросегментация на уровне сессий)** и ориентировано на развёртывание в изолированных, критических и **Air-Gapped** контурах без необходимости прямого доступа к сети Интернет на этапе эксплуатации.
 
@@ -41,10 +41,10 @@
 
 - **Полная декларативность:** развёртывание, конфигурация и управление доступом осуществляются через идемпотентные сценарии Ansible.
 - **Вендор-агностичность:** сквозной триггер `is_commercial_pam` позволяет переключать контур авторизации с open-source стека на промышленное коммерческое ПО (PAM-системы) без изменения логики деплоя.
-- **Изоляция рантайма:** исключено использование привилегированного контекста внутри контейнера. Бастион функционирует в Rootless Podman под непривилегированным пользователем хоста `mt_bastion`.
-- **FIDO-Anchor MFA (v1.1):** prod рекомендует **client-side** `ed25519-sk -O verify-required` (Touch ID / YubiKey) как первый фактор + **offline TOTP** на бастion; без WebAuthn в контейнере и без proprietary client.
+- **Изоляция рантайма:** исключено использование привилегированного контекста внутри контейнера. Шлюз функционирует в Rootless Podman под непривилегированным пользователем хоста `bastion`.
+- **FIDO-Anchor MFA (v1.1):** prod рекомендует **client-side** `ed25519-sk -O verify-required` (Touch ID / YubiKey) как первый фактор + **offline TOTP** на шлюз; без WebAuthn в контейнере и без proprietary client.
 
-### Системные требования (хост бастиона)
+### Системные требования (хост шлюза)
 
 - **Обязательная ОС хоста:** Rocky Linux 9.x (Enterprise LTS), архитектура x86_64.
 
@@ -54,7 +54,7 @@ Rocky Linux 9 — единственная утверждённая платфо
 
 1. **Родной Podman** — в семействе RHEL Podman интегрирован на уровне системных утилит и из коробки поддерживает Rootless-режим без сторонних обёрток (в отличие от Ubuntu, где по умолчанию доминирует Docker/Snap).
 2. **SELinux** — при монтировании томов с флагом `:Z` (реализовано в плейбуке) процессы контейнера жёстко изолируются от хоста штатными политиками без разработки custom MAC-правил.
-3. **Жизненный цикл** — Rocky Linux 9 получает патчи безопасности до **мая 2032 года**, что снижает риск преждевременного вывода бастиона из эксплуатации по причине EOL ОС.
+3. **Жизненный цикл** — Rocky Linux 9 получает патчи безопасности до **мая 2032 года**, что снижает риск преждевременного вывода шлюза из эксплуатации по причине EOL ОС.
 
 ### Решения CSO (Policy Gate)
 
@@ -69,7 +69,7 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 7 | Управление доступом: **только Ansible** (ручные правки на хосте запрещены) | Runbook |
 | 8 | Firewall хоста: **firewalld** (штатный стек RHEL) | Обязательно |
 | 9 | Jump-оператор: **restrict + port-forwarding** в `authorized_keys` | Обязательно |
-| 10 | Образ: OCI-label **mt.global.mfa.strict=1** (verify после load) | Обязательно |
+| 10 | Образ: OCI-label **bastion.mfa.strict=1** (verify после load) | Обязательно |
 | 11 | Роль `access: shell` — только по согласованию CSO заказчика | Организационно |
 | 12 | **SSH User CA** (`bastion_trusted_user_ca_file`, operator `certificate`) | Prod policy: `bastion_allow_raw_pubkey_prod`; signing offline — `scripts/sign-operator-cert.sh.example` |
 | 13 | **Declarative revoke операторов** | Удаление из `bastion_operators` → purge каталогов, MFA, Unix-учёток в контейнере + restart | `tasks/purge_revoked_operators.yml` |
@@ -81,49 +81,50 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 19 | **JIT access windows** | `valid_from` / `valid_until` + auto-purge; опц. systemd timer | `tasks/jit_filter_operators.yml`, `tasks/configure_jit_timer.yml` |
 | 20 | **SSH User CA prod** | Certificates ≤72h; raw pubkey blocked без waiver | `bastion_allow_raw_pubkey_prod`, `scripts/sign-operator-cert.sh.example` |
 | 21 | **Incident log naming (Tier 2)** | `incident_id` в basename `session_<INCIDENT>_<USER>_…` | `build/files/bastion-shell-wrapper.sh` |
-| 22 | **Shell command denylist (Tier 2)** | Denylist RO `/etc/bastion/command_denylist`; v2 — PTY inspector (Tier 4) | `bastion-command-policy.sh`, `bastion-pty-inspector.py` |
+| 22 | **Shell command denylist (Tier 2)** | Denylist RO `/etc/bastion/command_denylist`; **prod: enforcement v2** (PTY inspector) | `bastion-pty-inspector.py`, `bastion-command-policy.sh` (v1 migration-only) |
 | 23 | **Audit readonly role (Tier 2)** | `access: audit` — чтение `/var/log/bastion_sessions` без jump | `bastion-audit-shell-wrapper.sh`, `templates/sshd_config.j2` |
 | 24 | **SSH brute-force protection (Tier 2)** | firewalld rate limit (default) или opt-in fail2ban | `tasks/configure_ssh_brute_force.yml` |
 | 25 | **Break-glass emergency access (Tier 2)** | `break_glass: true` + JIT window ≤ max hours; auditd + syslog markers | `preflight_cso.yml`, `templates/auditd-bastion.rules.j2` |
-| 26 | **SSH gateway access (Tier 3)** | `access: gateway` — bastion-originated SSH, full target PTY log | `bastion-ssh-gateway-wrapper.sh`, `tasks/provision_bastion_targets.yml` |
+| 26 | **SSH gateway access (Tier 3)** | `access: gateway` — SSH с шлюза, full target PTY log | `bastion-ssh-gateway-wrapper.sh`, `tasks/provision_bastion_targets.yml` |
 | 27 | **Target credential broking (Tier 3)** | `bastion_targets[]`; keys Vault-only; RO mount `/etc/bastion/targets` | `tasks/provision_bastion_targets.yml` |
 | 28 | **Gateway session control (Tier 3)** | `bastion-session-ctl list|kill`; JIT purge kills active sessions | `scripts/bastion-session-ctl.sh`, `tasks/kill_gateway_sessions.yml` |
 | 29 | **Session search (Tier 4)** | JSONL filter by operator/date; host CLI `bastion-session-search` | `scripts/bastion-session-search.sh`, `tasks/install_tier4_tools.yml` |
 | 30 | **Live session moderation (Tier 4)** | `bastion-session-watch` tail + JSONL `moderator_watch_start` | `scripts/bastion-session-watch.sh` |
-| 31 | **Gateway command policy v2 (Tier 4)** | Bastion-side PTY inspector (Python); deny without target rc | `bastion-pty-inspector.py`, `bastion-ssh-gateway-exec.sh` |
+| 31 | **Gateway command policy v2 (Tier 4)** | **Обязателен в prod:** denylist на audit boundary шлюза (Python PTY inspector) | `bastion-pty-inspector.py`, `bastion-ssh-gateway-exec.sh` |
 | 32 | **FIDO-Anchor operator keys (Tier 5)** | `ed25519-sk -O verify-required`; preflight + compliance `fido_pubkey` | `scripts/preflight-fido-key.py`, `bastion_require_fido_pubkey` |
 | 33 | **MFA modes (Tier 5)** | `totp` / `fido_totp` (prod) / `fido_only` (CSO waiver only) | `bastion_mfa_mode`, `templates/sshd_config.j2` |
+| 34 | **Command policy v2 mandatory** | При `bastion_shell_command_policy_enabled: true` — v2 включён; v1 только migration + `bastion_command_policy_v2_required: false` | `preflight_cso.yml`, `bastion-compliance-verify.sh` |
 
 ---
 
 ## 2. Модель угроз и границы доверия (Trust Boundaries)
 
-Продукт «MT: Bastion» исходит из предположения, что хостовая операционная система бастиона (DMZ) находится в зоне повышенного риска. Границы доверия жёстко разграничены.
+Продукт «SSH PAM» исходит из предположения, что хостовая операционная система шлюза (DMZ) находится в зоне повышенного риска. Границы доверия жёстко разграничены.
 
 ```
-[ НЕБЕЗОПАСНАЯ ЗОНА ]          [ ЗОНА КОНТРОЛЯ MT: BASTION ]
+[ НЕБЕЗОПАСНАЯ ЗОНА ]          [ ЗОНА КОНТРОЛЯ SSH PAM ]
 
-Администратор MT Global        +---------------------------------------+
+Администратор         +---------------------------------------+
 (SSH-ключ + Offline TOTP)      | Rocky Linux 9.x (x86_64)              |
          |                     |  --> firewalld (порт 2222)            |
          v                     |  --> SELinux (:Z на томах Podman)     |
 [ Внешний интерфейс ] -------->|  --> auditd (контроль ядра хоста)     |
                                |  +-------------------------------+  |
                                |  | Rootless Podman Container     |  |
-                               |  | (пользователь: mt_bastion)    |  |
+                               |  | (пользователь: bastion)    |  |
                                |  |  --> ограниченный sshd        |  |
                                |  +-------------------------------+  |
                                +---------------------------------------+
                                          |
                                          v
                                [ Gateway SSH → target Linux ]
-                               (PTY log на бастion; jump — PermitOpen only)
+                               (PTY log на шлюз; jump — PermitOpen only)
 ```
 
 ### Нейтрализуемые векторы атак
 
-1. **Компрометация SSH-демона (0-day):** эксплуатация уязвимости внутри контейнера не позволяет злоумышленнику получить права `root` на хосте, так как процесс запущен в Rootless-режиме (UID сопоставлен с непривилегированным пользователем `mt_bastion`).
-2. **Компрометация учётной записи оператора:** перехват файла приватного ключа недостаточен — требуется **FIDO user verification** на устройстве (sk key, Tier 5) и **offline TOTP** на бастion (или CSO-waiver `fido_only`).
+1. **Компрометация SSH-демона (0-day):** эксплуатация уязвимости внутри контейнера не позволяет злоумышленнику получить права `root` на хосте, так как процесс запущен в Rootless-режиме (UID сопоставлен с непривилегированным пользователем `bastion`).
+2. **Компрометация учётной записи оператора:** перехват файла приватного ключа недостаточен — требуется **FIDO user verification** на устройстве (sk key, Tier 5) и **offline TOTP** на шлюз (или CSO-waiver `fido_only`).
 3. **Модификация логов правонарушителем:** попытка очистить историю команд блокируется системным атрибутом `Append-Only` (`chattr +a`) на уровне хостовой ОС в момент создания лог-файла.
 
 ---
@@ -132,9 +133,9 @@ Rocky Linux 9 — единственная утверждённая платфо
 
 | `access` | Назначение | Запись PTY |
 | :--- | :--- | :---: |
-| `gateway` | **Prod:** интерактив на Linux-target через бастion | ✅ на target |
+| `gateway` | **Prod:** интерактив на Linux-target через шлюз | ✅ на target |
 | `jump` | ProxyJump / automation; connect-audit | ❌ |
-| `shell` | Работа на бастion, four-eyes | ✅ bastion |
+| `shell` | Работа на шлюзе, four-eyes | ✅ шлюз |
 | `audit` | Чтение логов, `bastion-session-watch` | read-only |
 
 Полная матрица контролей — **Policy Gate** (§ выше, #1–33).
@@ -143,11 +144,11 @@ Rocky Linux 9 — единственная утверждённая платфо
 
 ## 4. Сценарии доступа (Workflow)
 
-Доступ операторов разграничен на прикладном уровне OpenSSH. Бастион поддерживает **четыре** режима: `jump`, `gateway`, `shell`, `audit`.
+Доступ операторов разграничен на прикладном уровне OpenSSH. Шлюз поддерживает **четыре** режима: `jump`, `gateway`, `shell`, `audit`.
 
 ### Сценарий А: интерактивный Shell-доступ (`access: shell`)
 
-Предназначен для локальной работы на бастионе или инициирования сессий совместного траблшутинга (принцип «четырёх глаз»).
+Предназначен для локальной работы на шлюзе или инициирования сессий совместного траблшутинга (принцип «четырёх глаз»).
 
 1. Оператор авторизуется (SSH-ключ + TOTP).
 2. Вызывается `ForceCommand /usr/local/bin/bastion-shell-wrapper.sh`.
@@ -158,7 +159,7 @@ Rocky Linux 9 — единственная утверждённая платфо
 
 Предназначен для сквозного подключения (ProxyJump) к целевому оборудованию.
 
-1. Штатный сценарий — ProxyJump (`ssh -J`), без интерактивной работы на бастионе.
+1. Штатный сценарий — ProxyJump (`ssh -J`), без интерактивной работы на шлюзе.
 2. Прямой shell-login для jump-оператора **заблокирован** опциями `restrict,port-forwarding` в `authorized_keys`.
 3. Разрешён только контролируемый TCP-forwarding через `PermitOpen` на явно заданные целевые хосты и порты.
 4. Сетевые события фиксируются средствами `LogLevel VERBOSE` OpenSSH и правилами `auditd` на хосте.
@@ -168,12 +169,12 @@ Rocky Linux 9 — единственная утверждённая платфо
 ### Сценарий В: SSH Gateway (`access: gateway`)
 
 1. ForceCommand `bastion-ssh-gateway-wrapper.sh`; target из `permit_open`.
-2. Bastion SSH к target с broked key; оператор ключ target не получает.
+2. Gateway SSH к target с broked key; оператор ключ target не получает.
 3. Лог `gateway_*` + sidecars + JSONL.
 4. `bastion-session-ctl list|kill`.
 5. **Tier 4:** `bastion-session-search`, `bastion-session-watch` (moderator), command policy v2 on PTY stream.
 
-См. [MT-Dostup-SSH-PAM-Overview.md](./MT-Dostup-SSH-PAM-Overview.md).
+См. [SSH-PAM-Overview.md](./SSH-PAM-Overview.md).
 
 
 ---
@@ -185,12 +186,12 @@ Rocky Linux 9 — единственная утверждённая платфо
 ### Фаза 1: подготовка на доверенной build-машине (с доступом в сеть)
 
 1. Выполняется `./trusted_download.sh` (по умолчанию `MFA_STRICT=1`).
-2. Скрипт собирает immutable-образ из декларативного `build/Containerfile`, экспортирует tar-архив (`mt_bastion_image.tar`) и формирует файл контрольных сумм `SHA256SUMS`.
+2. Скрипт собирает immutable-образ из декларативного `build/Containerfile`, экспортирует tar-архив (`bastion_image.tar`) и формирует файл контрольных сумм `SHA256SUMS`.
 3. Артефакты передаются в закрытый контур по регламенту заказчика. На целевом хосте выполняется проверка: `sha256sum -c SHA256SUMS`.
 
 ### Фаза 2: деплой в закрытом контуре клиента (Air Gap)
 
-1. Tar-архив и репозиторий `mt-bastion/` переносятся на хост назначения.
+1. Tar-архив и репозиторий `itwarranty-pam/` переносятся на хост назначения.
 2. В `group_vars/all.yml` заполняется массив `bastion_operators` (см. `group_vars/all.yml.example`).
 3. Запускается `ansible-galaxy collection install -r requirements.yml`, затем `ansible-playbook site.yml`.
 4. Preflight CSO проверяет Rocky Linux 9, x86_64, SELinux Enforcing, whitelist и операторов. При нарушении — **деплой прерывается**.
@@ -205,16 +206,16 @@ TOTP-секреты генерируются плейбуком и переда�
 
 ## 6. Комплаенс и регуляторные ограничения (Audit-Safe Disclaimer)
 
-Архитектура «MT: Bastion» спроектирована с учётом технических требований стандартов **PCI-DSS 4.0** (разделы 8.3/8.4 — MFA, раздел 10 — аудит) и руководящих документов по защите **КИИ** и **СТО БР ИББС**.
+Архитектура «SSH PAM» спроектирована с учётом технических требований стандартов **PCI-DSS 4.0** (разделы 8.3/8.4 — MFA, раздел 10 — аудит) и руководящих документов по защите **КИИ** и **СТО БР ИББС**.
 
 ### Важное ограничение для аудита
 
-Продукт «MT: Bastion» является техническим инструментом контроля (Security Control) и базой для построения защищённого процесса. Финальное соответствие (Compliance) инфраструктуры заказчика регуляторным требованиям зависит от смежных организационных политик на стороне клиента, включая:
+Продукт «SSH PAM» является техническим инструментом контроля (Security Control) и базой для построения защищённого процесса. Финальное соответствие (Compliance) инфраструктуры заказчика регуляторным требованиям зависит от смежных организационных политик на стороне клиента, включая:
 
 - настройку ротации SSH-ключей и TOTP-секретов операторов;
 - интеграцию хостового `auditd` и syslog с корпоративной SIEM;
 - политику долгосрочного хранения (retention) файлов аудита сессий на внешних WORM-хранилищах;
-- сетевую сегментацию DMZ и мониторинг исходящих соединений с бастиона.
+- сетевую сегментацию DMZ и мониторинг исходящих соединений с шлюза.
 
 ### SIEM forwarder (опционально)
 
@@ -225,7 +226,7 @@ TOTP-секреты генерируются плейбуком и переда�
 
 Переменные: `bastion_siem_server`, `bastion_siem_port`, `bastion_siem_protocol` (`tcp` | `udp` | `relp`).
 
-Нормализация в CEF/JSON — **на стороне SIEM заказчика** (см. OpenSpec `bastion-siem-syslog-export`). MT: Bastion не отправляет данные в облако MT Global.
+Нормализация в CEF/JSON — **на стороне SIEM заказчика** (см. OpenSpec `bastion-siem-syslog-export`). SSH PAM не отправляет данные в облако .
 
 Проверка после деплоя:
 
@@ -238,7 +239,7 @@ ansible-playbook site.yml --tags verify_compliance
 
 ## 7. Operational Runbook (Операционные регламенты)
 
-> Полный сквозной воркфлоу инцидента (JIT, four-eyes, архивация): [MT-Bastion-Troubleshooting-Workflow.md](./MT-Bastion-Troubleshooting-Workflow.md)
+> Полный сквозной воркфлоу инцидента (JIT, four-eyes, архивация): [Troubleshooting-Workflow.md](./Troubleshooting-Workflow.md)
 
 ### Добавление / отзыв прав оператора
 
@@ -252,7 +253,7 @@ ansible-playbook site.yml --tags verify_compliance
    - удаляет `{{ operators_home }}/<name>/` на хосте;
    - удаляет `generated/mfa/<host>/<name>.mfa.txt`;
    - удаляет Unix-учётку и `/home/<name>` в контейнере;
-   - перезапускает `mt_ssh_bastion` (handler `Restart ssh bastion container`).
+   - перезапускает `ssh_bastion` (handler `Restart ssh gateway container`).
 
 **Dev shortcut:** `./scripts/test-repo-key.sh revoke <name> --apply`
 
@@ -306,7 +307,7 @@ incident_id: "INC-2026-8942"
 При подозрительной активности (алерт `auditd`, SIEM):
 
 ```bash
-sudo -u mt_bastion podman stop mt_ssh_bastion
+sudo -u bastion podman stop ssh_bastion
 ```
 
 Контейнер останавливается, активные сессии разрываются. Логи сессий на хостовой ОС сохраняются для расследования.
@@ -323,9 +324,9 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 | Избегать | Говорить |
 | :--- | :--- |
-| «Наш бастион на 100% гарантирует, что инженер ничего не сломает в вашей сети» | «Архитектура поддерживает принцип наименьших привилегий через прикладную микросегментацию. Инженер изолирован настройкой `PermitOpen` — доступ только к явно одобренным хостам и портам, без неконтролируемого форвардинга и сканирования подсетей» |
-| «Решение полностью сертифицировано по КИИ и PCI-DSS» | «Технические контроли бастиона (локальный MFA, изоляция рантайма, append-only логирование) спроектированы в соответствии с требованиями PCI-DSS 4.0 и руководящих документов по защите КИИ, что упрощает прохождение регулярного ИБ-аудита вашей инфраструктуры» |
-| «Логи абсолютно невозможно удалить» | «At-birth protection: каждый лог-файл получает `chattr +a` в момент создания; каталог `/var/log/bastion_sessions` принадлежит `mt_bastion` с правами `0750`. Рекомендуем стриминг `auditd` в SIEM» |
+| «Наш шлюз на 100% гарантирует, что инженер ничего не сломает в вашей сети» | «Архитектура поддерживает принцип наименьших привилегий через прикладную микросегментацию. Инженер изолирован настройкой `PermitOpen` — доступ только к явно одобренным хостам и портам, без неконтролируемого форвардинга и сканирования подсетей» |
+| «Решение полностью сертифицировано по КИИ и PCI-DSS» | «Технические контроли шлюза (локальный MFA, изоляция рантайма, append-only логирование) спроектированы в соответствии с требованиями PCI-DSS 4.0 и руководящих документов по защите КИИ, что упрощает прохождение регулярного ИБ-аудита вашей инфраструктуры» |
+| «Логи абсолютно невозможно удалить» | «At-birth protection: каждый лог-файл получает `chattr +a` в момент создания; каталог `/var/log/bastion_sessions` принадлежит `bastion` с правами `0750`. Рекомендуем стриминг `auditd` в SIEM» |
 | «Jump-оператор не получит shell ни при каких условиях» | «Для роли jump в `authorized_keys` включён `restrict,port-forwarding` — PTY и shell заблокированы на уровне OpenSSH. Доступен только audited ProxyJump к whitelist-хостам» |
 
 ---
@@ -334,7 +335,7 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 
 Используйте перед пресейлом и kick-off деплоя.
 
-### Целевой хост бастиона
+### Целевой хост шлюза
 
 | # | Требование | Проверка |
 | :-: | :--- | :--- |
@@ -356,13 +357,26 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | Firewall | `firewalld` |
 | MAC | `selinux-policy-targeted` (предустановлен в Rocky Linux 9) |
 
+### Уровни зависимостей (CSO)
+
+Зависимости разделены по границе доверия — не смешивать в onboarding оператора.
+
+| Уровень | Где | Обязательно | Примеры |
+| :--- | :--- | :---: | :--- |
+| **A — Prod runtime** | Rocky host + образ шлюза | Да | Podman, OpenSSH/PAM, `google-authenticator`, `python3` (PTY inspector v2), `e2fsprogs` (`chattr`) |
+| **B — Deploy plane** | Build/deploy host | Да для деплоя | Ansible, `containers.podman`, `ansible.posix`; `community.hashi_vault` — только при `bastion_vault_enabled` |
+| **C — Host tools (opt-in)** | Rocky host | По фичам | `jq` при `bastion_session_search_enabled`; fail2ban/rsyslog — opt-in |
+| **D — Lab / operator UX** | Ноутбук инженера | Нет для prod | Lima, `dev-up`, `bastion-doctor`, Node/QR — вне security boundary |
+
+**Оператор prod:** только `ssh` + Authenticator. Всё из уровня D — админ/lab, не требование доступа.
+
 ### Build-машина (фаза 1, вне Air Gap)
 
 | # | Требование |
 | :-: | :--- |
 | 1 | Podman установлен |
 | 2 | Доступ к базовому образу `alpine:3.19` (или предзагруженный mirror) |
-| 3 | Выполнен `./trusted_download.sh`, получены `mt_bastion_image.tar` и `SHA256SUMS` |
+| 3 | Выполнен `./trusted_download.sh`, получены `bastion_image.tar` и `SHA256SUMS` |
 | 4 | Артефакты переданы в контур клиента с сохранением контрольной суммы |
 
 ### Управляющая машина Ansible
@@ -370,7 +384,7 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | # | Требование |
 | :-: | :--- |
 | 1 | Ansible 2.14+ |
-| 2 | Коллекции: `containers.podman`, `ansible.posix` |
+| 2 | Коллекции: `containers.podman`, `ansible.posix` (Vault: `community.hashi_vault` — только при `bastion_vault_enabled`) |
 | 3 | Заполнены `bastion_operators` и `bastion_permitted_targets` |
 | 4 | Секреты (`mfa_secret`, `commercial_pam_api_token`) — в Ansible Vault |
 | 5 | Каталог `generated/mfa/` защищён правами `0700`, не в git |
@@ -381,12 +395,12 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | :-: | :--- |
 | 1 | Порт `bastion_ssh_port` (по умолчанию 2222) открыт только для доверенных источников |
 | 2 | Список целей `PermitOpen` согласован с владельцами систем (формат `host:port`, без CIDR) |
-| 3 | Маршрутизация с бастиона до целевых хостов проверена (`nc -zv target 22`) |
-| 4 | SIEM-команда клиента уведомлена о правилах `auditd` (`mt_bastion_session_logs`, `mt_bastion_ssh_connect`) |
+| 3 | Маршрутизация с шлюза до целевых хостов проверена (`nc -zv target 22`) |
+| 4 | SIEM-команда клиента уведомлена о правилах `auditd` (`bastion_session_logs`, `bastion_ssh_connect`) |
 | 5 | При SIEM forward: `bastion_siem_server` доступен по TCP/RELP из DMZ |
 | 6 | Compliance verify: `./scripts/bastion-compliance-verify.sh` exit 0 после деплоя |
 
-### Dev / lab (инженеры MT Global)
+### Dev / lab (инженеры )
 
 | # | Требование |
 | :-: | :--- |
@@ -405,7 +419,8 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | 3 | Тестовый вход: `gateway` (prod), при необходимости `jump` / `shell` |
 | 4 | Gateway: `gateway_*.log` + `sha256sum -c`; JSONL в `sessions.jsonl` |
 | 5 | `bastion-session-search` / compliance verify exit 0 |
-| 6 | Образ `MFA_STRICT=1`; после wrapper — `./trusted_download.sh` |
+| 6 | Prod FIDO (рекомендуется): `ed25519-sk -O verify-required`; `bastion_require_fido_pubkey: true` |
+| 7 | Образ `MFA_STRICT=1`; после wrapper — `./trusted_download.sh` |
 
 ---
 
@@ -417,9 +432,10 @@ sudo -u mt_bastion podman stop mt_ssh_bastion
 | Gateway | `build/files/bastion-ssh-gateway-*.sh`, `tasks/provision_bastion_targets.yml` |
 | Policy | `group_vars/all.yml`, `group_vars/prod.yml.example`, `templates/sshd_config.j2` |
 | CLI | `scripts/bastion-session-{ctl,search,watch}.sh`, `scripts/bastion-compliance-verify.sh` |
+| FIDO | [FIDO-Onboarding.md](./FIDO-Onboarding.md), `scripts/preflight-fido-key.py` |
 | Lab | `group_vars/dev/`, `inventory/local-lima.yml`, `./scripts/dev-up.sh` |
 | Specs | `openspec/specs/`, `openspec/changes/archive/` |
 
 ---
 
-*Документ подготовлен MT Global. Актуально для продукта **v1.0.0** (документ **1.6**).*
+*Документ подготовлен . Актуально для продукта **v1.1.0** (документ **1.8**).*

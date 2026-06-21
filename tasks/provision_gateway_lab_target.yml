@@ -1,5 +1,5 @@
 ---
-# Lab mock target container (mt_gateway_target) on podman network mt_bastion_net.
+# Lab mock target container (gateway_target) on podman network bastion_net.
 - name: Gateway lab — podman network
   ansible.builtin.command:
     argv:
@@ -23,7 +23,7 @@
     group: "{{ bastion_user }}"
     mode: "0750"
 
-- name: Gateway lab — pubkey mock target (mt_support)
+- name: Gateway lab — pubkey mock target (bastion_support)
   ansible.builtin.copy:
     src: "{{ lab_keys_dir }}/gateway-target-support.lab.pub"
     dest: "{{ bastion_home }}/gateway_lab/authorized_keys"
@@ -50,7 +50,7 @@
 
 - name: Gateway lab — контейнер mock target
   containers.podman.podman_container:
-    name: mt_gateway_target
+    name: gateway_target
     image: "{{ bastion_gateway_lab_target_image }}"
     state: started
     restart_policy: always

@@ -1,4 +1,4 @@
-# MT Bastion — forward auditd bastion events (local6) to client SIEM.
+# SSH PAM — forward auditd bastion events (local6) to client SIEM.
 # Managed by Ansible; replace @@host with client receiver.
 {% if bastion_siem_protocol | default('tcp') == 'udp' %}
 local6.*    @{{ bastion_siem_server }}:{{ bastion_siem_port | default(514) }}

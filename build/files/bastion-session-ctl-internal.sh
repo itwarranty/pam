@@ -2,8 +2,8 @@
 # In-container session control (list/kill). Host wrapper: scripts/bastion-session-ctl.sh
 set -eu
 
-SESSIONS_DIR="${MT_BASTION_SESSIONS_DIR:-/run/mt-bastion/sessions}"
-TIMEOUT="${MT_BASTION_KILL_TIMEOUT:-10}"
+SESSIONS_DIR="${BASTION_SESSIONS_DIR:-/run/bastion/sessions}"
+TIMEOUT="${BASTION_KILL_TIMEOUT:-10}"
 
 _usage() {
   cat <<'EOF'
@@ -49,7 +49,7 @@ _kill_one() {
     kill -0 "${pid}" 2>/dev/null && kill -KILL "${pid}" 2>/dev/null || true
   fi
   rm -f "${reg}" 2>/dev/null || true
-  /usr/local/bin/bastion-syslog.sh mt-bastion-session-kill "session=${sid} operator=${op:-unknown} pid=${pid:-unknown}"
+  /usr/local/bin/bastion-syslog.sh bastion-session-kill "session=${sid} operator=${op:-unknown} pid=${pid:-unknown}"
   printf 'Killed session %s (operator=%s)\n' "${sid}" "${op:-unknown}"
 }
 

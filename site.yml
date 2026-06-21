@@ -1,5 +1,5 @@
 ---
-- name: "Развертывание защищенного контура доступа MT: Bastion"
+- name: "Развертывание защищенного контура доступа SSH PAM"
   hosts: bastion_servers
   become: true
   gather_facts: true
@@ -9,14 +9,14 @@
       ansible.builtin.command: augenrules --load
       changed_when: true
 
-    - name: Restart ssh bastion container
+    - name: Restart ssh gateway container
       ansible.builtin.shell: |
         set -e
-        podman restart mt_ssh_bastion
+        podman restart ssh_bastion
         for u in {{ bastion_revoked_operator_names | default([]) | join(' ') }}; do
           [ -n "$u" ] || continue
-          podman exec mt_ssh_bastion deluser -r "$u" 2>/dev/null || true
-          podman exec mt_ssh_bastion rm -rf "/home/$u" 2>/dev/null || true
+          podman exec ssh_bastion deluser -r "$u" 2>/dev/null || true
+          podman exec ssh_bastion rm -rf "/home/$u" 2>/dev/null || true
         done
       become: true
       become_user: "{{ bastion_user }}"
@@ -56,8 +56,8 @@
       ansible.builtin.include_tasks: tasks/commercial_pam.yml
       when: is_commercial_pam | bool
 
-    # --- ВЕТКА Б: OPEN-SOURCE MT BASTION ---
-    - name: Развертывание бесплатного безопасного стека MT Bastion
+    # --- ВЕТКА Б: OPEN-SOURCE SSH PAM ---
+    - name: Развертывание бесплатного безопасного стека SSH PAM
       when: not (is_commercial_pam | bool)
       block:
         - name: Подготовка ОС и создание бесправного пользователя

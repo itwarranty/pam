@@ -1,8 +1,8 @@
 ## Why
 
-MT: Bastion **v1.0.0** delivers complete SSH PAM with **offline TOTP** as second factor. CSO review identified phishing of operator SSH private keys as residual risk. Commercial PAM (Teleport, СКДПУ) markets **FIDO2 / platform authenticators** (Touch ID, YubiKey).
+SSH PAM **v1.0.0** delivers complete SSH PAM with **offline TOTP** as second factor. CSO review identified phishing of operator SSH private keys as residual risk. Commercial PAM (Teleport, СКДПУ) markets **FIDO2 / platform authenticators** (Touch ID, YubiKey).
 
-**Goal:** adopt **FIDO-Anchor + Bastion TOTP** — phishing-resistant first factor on the **client workstation**, keep **offline TOTP** on bastion, optional **short-lived SSH user certificates** aligned with JIT windows. **No** WebAuthn in container PAM, **no** `tsh`-like client, **no** IdP runtime dependency on bastion (IdP path remains separate Tier 4 opt-in).
+**Goal:** adopt **FIDO-Anchor + gateway TOTP** — phishing-resistant first factor on the **client workstation**, keep **offline TOTP** on bastion, optional **short-lived SSH user certificates** aligned with JIT windows. **No** WebAuthn in container PAM, **no** `tsh`-like client, **no** IdP runtime dependency on bastion (IdP path remains separate Tier 4 opt-in).
 
 ## What Changes
 
@@ -38,7 +38,7 @@ MT: Bastion **v1.0.0** delivers complete SSH PAM with **offline TOTP** as second
 ### 5. Documentation and Policy Gate
 
 - Whitepaper Policy Gate #32–33 (FIDO anchor, MFA modes).
-- `docs/MT-Bastion-FIDO-Onboarding.md` (operator + CSO).
+- `docs/FIDO-Onboarding.md` (operator + CSO).
 - Engineer-Onboarding §FIDO; CSO Demo optional block.
 - Battlecard row vs Teleport (FIDO without tsh).
 

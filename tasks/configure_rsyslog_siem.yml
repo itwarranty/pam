@@ -25,7 +25,7 @@
 - name: Drop-in rsyslog — forward local6 to client SIEM
   ansible.builtin.template:
     src: rsyslog-bastion-siem.conf.j2
-    dest: /etc/rsyslog.d/99-mt-bastion-siem.conf
+    dest: /etc/rsyslog.d/99-bastion-siem.conf
     owner: root
     group: root
     mode: "0644"
@@ -34,7 +34,7 @@
 
 - name: Удаление SIEM drop-in при отключённом forward
   ansible.builtin.file:
-    path: /etc/rsyslog.d/99-mt-bastion-siem.conf
+    path: /etc/rsyslog.d/99-bastion-siem.conf
     state: absent
   when: not (bastion_siem_forward_enabled | bool)
   notify: Restart rsyslog

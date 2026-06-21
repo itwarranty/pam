@@ -4,11 +4,11 @@
 set -eu
 
 PERMIT="/home/${USER}/permit_open"
-PORT="${MT_BASTION_SSH_PORT:-2222}"
+PORT="${BASTION_SSH_PORT:-2222}"
 
 printf '\n'
 printf '╔══════════════════════════════════════════════════════════════╗\n'
-printf '║  MT Bastion — access: jump                                   ║\n'
+printf '║  SSH PAM — access: jump                                   ║\n'
 printf '╠══════════════════════════════════════════════════════════════╣\n'
 printf '║  Interactive shell on the bastion is disabled.             ║\n'
 printf '║  Use ProxyJump (-J), not direct ssh to this account.         ║\n'
@@ -34,7 +34,7 @@ else
 fi
 
 printf '║                                                              ║\n'
-printf '║  On your Mac: ./scripts/mt-dostup-doctor.sh %s              ║\n' "${USER}"
+printf '║  On your Mac: ./scripts/bastion-doctor.sh %s              ║\n' "${USER}"
 printf '╚══════════════════════════════════════════════════════════════╝\n'
 printf '\n'
 

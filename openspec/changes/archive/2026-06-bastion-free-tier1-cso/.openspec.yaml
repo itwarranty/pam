@@ -2,4 +2,4 @@ schema: spec-driven
 created: 2026-06-15
 
 depends_on:
-  - ssh-user-ca-qa-mtglobal
+  - ssh-user-ca-qa

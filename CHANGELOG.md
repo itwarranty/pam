@@ -16,7 +16,7 @@
 - HashiCorp Vault target keys (render-at-deploy)
 - OIDC/SAML cert signing examples
 - HA active-passive runbook + Ansible vars
-- PAM positioning docs (`MT-Dostup-SSH-PAM-Overview.md`), battlecard, SoW
+- PAM positioning docs (`SSH-PAM-Overview.md`), battlecard, SoW
 
 ## v0.6.0 — Tier 3 SSH Gateway
 

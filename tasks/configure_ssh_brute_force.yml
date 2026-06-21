@@ -37,10 +37,10 @@
     - bastion_ssh_rate_limit_enabled | bool
     - bastion_ssh_rate_limit_method == 'fail2ban'
 
-- name: Fail2ban jail MT Bastion SSH
+- name: Fail2ban jail SSH PAM SSH
   ansible.builtin.template:
-    src: fail2ban-mt-bastion.conf.j2
-    dest: /etc/fail2ban/jail.d/mt-bastion.conf
+    src: fail2ban-bastion.conf.j2
+    dest: /etc/fail2ban/jail.d/bastion.conf
     owner: root
     group: root
     mode: "0644"
@@ -49,10 +49,10 @@
     - bastion_ssh_rate_limit_method == 'fail2ban'
   notify: Restart fail2ban
 
-- name: Fail2ban filter MT Bastion SSH
+- name: Fail2ban filter SSH PAM SSH
   ansible.builtin.template:
-    src: fail2ban-mt-bastion-filter.conf.j2
-    dest: /etc/fail2ban/filter.d/mt-bastion-ssh.conf
+    src: fail2ban-bastion-filter.conf.j2
+    dest: /etc/fail2ban/filter.d/bastion-ssh.conf
     owner: root
     group: root
     mode: "0644"

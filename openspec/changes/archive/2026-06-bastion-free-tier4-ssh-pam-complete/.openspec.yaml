@@ -7,6 +7,6 @@ depends_on:
 target_release: v1.0.0
 
 product_positioning: |
-  MT: Bastion Free = open-source tier of «МТ Доступ» — full SSH PAM product.
+  SSH PAM = open-source tier of SSH PAM — full SSH PAM product.
   Replaces commercial PAM gateways (e.g. СКДПУ SSH) for Linux scope.
   Tier 4 completes enterprise-class SSH PAM in Free; no separate paid feature split for SSH.

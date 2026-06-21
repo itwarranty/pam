@@ -1,8 +1,8 @@
 ## Context
 
-MT: Bastion runs OpenSSH in a Rootless Podman container on Rocky Linux 9. Operators are provisioned via Ansible (`bastion_operators`) into mounted home directories. Authentication is `publickey + keyboard-interactive (TOTP)`.
+SSH PAM runs OpenSSH in a Rootless Podman container on Rocky Linux 9. Operators are provisioned via Ansible (`bastion_operators`) into mounted home directories. Authentication is `publickey + keyboard-interactive (TOTP)`.
 
-Lab (`group_vars/local_lima.yml`) uses raw ed25519 pubkeys with comments `*@mtglobal.team`. QA will add org SSH User CA so operators present short-lived **user certificates** signed by `mtglobal.team` User CA private key (held offline/HSM, never on bastion).
+Lab (`group_vars/local_lima.yml`) uses raw ed25519 pubkeys with comments `*@example.com`. QA will add org SSH User CA so operators present short-lived **user certificates** signed by `example.com` User CA private key (held offline/HSM, never on bastion).
 
 Implementation hooks already exist:
 - `bastion_trusted_user_ca_file` → copies CA `.pub`, mounts into container, sets `TrustedUserCAKeys`.
@@ -26,7 +26,7 @@ Implementation hooks already exist:
 
 ### D1: CA public key only on bastion
 
-**Decision:** Only `mtglobal.team-user-ca.pub` is deployed to bastion; private CA never touches bastion host or container.
+**Decision:** Only `user-ca.pub` is deployed to gateway; private CA never touches bastion host or container.
 
 **Rationale:** Standard SSH CA model; aligns with CSO supply-chain and key custody.
 
@@ -34,9 +34,9 @@ Implementation hooks already exist:
 
 **Decision:**
 - Unix account: `engineer-jump` (match `operator.name`)
-- Key ID (`ssh-keygen -I`): `engineer-jump@mtglobal.team`
+- Key ID (`ssh-keygen -I`): `engineer-jump@example.com`
 - Principal (`-n`): `engineer-jump`
-- Email field in Ansible: `engineer-jump@mtglobal.team`
+- Email field in Ansible: `engineer-jump@example.com`
 
 **Rationale:** Consistent with lab keys and TOTP otpauth labels.
 
@@ -75,25 +75,25 @@ No container image rebuild required.
 |:---|:---|
 | CA private key leak | Offline/HSM, break-glass procedure, CA rotation runbook |
 | Expired certs lock out operators | QA calendar + renewal SOP; prod automation later |
-| QA delays block lab | Lab stays on raw keys (`local_lima`); CA is opt-in via `qa_mtglobal` group |
+| QA delays block lab | Lab stays on raw keys (`local_lima`); CA is opt-in via `qa` group |
 
 ## Open Questions
 
-- [ ] Who operates User CA private key at MT Global (role, HSM)?
+- [ ] Who operates User CA private key at  (role, HSM)?
 - [ ] Prod: manual signing vs automated step-ca/Vault PKI?
 - [ ] Required `source-address` restrictions for operator certs?
 
 ## QA configuration (copy when CA is available)
 
-Create `group_vars/qa_mtglobal.yml`:
+Create `group_vars/qa.yml`:
 
 ```yaml
-bastion_lab_domain: mtglobal.team
-bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/mtglobal.team-user-ca.pub"
+bastion_lab_domain: example.com
+bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/user-ca.pub"
 
 bastion_operators:
   - name: engineer-jump
-    email: engineer-jump@mtglobal.team
+    email: engineer-jump@example.com
     certificate: "{{ lookup('file', playbook_dir + '/lab/certs/engineer-jump-cert.pub') }}"
     mfa_secret: "{{ vault_engineer_jump_mfa }}"
     access: jump
@@ -101,18 +101,18 @@ bastion_operators:
       - "10.0.1.10:22"
 ```
 
-Create `inventory/qa-mtglobal.yml`:
+Create `inventory/qa.yml`:
 
 ```yaml
 all:
   children:
     bastion_servers:
       children:
-        qa_mtglobal:
+        qa:
           hosts:
-            bastion-qa.mtglobal.team:
+            bastion-qa.example.com:
               ansible_host: 10.0.0.50
               ansible_user: ansible
 ```
 
-Deploy: `ansible-playbook -i inventory/qa-mtglobal.yml site.yml`
+Deploy: `ansible-playbook -i inventory/qa.yml site.yml`

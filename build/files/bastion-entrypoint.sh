@@ -4,7 +4,7 @@ set -eu
 
 OPERATORS_SRC="/etc/bastion/operators"
 TARGETS_SRC="/etc/bastion/targets"
-TARGETS_RUNTIME="/run/mt-bastion/targets-runtime"
+TARGETS_RUNTIME="/run/bastion/targets-runtime"
 
 # Gateway operators run as Unix users without access to root-only mounts; stage readable copies.
 if [ -d "${TARGETS_SRC}" ]; then
@@ -28,22 +28,22 @@ if [ -d "${TARGETS_SRC}" ]; then
 fi
 
 if [ -f /etc/bastion/command_denylist ]; then
-  mkdir -p /run/mt-bastion
-  cp -f /etc/bastion/command_denylist /run/mt-bastion/command_denylist
-  chmod 0644 /run/mt-bastion/command_denylist
+  mkdir -p /run/bastion
+  cp -f /etc/bastion/command_denylist /run/bastion/command_denylist
+  chmod 0644 /run/bastion/command_denylist
 fi
 
-for _sess_dir in /run/mt-bastion/sessions; do
+for _sess_dir in /run/bastion/sessions; do
   mkdir -p "${_sess_dir}"
   chmod 1777 "${_sess_dir}" 2>/dev/null || true
 done
 
-mkdir -p /run/mt-bastion
-[ "${BASTION_GATEWAY_LAB_MODE:-0}" = "1" ] && echo 1 > /run/mt-bastion/lab_mode
-[ "${BASTION_GATEWAY_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ] && echo 1 > /run/mt-bastion/policy_v2_enabled
-[ "${BASTION_SHELL_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ] && echo 1 > /run/mt-bastion/shell_policy_v2_enabled
+mkdir -p /run/bastion
+[ "${BASTION_GATEWAY_LAB_MODE:-0}" = "1" ] && echo 1 > /run/bastion/lab_mode
+[ "${BASTION_GATEWAY_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ] && echo 1 > /run/bastion/policy_v2_enabled
+[ "${BASTION_SHELL_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ] && echo 1 > /run/bastion/shell_policy_v2_enabled
 
-if [ -f /run/mt-bastion/lab_mode ] && [ -d "${TARGETS_RUNTIME}" ] && command -v ssh-keyscan >/dev/null 2>&1; then
+if [ -f /run/bastion/lab_mode ] && [ -d "${TARGETS_RUNTIME}" ] && command -v ssh-keyscan >/dev/null 2>&1; then
   : > "${TARGETS_RUNTIME}/known_hosts"
   for envf in "${TARGETS_RUNTIME}"/*/target.env; do
     [ -f "${envf}" ] || continue

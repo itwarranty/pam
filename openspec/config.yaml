@@ -1,10 +1,10 @@
 schema: spec-driven
 
 context: |
-  Product: MT: Bastion — open-source tier of «МТ Доступ», a full SSH PAM product (Privileged Access Management).
+  Product: SSH PAM — open-source tier of SSH PAM, a full SSH PAM product (Privileged Access Management).
   Replaces commercial SSH gateways (e.g. СКДПУ) for Linux scope; not «for clients without PAM».
   Host OS: Rocky Linux 9.x x86_64, SELinux Enforcing only.
-  Domain: mtglobal.team
+  Domain: example.com
   Lab: raw SSH pubkeys (group_vars/dev/).
   QA target: SSH User CA signed certificates + MFA strict.
   Tier 1 Free (complete): v0.2–v0.4 — openspec/specs/

@@ -11,8 +11,8 @@ lab/keys/*.lab
 lab/certs/
 lab/ca/*
 !lab/ca/.gitkeep
-group_vars/qa_mtglobal.yml
-inventory/qa-mtglobal.yml
+group_vars/qa.yml
+inventory/qa.yml
 scripts/node_modules/
 keys/deploy/
 keys/test/

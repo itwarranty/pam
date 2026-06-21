@@ -1,6 +1,6 @@
 ## Context
 
-MT: Bastion Free targets **Air Gap / KII** customers who need audited SSH support access without commercial PAM licenses. Architecture stays: Ansible → Rocky Linux 9 host → Rootless Podman → OpenSSH (`sshd.pam`) + offline TOTP.
+SSH PAM targets **Air Gap / KII** customers who need audited SSH support access without commercial PAM licenses. Architecture stays: Ansible → Rocky Linux 9 host → Rootless Podman → OpenSSH (`sshd.pam`) + offline TOTP.
 
 Tier 1 adds **CSO-visible controls** that enterprise buyers expect, implemented as **declarative code** rather than proprietary agents.
 
@@ -14,7 +14,7 @@ Tier 1 adds **CSO-visible controls** that enterprise buyers expect, implemented 
 
 **Non-Goals:**
 
-- Replace client SIEM or build MT Global hosted analytics.
+- Replace client SIEM or build  hosted analytics.
 - Full ITSM workflow engine.
 
 ---
@@ -37,7 +37,7 @@ Tier 1 adds **CSO-visible controls** that enterprise buyers expect, implemented 
 - Operator: `operator.certificate` in `authorized_keys` (see existing templates)
 - Private CA: never on bastion; signing on admin workstation or client HSM
 
-**Dependency:** Implement trust/certificate specs in `ssh-user-ca-qa-mtglobal` first; this change adds prod policy gates only.
+**Dependency:** Implement trust/certificate specs in `ssh-user-ca-qa` first; this change adds prod policy gates only.
 
 ---
 
@@ -58,7 +58,7 @@ bastion_operators:
 
 **Enforcement layers:**
 
-1. **Provisioning:** write `~/.mt-bastion-access-window` (or extend `.google_authenticator` comment) — informational.
+1. **Provisioning:** write `~/.bastion-access-window` (or extend `.google_authenticator` comment) — informational.
 2. **sshd:** `Match User` + `ForceCommand` wrapper that rejects login outside window (shell role) OR `AuthorizedKeysCommand` — **preferred: wrapper script** `bastion-access-window-check.sh` called before auth completes (PAM or ForceCommand pre-check).
 3. **Expiry purge:** systemd timer on host runs daily/hourly:
 
@@ -81,7 +81,7 @@ bastion_operators:
 
 | Source | Facility / tag | SIEM use |
 |:---|:---|:---|
-| auditd (`mt_bastion_*` keys) | `local6` / `mt-bastion-audit` | integrity, connect events |
+| auditd (`bastion_*` keys) | `local6` / `bastion-audit` | integrity, connect events |
 | `/var/log/bastion_sessions/` write detection | via auditd rule (existing) | session file creation |
 | Optional: journald sshd on host | if forwarded | auth failures |
 
@@ -169,13 +169,13 @@ Task copies `*.log` + `*.sha256` when session file mtime stable (document manual
 |:-:|:---|:---|
 | 1 | OS | Rocky Linux 9.x |
 | 2 | SELinux | Enforcing |
-| 3 | Container | `mt_ssh_bastion` running as `mt_bastion` |
-| 4 | Image label | `mt.global.mfa.strict=1` |
+| 3 | Container | `ssh_bastion` running as `bastion` |
+| 4 | Image label | `bastion.mfa.strict=1` |
 | 5 | Whitelist | `bastion_permitted_targets` non-empty in deployed config |
 | 6 | Orphan users | no `/home/*` in container outside `bastion_operators` names |
 | 7 | auditd | active |
 | 8 | firewalld | active, port open |
-| 9 | Session log dir | exists, mode 0750, owner mt_bastion |
+| 9 | Session log dir | exists, mode 0750, owner bastion |
 
 Exit code 0 = pass; non-zero = fail (usable in Nagios/Prometheus textfile optional later).
 
@@ -186,7 +186,7 @@ Exit code 0 = pass; non-zero = fail (usable in Nagios/Prometheus textfile option
 ```text
 Phase A (no PKI):  compliance verify → source IP → tamper-evident logs → SIEM template
 Phase B:           JIT valid_until + purge timer
-Phase C (PKI):     SSH User CA prod Free (after ssh-user-ca-qa-mtglobal QA pass)
+Phase C (PKI):     SSH User CA prod Free (after ssh-user-ca-qa QA pass)
 ```
 
 ## Risks

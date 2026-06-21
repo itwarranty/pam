@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MT: Bastion — подготовка доверенного offline-артефакта для Air Gap.
+# SSH PAM — подготовка доверенного offline-артефакта для Air Gap.
 #
 # Запуск на build-машине с доступом к реестру образов (один раз):
 #   ./trusted_download.sh
@@ -7,22 +7,22 @@
 # Строгий MFA (без nullok) — по умолчанию:
 #   MFA_STRICT=1 ./trusted_download.sh
 #
-# Результат: trusted_upstream_packages/mt_bastion_image.tar + SHA256SUMS
+# Результат: trusted_upstream_packages/bastion_image.tar + SHA256SUMS
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${TRUSTED_FILES_DIR:-/tmp/trusted_upstream_packages}"
 CONTAINERFILE="${SCRIPT_DIR}/build/Containerfile"
-IMAGE_NAME="${BASTION_IMAGE_NAME:-mt_bastion_secure}"
+IMAGE_NAME="${BASTION_IMAGE_NAME:-bastion_secure}"
 IMAGE_TAG="${BASTION_IMAGE_TAG:-latest}"
 IMAGE_REF="${IMAGE_NAME}:${IMAGE_TAG}"
-TAR_PATH="${OUTPUT_DIR}/mt_bastion_image.tar"
+TAR_PATH="${OUTPUT_DIR}/bastion_image.tar"
 CHECKSUMS_FILE="${OUTPUT_DIR}/SHA256SUMS"
 MFA_STRICT="${MFA_STRICT:-1}"
 
-log() { printf '[mt-bastion] %s\n' "$*"; }
-die() { printf '[mt-bastion] ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '[bastion] %s\n' "$*"; }
+die() { printf '[bastion] ERROR: %s\n' "$*" >&2; exit 1; }
 
 if [ "${MFA_STRICT}" != "1" ] && [ "${BASTION_LAB_MODE:-0}" != "1" ]; then
   die "MFA_STRICT=${MFA_STRICT} запрещён политикой CSO. Prod-сборка: MFA_STRICT=1 (по умолчанию). Lab-only: BASTION_LAB_MODE=1 MFA_STRICT=0."

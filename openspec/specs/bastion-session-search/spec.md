@@ -1,4 +1,4 @@
-### Requirement: MT Bastion SHALL provide session search without external database
+### Requirement: SSH PAM SHALL provide session search without external database
 
 SSH PAM operators and auditors SHALL query historical sessions from host-local artifacts.
 

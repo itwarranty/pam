@@ -1,10 +1,13 @@
 ---
-# MT Global internal prod profile (v1.0 GA) — copy/adapt with Vault.
+#  internal prod profile (v1.0 GA) — copy/adapt with Vault.
+# CSO: command policy v2 mandatory (do not disable without bastion_command_policy_v2_required: false + risk acceptance).
 
 bastion_prod_require_gateway: true
 bastion_jit_timer_enabled: true
 bastion_siem_forward_enabled: true
 bastion_require_source_ip: true
+bastion_shell_command_policy_enabled: true
+bastion_command_policy_v2_required: true
 bastion_gateway_command_policy_v2_enabled: true
 bastion_shell_command_policy_v2_enabled: true
 bastion_session_search_enabled: true
@@ -25,4 +28,4 @@ bastion_mfa_mode: fido_totp
 # - bastion-session-watch on live session; kill + JIT purge still work
 # - bastion-compliance-verify.sh exit 0
 # - OIDC-signed or internal CA cert login for one operator
-# - HA tabletop per docs/MT-Bastion-HA-Runbook.md
+# - HA tabletop per docs/HA-Runbook.md

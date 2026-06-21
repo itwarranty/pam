@@ -2,7 +2,7 @@
 
 ### Requirement: Operators MAY declare time-bound access windows
 
-MT: Bastion Free SHALL support optional Just-in-Time fields on each entry in `bastion_operators`.
+SSH PAM SHALL support optional Just-in-Time fields on each entry in `bastion_operators`.
 
 #### Scenario: Operator schema extension
 - **WHEN** administrator defines an operator
@@ -13,14 +13,14 @@ MT: Bastion Free SHALL support optional Just-in-Time fields on each entry in `ba
 
 ### Requirement: Expired operators SHALL be removed declaratively on playbook run
 
-When an operator's `valid_until` is in the past, MT: Bastion SHALL treat that operator as revoked and execute purge semantics.
+When an operator's `valid_until` is in the past, SSH PAM SHALL treat that operator as revoked and execute purge semantics.
 
 #### Scenario: Expired operator purged on deploy
 - **WHEN** `ansible-playbook site.yml` runs
 - **AND** operator `engineer1` has `valid_until` earlier than current time on bastion host
 - **THEN** `engineer1` SHALL NOT appear in effective provisioned operators
 - **THEN** `purge_revoked_operators.yml` semantics SHALL remove host directory, MFA onboarding file, and container Unix account
-- **THEN** handler SHALL restart `mt_ssh_bastion` if purge occurred
+- **THEN** handler SHALL restart `ssh_bastion` if purge occurred
 
 #### Scenario: Future valid_from operator not yet active
 - **WHEN** operator has `valid_from` in the future
@@ -28,7 +28,7 @@ When an operator's `valid_until` is in the past, MT: Bastion SHALL treat that op
 
 ### Requirement: JIT expiry SHALL be automatable without manual Ansible operator
 
-MT: Bastion Free SHALL document and optionally ship a host timer to re-apply playbook for JIT purge.
+SSH PAM SHALL document and optionally ship a host timer to re-apply playbook for JIT purge.
 
 #### Scenario: systemd timer template
 - **WHEN** `bastion_jit_timer_enabled: true`

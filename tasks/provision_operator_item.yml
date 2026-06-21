@@ -19,7 +19,7 @@
     group: "{{ bastion_user }}"
     mode: "0600"
     setype: container_file_t
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: "Генерация MFA-секрета для {{ operator.name }}"
   ansible.builtin.command: openssl rand -base32 20
@@ -46,11 +46,11 @@
     setype: container_file_t
   vars:
     mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: "Break-glass marker {{ operator.name }}"
   ansible.builtin.copy:
-    dest: "{{ operators_home }}/{{ operator.name }}/.mt-bastion-break-glass"
+    dest: "{{ operators_home }}/{{ operator.name }}/.bastion-break-glass"
     owner: "{{ bastion_user }}"
     group: "{{ bastion_user }}"
     mode: "0600"
@@ -60,7 +60,7 @@
       incident_id={{ operator.incident_id }}
       valid_until={{ operator.valid_until | default('') }}
   when: operator.break_glass | default(false) | bool
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: "permit_open для gateway {{ operator.name }}"
   ansible.builtin.copy:
@@ -74,7 +74,7 @@
       {{ entry }}
       {% endfor %}
   when: operator.access | default('jump') == 'gateway'
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container
 
 - name: "SELinux: container_file_t для дерева {{ operator.name }} (Podman :Z mount)"
   ansible.builtin.command:
@@ -87,4 +87,4 @@
   register: operator_selinux_fix
   changed_when: operator_selinux_fix.rc == 0
   when: ansible_selinux.status | default('disabled') == 'enabled'
-  notify: Restart ssh bastion container
+  notify: Restart ssh gateway container

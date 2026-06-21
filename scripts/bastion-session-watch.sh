@@ -2,9 +2,9 @@
 # Live tail of active gateway session log (four-eyes moderation).
 set -euo pipefail
 
-SESSIONS_DIR="${BASTION_RUNTIME_SESSIONS_DIR:-/home/mt_bastion/runtime/sessions}"
+SESSIONS_DIR="${BASTION_RUNTIME_SESSIONS_DIR:-/home/bastion/runtime/sessions}"
 JSONL="${AUDIT_LOG_DIR:-/var/log/bastion_sessions}/sessions.jsonl"
-CONTAINER="${BASTION_CONTAINER_NAME:-mt_ssh_bastion}"
+CONTAINER="${BASTION_CONTAINER_NAME:-ssh_bastion}"
 MODERATOR="${SUDO_USER:-${USER:-unknown}}"
 
 usage() {
@@ -27,7 +27,7 @@ SID="${1:-}"
 
 REG="${SESSIONS_DIR}/${SID}.json"
 if [[ ! -f "${REG}" ]] && command -v podman >/dev/null 2>&1; then
-  REG_CONTENT="$(podman exec "${CONTAINER}" cat "/run/mt-bastion/sessions/${SID}.json" 2>/dev/null || true)"
+  REG_CONTENT="$(podman exec "${CONTAINER}" cat "/run/bastion/sessions/${SID}.json" 2>/dev/null || true)"
 else
   REG_CONTENT="$(cat "${REG}" 2>/dev/null || true)"
 fi
@@ -39,7 +39,7 @@ OPERATOR="$(printf '%s' "${REG_CONTENT}" | sed -n 's/.*"operator"[[:space:]]*:[[
 TARGET_ID="$(printf '%s' "${REG_CONTENT}" | sed -n 's/.*"target_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
 UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-logger -t mt-bastion-moderator "watch start session=${SID} moderator=${MODERATOR} operator=${OPERATOR}"
+logger -t bastion-moderator "watch start session=${SID} moderator=${MODERATOR} operator=${OPERATOR}"
 append_jsonl "$(printf '{"event":"moderator_watch_start","ts":"%s","session_id":"%s","operator":"%s","target_id":"%s","moderator":"%s"}' \
   "${UTC}" "${SID}" "${OPERATOR}" "${TARGET_ID}" "${MODERATOR}")"
 

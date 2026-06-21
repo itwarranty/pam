@@ -1,5 +1,5 @@
 ---
-- name: "[CSO] Inspect загруженного образа бастиона"
+- name: "[CSO] Inspect загруженного образа шлюза"
   ansible.builtin.command:
     argv:
       - podman
@@ -18,8 +18,8 @@
 - name: "[CSO] Образ должен быть собран с MFA_STRICT=1"
   ansible.builtin.assert:
     that:
-      - (bastion_image_inspect.stdout | from_json)[0].Config.Labels['mt.global.mfa.strict'] | default('') | string == bastion_required_image_mfa_strict
+      - (bastion_image_inspect.stdout | from_json)[0].Config.Labels['bastion.mfa.strict'] | default('') | string == bastion_required_image_mfa_strict
     fail_msg: >
       Образ {{ bastion_image_name }}:{{ bastion_image_tag }} не прошёл CSO-верификацию.
-      OCI-label mt.global.mfa.strict должен быть '{{ bastion_required_image_mfa_strict }}'.
+      OCI-label bastion.mfa.strict должен быть '{{ bastion_required_image_mfa_strict }}'.
       Пересоберите: ./trusted_download.sh

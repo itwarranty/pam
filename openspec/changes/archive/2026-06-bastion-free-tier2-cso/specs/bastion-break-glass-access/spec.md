@@ -1,6 +1,6 @@
 ### Requirement: Break-glass operators SHALL require explicit CSO gate and mandatory metadata
 
-MT: Bastion Free SHALL treat break-glass as an opt-in emergency profile controlled by Ansible variables and operator fields.
+SSH PAM SHALL treat break-glass as an opt-in emergency profile controlled by Ansible variables and operator fields.
 
 #### Scenario: Break-glass disabled in prod
 - **WHEN** `bastion_break_glass_enabled` is `false` (default)
@@ -31,7 +31,7 @@ Emergency sessions SHALL be distinguishable in host and SIEM logs.
 #### Scenario: Break-glass shell session starts
 - **WHEN** operator with `break_glass: true` starts `access: shell` session
 - **THEN** session start event SHALL include `BREAK_GLASS=1` in syslog message
-- **AND** auditd rule key `mt_bastion_break_glass_session` SHALL fire on session log write (when audit rules deployed)
+- **AND** auditd rule key `bastion_break_glass_session` SHALL fire on session log write (when audit rules deployed)
 
 ### Requirement: Break-glass access SHALL auto-expire via JIT purge
 

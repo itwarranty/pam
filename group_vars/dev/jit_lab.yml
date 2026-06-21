@@ -4,7 +4,7 @@
 
 bastion_operators_jit_lab:
   - name: jit-expired-test
-    email: jit-expired-test@mtglobal.team
+    email: jit-expired-test@example.com
     pubkey: "{{ lookup('file', lab_keys_dir + '/jit-expired-test.lab.pub') }}"
     mfa_secret: JITEXPIREDJITEXPIREDJITEXPIREDJIT
     access: jump

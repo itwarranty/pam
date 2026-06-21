@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: QA operators MAY authenticate with signed user certificates
-When an operator entry uses `certificate` instead of `pubkey`, MT: Bastion SHALL write the certificate line to `authorized_keys` and SHALL accept authentication when the certificate is signed by the configured User CA and presents valid principal.
+When an operator entry uses `certificate` instead of `pubkey`, SSH PAM SHALL write the certificate line to `authorized_keys` and SHALL accept authentication when the certificate is signed by the configured User CA and presents valid principal.
 
 #### Scenario: Jump operator certificate with restrict options
 - **WHEN** operator has `access: jump` and `certificate` is defined
@@ -18,17 +18,17 @@ When an operator entry uses `certificate` instead of `pubkey`, MT: Bastion SHALL
 - **WHEN** operator presents valid certificate but incorrect or missing TOTP
 - **THEN** SSH authentication SHALL fail
 
-### Requirement: Certificate naming SHALL follow mtglobal.team convention
-User certificate issuance for QA SHALL use identities aligned with domain `mtglobal.team`.
+### Requirement: Certificate naming SHALL follow example.com convention
+User certificate issuance for QA SHALL use identities aligned with domain `example.com`.
 
 #### Scenario: Key ID and principal on issuance
 - **WHEN** PKI admin signs a user key with `ssh-keygen -s`
-- **THEN** Key ID (`-I`) SHALL be `{operator}@mtglobal.team`
+- **THEN** Key ID (`-I`) SHALL be `{operator}@example.com`
 - **THEN** principal (`-n`) SHALL equal Ansible `operator.name` (Unix username in container)
 
 #### Scenario: Ansible operator email field
 - **WHEN** provisioning MFA secrets for QA operators
-- **THEN** otpauth labels SHALL use `{operator}@mtglobal.team` when `email` or `bastion_lab_domain` is set
+- **THEN** otpauth labels SHALL use `{operator}@example.com` when `email` or `bastion_lab_domain` is set
 
 ### Requirement: Standard user certificate issuance command for QA
 QA documentation SHALL define the canonical signing command for operator certificates.
@@ -37,11 +37,11 @@ QA documentation SHALL define the canonical signing command for operator certifi
 - **WHEN** PKI admin issues QA cert for operator `engineer-jump`
 - **THEN** signing SHALL follow:
   ```bash
-  ssh-keygen -s /secure/mtglobal.team-user-ca \
-    -I "engineer-jump@mtglobal.team" \
+  ssh-keygen -s /secure/user-ca \
+    -I "engineer-jump@example.com" \
     -n engineer-jump \
     -V +30d \
     -O clear \
-    ~/.ssh/mt-bastion-qa.pub
+    ~/.ssh/bastion-qa.pub
   ```
 - **THEN** resulting `*-cert.pub` MAY be copied to `lab/certs/engineer-jump-cert.pub` for Ansible lookup

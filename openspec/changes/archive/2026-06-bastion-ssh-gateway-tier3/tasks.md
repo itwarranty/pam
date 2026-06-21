@@ -41,7 +41,7 @@
 
 - [x] 6.1 Template `templates/ssh_known_hosts_targets.j2` → mount in container.
 - [x] 6.2 `bastion_gateway_lab_mode` for lab-only `accept-new`.
-- [x] 6.3 auditd rule optional: read target identity files (`mt_bastion_target_key_read`).
+- [x] 6.3 auditd rule optional: read target identity files (`bastion_target_key_read`).
 
 ## 7. Structured export (Phase D — v0.6.3)
 
@@ -55,7 +55,7 @@
 - [x] 8.2 Operator field `bastion_jump_approved: true` waiver.
 - [x] 8.3 Preflight rules per `bastion-jump-gateway-access-policy` spec.
 - [x] 8.4 Whitepaper §4 scenario C (gateway) + Policy Gate #26–28.
-- [x] 8.5 Client 1-pager: `docs/MT-Bastion-Client-Without-PAM.md` (Russian, adoption checklist).
+- [x] 8.5 Client 1-pager: `docs/SSH-PAM-Overview.md` (Russian, adoption checklist).
 
 ## 9. Documentation & archive
 

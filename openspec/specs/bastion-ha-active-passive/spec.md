@@ -1,6 +1,6 @@
 ### Requirement: SSH PAM SHALL support active-passive HA pattern
 
-MT Bastion SHALL document and automate baseline two-node HA for session log continuity.
+SSH PAM SHALL document and automate baseline two-node HA for session log continuity.
 
 #### Scenario: Primary and standby inventory
 - **WHEN** inventory defines `bastion_primary` and `bastion_standby` groups
@@ -16,7 +16,7 @@ MT Bastion SHALL document and automate baseline two-node HA for session log cont
 ### Requirement: Failover procedure SHALL be documented
 
 #### Scenario: Primary failure
-- **WHEN** operator follows `docs/MT-Bastion-HA-Runbook.md`
+- **WHEN** operator follows `docs/HA-Runbook.md`
 - **THEN** runbook SHALL describe VIP/DNS update, `bastion-ha-promote.sh`, container start on standby
 - **THEN** runbook SHALL state active sessions on primary are lost
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Bastion audit syslog: append-only file on shared volume + host journal when /dev/log exists.
+# Gateway audit syslog: append-only file on shared volume + host journal when /dev/log exists.
 set -eu
 
 tag="${1:?tag}"
