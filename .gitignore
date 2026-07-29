@@ -17,3 +17,7 @@ scripts/node_modules/
 keys/deploy/
 keys/test/
 !group_vars/dev/test_operators.yml
+
+# Python
+__pycache__/
+*.pyc

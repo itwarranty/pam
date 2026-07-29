@@ -4,6 +4,7 @@
 #
 # Usage (on Rocky 9 gateway host or via limactl shell):
 #   ./scripts/pam-compliance-verify.sh
+#   ./scripts/pam-compliance-verify.sh --json
 #
 # Env overrides:
 #   PAM_USER, PAM_SSH_PORT, AUDIT_LOG_DIR, OPERATORS_HOME,
@@ -13,7 +14,7 @@
 
 set -euo pipefail
 
-PAM_USER="${PAM_USER:-gateway}"
+PAM_USER="${PAM_USER:-pam}"
 PAM_SSH_PORT="${PAM_SSH_PORT:-2222}"
 AUDIT_LOG_DIR="${AUDIT_LOG_DIR:-/var/log/pam_sessions}"
 OPERATORS_HOME="${OPERATORS_HOME:-/home/${PAM_USER}/operators}"
@@ -29,12 +30,32 @@ PAM_FIDO_WAIVER_OPERATORS="${PAM_FIDO_WAIVER_OPERATORS:-}"
 PAM_SHELL_COMMAND_POLICY_ENABLED="${PAM_SHELL_COMMAND_POLICY_ENABLED:-true}"
 PAM_COMMAND_POLICY_V2_REQUIRED="${PAM_COMMAND_POLICY_V2_REQUIRED:-true}"
 
+JSON_MODE=0
+for arg in "$@"; do
+  case "${arg}" in
+    --json|-j) JSON_MODE=1 ;;
+    -h|--help)
+      printf 'Usage: %s [--json]\n' "$0"
+      exit 0
+      ;;
+  esac
+done
+
 PASS=0
 FAIL=0
 declare -a FAILED_CHECKS=()
+declare -a PASSED_CHECKS=()
 
-log_pass() { printf '[PASS] %s\n' "$*"; PASS=$((PASS + 1)); }
-log_fail() { printf '[FAIL] %s\n' "$*" >&2; FAIL=$((FAIL + 1)); FAILED_CHECKS+=("$1"); }
+log_pass() {
+  PASSED_CHECKS+=("$*")
+  PASS=$((PASS + 1))
+  [[ "${JSON_MODE}" -eq 1 ]] || printf '[PASS] %s\n' "$*"
+}
+log_fail() {
+  FAILED_CHECKS+=("$*")
+  FAIL=$((FAIL + 1))
+  [[ "${JSON_MODE}" -eq 1 ]] || printf '[FAIL] %s\n' "$*" >&2
+}
 
 check_os() {
   if [[ -f /etc/redhat-release ]]; then
@@ -144,6 +165,10 @@ check_orphan_users() {
 
 check_service() {
   local name="$1"
+  if ! command -v systemctl >/dev/null 2>&1; then
+    log_fail "${name} — systemctl not available (run on Rocky 9 gateway host)"
+    return
+  fi
   if systemctl is-active --quiet "${name}"; then
     log_pass "${name} — active"
   else
@@ -297,7 +322,7 @@ check_fido_pubkey() {
 }
 
 main() {
-  printf '=== SSH PAM compliance verify ===\n\n'
+  [[ "${JSON_MODE}" -eq 1 ]] || printf '=== SSH PAM compliance verify ===\n\n'
   check_os
   check_arch
   check_selinux
@@ -316,12 +341,36 @@ main() {
   check_command_policy_v2
   check_fido_pubkey
 
-  printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"
-  if [[ "${FAIL}" -gt 0 ]]; then
-    printf 'Failed checks: %s\n' "${FAILED_CHECKS[*]}" >&2
-    exit 1
+  if [[ "${JSON_MODE}" -eq 1 ]]; then
+    PASS_FILE="$(mktemp)"
+    FAIL_FILE="$(mktemp)"
+    printf '%s\n' "${PASSED_CHECKS[@]:-}" > "${PASS_FILE}"
+    printf '%s\n' "${FAILED_CHECKS[@]:-}" > "${FAIL_FILE}"
+    python3 - "${PASS}" "${FAIL}" "${PASS_FILE}" "${FAIL_FILE}" <<'PY'
+import json, sys
+from pathlib import Path
+pass_n, fail_n = int(sys.argv[1]), int(sys.argv[2])
+passed = [l for l in Path(sys.argv[3]).read_text().splitlines() if l]
+failed = [l for l in Path(sys.argv[4]).read_text().splitlines() if l]
+print(json.dumps({
+    "product": "ITWarranty SSH PAM",
+    "passed": pass_n,
+    "failed": fail_n,
+    "ok": fail_n == 0,
+    "passed_checks": passed,
+    "failed_checks": failed,
+}, ensure_ascii=False, indent=2))
+PY
+    rm -f "${PASS_FILE}" "${FAIL_FILE}"
+  else
+    printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"
+    if [[ "${FAIL}" -gt 0 ]]; then
+      printf 'Failed checks: %s\n' "${FAILED_CHECKS[*]}" >&2
+    else
+      printf 'All compliance checks PASSED.\n'
+    fi
   fi
-  printf 'All compliance checks PASSED.\n'
+  [[ "${FAIL}" -eq 0 ]] || exit 1
 }
 
-main "$@"
+main

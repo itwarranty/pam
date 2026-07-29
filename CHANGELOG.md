@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1 — Usability (CLI + quickstart)
+
+- Unified `pam` CLI (`pam up|doctor|verify|sessions|access`)
+- `scripts/quickstart.sh` / `pam up` for first lab stand
+- Deploy profiles: `group_vars/profiles/{eval,pilot,prod}.yml`
+- Short [Runbooks](docs/Runbooks.md); README landing + Apache-2.0 LICENSE
+- `pam verify --json`; actionable preflight hints
+
 ## v1.1.0 — FIDO-Anchor MFA (Tier 5)
 
 - FIDO2 / platform SSH keys (`ed25519-sk -O verify-required`) as first factor

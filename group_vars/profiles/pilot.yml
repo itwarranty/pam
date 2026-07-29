@@ -1,0 +1,17 @@
+---
+# Pilot profile — closer to prod, still without SIEM/FIDO mandate.
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml site.yml -e @group_vars/profiles/pilot.yml
+
+pam_profile: pilot
+
+pam_require_source_ip: false
+pam_siem_forward_enabled: false
+pam_require_fido_pubkey: false
+pam_mfa_mode: totp
+pam_require_vault_target_keys: true
+pam_gateway_lab_enabled: false
+pam_gateway_lab_mode: false
+pam_prod_require_gateway: false
+pam_session_search_enabled: true
+pam_command_policy_v2_required: true

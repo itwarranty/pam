@@ -1,5 +1,17 @@
 ---
-# Install Tier 4 host CLI tools (session search, watch).
+# Install host CLI tools (unified pam + session search/watch).
+- name: Unified pam CLI on host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/pam"
+    dest: /usr/local/bin/pam
+    mode: "0755"
+
+- name: pam-session-ctl on host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/pam-session-ctl.sh"
+    dest: /usr/local/bin/pam-session-ctl
+    mode: "0755"
+
 - name: pam-session-search on host
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/scripts/pam-session-search.sh"
@@ -12,6 +24,24 @@
     dest: /usr/local/bin/pam-session-watch
     mode: "0755"
   when: pam_session_watch_enabled | default(true) | bool
+
+- name: pam-compliance-verify on host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/pam-compliance-verify.sh"
+    dest: /usr/local/bin/pam-compliance-verify
+    mode: "0755"
+
+- name: Ensure /etc/ssh-pam exists
+  ansible.builtin.file:
+    path: /etc/ssh-pam
+    state: directory
+    mode: "0755"
+
+- name: Record PAM_ROOT for installed CLI
+  ansible.builtin.copy:
+    dest: /etc/ssh-pam/pam_root
+    content: "{{ playbook_dir }}\n"
+    mode: "0644"
 
 - name: jq for session search (Rocky 9)
   ansible.builtin.dnf:

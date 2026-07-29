@@ -3,7 +3,7 @@
 set -euo pipefail
 
 CONTAINER="${PAM_CONTAINER_NAME:-ssh_pam}"
-PAM_USER="${PAM_USER:-gateway}"
+PAM_USER="${PAM_USER:-pam}"
 
 echo "[ha-promote] Starting ${CONTAINER} on this host..."
 sudo -u "${PAM_USER}" podman start "${CONTAINER}" || podman start "${CONTAINER}"

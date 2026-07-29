@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# ITWarranty SSH PAM — one command for day-to-day ops.
+# Usage: pam <command> [args...]
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# When installed as /usr/local/bin/pam, resolve playbook root
+if [[ ! -d "${ROOT}/scripts" ]]; then
+  if [[ -n "${PAM_ROOT:-}" ]]; then
+    ROOT="${PAM_ROOT}"
+  elif [[ -f /etc/ssh-pam/pam_root ]]; then
+    ROOT="$(tr -d '\n' < /etc/ssh-pam/pam_root)"
+  else
+    ROOT="/opt/pam"
+  fi
+fi
+SCRIPTS="${ROOT}/scripts"
+
+die() { printf 'pam: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+ITWarranty SSH PAM — unified CLI
+
+Usage:
+  pam up                         Start local lab (Lima + deploy)
+  pam doctor [operator...]       Check lab operator / show TOTP hint
+  pam verify [--json]            Post-deploy compliance checks
+  pam sessions list              Active gateway sessions
+  pam sessions kill <id>         Kill a gateway session
+  pam sessions search [args...]  Search session JSONL
+  pam sessions watch <id>        Live-tail a session log
+  pam access grant <name> ...    Create test access (Git + gateway)
+  pam access revoke <name> ...   Revoke test access
+  pam access list                List test access keys
+  pam access onboarding <name>   Show onboarding pack path
+  pam deploy [ansible args...]   Run site.yml (needs inventory)
+  pam help                       This help
+
+Env:
+  PAM_ROOT                 Repo/install dir (default: auto or /opt/pam)
+  PAM_USER                 Host user for Podman (default: pam)
+  PAM_CONTAINER_NAME       Container name (default: ssh_pam)
+  ANSIBLE_INVENTORY        Inventory for deploy (default: inventory/local-lima.yml)
+
+Examples:
+  ./scripts/pam up
+  ./scripts/pam doctor gateway-lab
+  ./scripts/pam sessions list
+  ./scripts/pam access grant tester-01 --pam --apply
+EOF
+}
+
+need() {
+  local path="$1"
+  [[ -x "${path}" || -f "${path}" ]] || die "missing ${path} (set PAM_ROOT?)"
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "${cmd}" in
+  -h|--help|help)
+    usage
+    ;;
+  up|quickstart)
+    need "${SCRIPTS}/quickstart.sh"
+    exec bash "${SCRIPTS}/quickstart.sh" "$@"
+    ;;
+  doctor)
+    need "${SCRIPTS}/pam-doctor.sh"
+    exec bash "${SCRIPTS}/pam-doctor.sh" "$@"
+    ;;
+  verify|compliance)
+    need "${SCRIPTS}/pam-compliance-verify.sh"
+    exec bash "${SCRIPTS}/pam-compliance-verify.sh" "$@"
+    ;;
+  sessions)
+    sub="${1:-list}"
+    shift || true
+    case "${sub}" in
+      list)
+        need "${SCRIPTS}/pam-session-ctl.sh"
+        exec bash "${SCRIPTS}/pam-session-ctl.sh" list "$@"
+        ;;
+      kill)
+        [[ $# -ge 1 ]] || die "usage: pam sessions kill <session-id>"
+        need "${SCRIPTS}/pam-session-ctl.sh"
+        exec bash "${SCRIPTS}/pam-session-ctl.sh" kill "$@"
+        ;;
+      search)
+        need "${SCRIPTS}/pam-session-search.sh"
+        exec bash "${SCRIPTS}/pam-session-search.sh" "$@"
+        ;;
+      watch)
+        [[ $# -ge 1 ]] || die "usage: pam sessions watch <session-id>"
+        need "${SCRIPTS}/pam-session-watch.sh"
+        exec bash "${SCRIPTS}/pam-session-watch.sh" "$@"
+        ;;
+      *)
+        die "unknown sessions subcommand: ${sub} (list|kill|search|watch)"
+        ;;
+    esac
+    ;;
+  access)
+    sub="${1:-}"
+    shift || true
+    need "${SCRIPTS}/test-repo-key.sh"
+    case "${sub}" in
+      grant|create)
+        [[ $# -ge 1 ]] || die "usage: pam access grant <name> [--pam] [--apply]"
+        exec bash "${SCRIPTS}/test-repo-key.sh" create "$@"
+        ;;
+      revoke)
+        [[ $# -ge 1 ]] || die "usage: pam access revoke <name> [--apply]"
+        exec bash "${SCRIPTS}/test-repo-key.sh" revoke "$@"
+        ;;
+      list)
+        exec bash "${SCRIPTS}/test-repo-key.sh" list "$@"
+        ;;
+      onboarding)
+        [[ $# -ge 1 ]] || die "usage: pam access onboarding <name>"
+        exec bash "${SCRIPTS}/test-repo-key.sh" onboarding "$@"
+        ;;
+      apply|apply-dev)
+        exec bash "${SCRIPTS}/test-repo-key.sh" apply-dev "$@"
+        ;;
+      *)
+        die "usage: pam access grant|revoke|list|onboarding|apply ..."
+        ;;
+    esac
+    ;;
+  deploy)
+    INV="${ANSIBLE_INVENTORY:-${ROOT}/inventory/local-lima.yml}"
+    command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found"
+    exec ansible-playbook -i "${INV}" "${ROOT}/site.yml" "$@"
+    ;;
+  *)
+    die "unknown command: ${cmd} (try: pam help)"
+    ;;
+esac

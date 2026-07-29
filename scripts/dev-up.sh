@@ -73,9 +73,7 @@ print_lab_summary() {
   echo "=== Lab operators (SSH PAM) ==="
   printf '%-18s %-8s  %s\n' "OPERATOR" "ACCESS" "HOW TO CONNECT"
   printf '%-18s %-8s  %s\n' "----------" "------" "--------------"
-  python3 - "${ROOT}" <<'PY' | while IFS=$'\t' read -r name access hint; do
-    printf '%-18s %-8s  %s\n' "$name" "$access" "$hint"
-  done
+  python3 - "${ROOT}" <<'PY'
 import json, subprocess, sys
 from pathlib import Path
 
@@ -83,7 +81,7 @@ root = Path(sys.argv[1])
 script = root / "scripts" / "lib" / "parse-lab-operators.py"
 ops = json.loads(subprocess.check_output([sys.executable, str(script), str(root / "group_vars" / "dev")], text=True))
 hints = {
-    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/pam-doctor.sh NAME",
+    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/pam doctor NAME",
     "gateway": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
     "shell": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
     "audit": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
@@ -91,10 +89,10 @@ hints = {
 for o in sorted(ops, key=lambda x: x["name"]):
     acc = o.get("access", "jump")
     hint = hints.get(acc, "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1").replace("NAME", o["name"])
-    print(f"{o['name']}\t{acc}\t{hint}")
+    print(f"{o['name']:<18} {acc:<8}  {hint}")
 PY
   echo ""
-  echo "TOTP: ./scripts/pam-doctor.sh <operator>  (live 6-digit code)"
+  echo "TOTP: ./scripts/pam doctor <operator>  (live 6-digit code)"
   echo "Pre-login banner on the gateway reminds: jump → use -J"
   echo ""
 }

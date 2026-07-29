@@ -9,7 +9,8 @@
       {{ pam_required_os_major }}.x (Enterprise LTS).
       Обнаружено: {{ ansible_facts['distribution'] }}
       {{ ansible_facts['distribution_version'] }}.
-      Другие дистрибутивы не проходят ИБ-аудит и блокируются политикой CSO.
+      Что сделать: разверните Rocky Linux {{ pam_required_os_major }} x86_64
+      (lab: ./scripts/pam up — Lima Rocky 9).
 
 - name: "[CSO] Архитектура x86_64"
   ansible.builtin.assert:
@@ -31,7 +32,7 @@
       - selinux_state.stdout == 'Enforcing'
     fail_msg: >
       SELinux должен быть в режиме Enforcing (текущий: {{ selinux_state.stdout }}).
-      Permissive/Disabled не допускаются — нарушается MAC-изоляция контейнера (:Z).
+      Что сделать: setenforce 1; в /etc/selinux/config задайте SELINUX=enforcing.
   when: pam_selinux_enforcing | bool
 
 - name: "[CSO] Только Rootless Podman"
@@ -47,8 +48,9 @@
     that:
       - pam_permitted_targets | length > 0
     fail_msg: >
-      pam_permitted_targets пуст. Jump-host без whitelist не разворачивается —
-      это создаёт неконтролируемый транзитный доступ.
+      pam_permitted_targets пуст. Jump-host без whitelist не разворачивается.
+      Что сделать: добавьте host:port в pam_permitted_targets
+      (lab: group_vars/dev/gateway_lab.yml уже содержит пример).
   when:
     - not (is_commercial_pam | bool)
     - pam_allow_tcp_forwarding | bool
@@ -81,6 +83,8 @@
       - pam_operators | length > 0
     fail_msg: >
       pam_operators пуст. Шлюз без явного списка операторов не разворачивается.
+      Что сделать: заполните pam_operators (Vault) или для lab используйте
+      group_vars/dev/ и ./scripts/pam up.
   when: not (is_commercial_pam | bool)
 
 - name: "[CSO] Source IP обязателен для каждого оператора (strict mode)"

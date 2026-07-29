@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-PAM_USER="${PAM_USER:-gateway}"
+PAM_USER="${PAM_USER:-pam}"
 CONTAINER="${PAM_CONTAINER_NAME:-ssh_pam}"
 DENYLIST="${PAM_DENYLIST:-/run/ssh-pam/command_denylist}"
 

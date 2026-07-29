@@ -3,7 +3,7 @@
 set -euo pipefail
 
 CONTAINER="${PAM_CONTAINER_NAME:-ssh_pam}"
-PAM_USER="${PAM_USER:-gateway}"
+PAM_USER="${PAM_USER:-pam}"
 
 if ! command -v podman >/dev/null 2>&1; then
   printf 'ERROR: podman not found\n' >&2

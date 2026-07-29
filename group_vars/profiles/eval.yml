@@ -1,0 +1,20 @@
+---
+# Eval / demo profile — overlay for local or pilot stands.
+# Usage:
+#   ansible-playbook -i inventory/local-lima.yml site.yml -e @group_vars/profiles/eval.yml
+#
+# Soft defaults: no SIEM, no FIDO mandate, no source-IP strict, gateway lab OK.
+# CSO hard gates (Rocky 9, SELinux Enforcing, MFA image, operators list) still apply.
+
+pam_profile: eval
+
+pam_require_source_ip: false
+pam_siem_forward_enabled: false
+pam_require_fido_pubkey: false
+pam_mfa_mode: totp
+pam_require_vault_target_keys: false
+pam_gateway_lab_enabled: true
+pam_gateway_lab_mode: true
+pam_session_search_enabled: true
+pam_session_watch_enabled: true
+pam_dr_enabled: false

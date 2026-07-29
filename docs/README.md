@@ -6,6 +6,7 @@ Open-source **SSH PAM** от [ITWarranty](https://github.com/itwarranty) — Pri
 
 | Документ | Аудитория | Назначение |
 | :--- | :--- | :--- |
+| [Runbooks.md](./Runbooks.md) | Инженеры | Короткие сценарии: login, revoke, kill |
 | [Whitepaper.md](./Whitepaper.md) | CSO, аудитор | Техпаспорт, Policy Gate, checklist |
 | [SSH-PAM-Overview.md](./SSH-PAM-Overview.md) | CSO, заказчик | Обзор SSH PAM для заказчика |
 | [Troubleshooting-Workflow.md](./Troubleshooting-Workflow.md) | ИБ + инженеры | Регламент инцидента, four-eyes, JIT |
