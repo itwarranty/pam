@@ -1,15 +1,15 @@
 ---
 all:
   children:
-    bastion_servers:
+    pam_servers:
       children:
-        bastion_primary:
+        pam_primary:
           hosts:
-            bastion-primary:
+            gateway-primary:
               ansible_host: 10.0.0.10
-              bastion_ha_role: primary
-        bastion_standby:
+              pam_ha_role: primary
+        pam_standby:
           hosts:
-            bastion-standby:
+            gateway-standby:
               ansible_host: 10.0.0.11
-              bastion_ha_role: standby
+              pam_ha_role: standby

@@ -1,27 +1,28 @@
 ---
-# Tier 3 lab: SSH gateway + mock target container on podman network bastion_net.
-bastion_gateway_lab_enabled: true
-bastion_gateway_lab_mode: true
-bastion_require_vault_target_keys: false
-bastion_shell_command_policy_enabled: true
-bastion_gateway_command_policy_v2_enabled: true
-bastion_shell_command_policy_v2_enabled: true
-bastion_session_search_enabled: true
-bastion_audit_log_dir_mode: "1777"
-bastion_runtime_sessions_dir_mode: "1777"
-bastion_syslog_journal_bridge: true
-bastion_container_mount_dev_log: true
+# Tier 3 lab: SSH gateway + mock target container on podman network pam_net.
+pam_gateway_lab_enabled: true
+pam_dr_enabled: true
+pam_gateway_lab_mode: true
+pam_require_vault_target_keys: false
+pam_shell_command_policy_enabled: true
+pam_gateway_command_policy_v2_enabled: true
+pam_shell_command_policy_v2_enabled: true
+pam_session_search_enabled: true
+pam_audit_log_dir_mode: "1777"
+pam_runtime_sessions_dir_mode: "1777"
+pam_syslog_journal_bridge: true
+pam_container_mount_dev_log: true
 
-bastion_targets:
+pam_targets:
   - id: lab-mock-01
     host: gateway-target
     port: 22
-    account: bastion_support
+    account: pam_support
     identity_file: "{{ lab_keys_dir }}/gateway-target-support.lab"
     tags: [lab]
     description: "Gateway lab mock SSH target (gateway_target container)"
 
-bastion_operators_gateway_lab:
+pam_operators_gateway_lab:
   - name: gateway-lab
     email: gateway-lab@example.com
     pubkey: "{{ lookup('file', lab_keys_dir + '/gateway-lab.lab.pub') }}"
@@ -33,7 +34,7 @@ bastion_operators_gateway_lab:
     allowed_sources:
       - "127.0.0.0/8"
 
-bastion_permitted_targets:
+pam_permitted_targets:
   - "10.0.1.10:22"
   - "10.0.1.11:22"
   - "gateway-target:22"

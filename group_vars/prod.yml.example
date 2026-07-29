@@ -1,31 +1,31 @@
 ---
 #  internal prod profile (v1.0 GA) — copy/adapt with Vault.
-# CSO: command policy v2 mandatory (do not disable without bastion_command_policy_v2_required: false + risk acceptance).
+# CSO: command policy v2 mandatory (do not disable without pam_command_policy_v2_required: false + risk acceptance).
 
-bastion_prod_require_gateway: true
-bastion_jit_timer_enabled: true
-bastion_siem_forward_enabled: true
-bastion_require_source_ip: true
-bastion_shell_command_policy_enabled: true
-bastion_command_policy_v2_required: true
-bastion_gateway_command_policy_v2_enabled: true
-bastion_shell_command_policy_v2_enabled: true
-bastion_session_search_enabled: true
-bastion_session_watch_enabled: true
-bastion_ssh_user_ca_qa_complete: true  # after internal PKI sign-off
+pam_prod_require_gateway: true
+pam_jit_timer_enabled: true
+pam_siem_forward_enabled: true
+pam_require_source_ip: true
+pam_shell_command_policy_enabled: true
+pam_command_policy_v2_required: true
+pam_gateway_command_policy_v2_enabled: true
+pam_shell_command_policy_v2_enabled: true
+pam_session_search_enabled: true
+pam_session_watch_enabled: true
+pam_ssh_user_ca_qa_complete: true  # after internal PKI sign-off
 
 # Tier 5 FIDO-Anchor MFA (recommended prod)
-bastion_require_fido_pubkey: true
-bastion_mfa_mode: fido_totp
+pam_require_fido_pubkey: true
+pam_mfa_mode: fido_totp
 
-# bastion_vault_enabled: true
-# bastion_vault_addr: "https://vault.internal.example"
-# bastion_oidc_cert_policy_enabled: true
+# pam_vault_enabled: true
+# pam_vault_addr: "https://vault.internal.example"
+# pam_oidc_cert_policy_enabled: true
 
 # Internal prod acceptance (OpenSpec tasks §10 — org gate):
-# - gateway session recorded; bastion-session-search finds by operator + date
+# - gateway session recorded; pam-session-search finds by operator + date
 # - policy v2 denies destructive command on target
-# - bastion-session-watch on live session; kill + JIT purge still work
-# - bastion-compliance-verify.sh exit 0
+# - pam-session-watch on live session; kill + JIT purge still work
+# - pam-compliance-verify.sh exit 0
 # - OIDC-signed or internal CA cert login for one operator
 # - HA tabletop per docs/HA-Runbook.md

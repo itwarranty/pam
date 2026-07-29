@@ -5,7 +5,7 @@
     name:
       - rsyslog
     state: present
-  when: bastion_siem_forward_enabled | bool
+  when: pam_siem_forward_enabled | bool
 
 - name: auditd → syslog LOCAL6 для SIEM pipeline
   ansible.builtin.copy:
@@ -19,22 +19,22 @@
       path = builtin_syslog
       type = always
       args = LOG_LOCAL6
-  when: bastion_siem_forward_enabled | bool
+  when: pam_siem_forward_enabled | bool
   notify: Restart auditd for SIEM
 
 - name: Drop-in rsyslog — forward local6 to client SIEM
   ansible.builtin.template:
-    src: rsyslog-bastion-siem.conf.j2
-    dest: /etc/rsyslog.d/99-bastion-siem.conf
+    src: rsyslog-pam-siem.conf.j2
+    dest: /etc/rsyslog.d/99-gateway-siem.conf
     owner: root
     group: root
     mode: "0644"
-  when: bastion_siem_forward_enabled | bool
+  when: pam_siem_forward_enabled | bool
   notify: Restart rsyslog
 
 - name: Удаление SIEM drop-in при отключённом forward
   ansible.builtin.file:
-    path: /etc/rsyslog.d/99-bastion-siem.conf
+    path: /etc/rsyslog.d/99-gateway-siem.conf
     state: absent
-  when: not (bastion_siem_forward_enabled | bool)
+  when: not (pam_siem_forward_enabled | bool)
   notify: Restart rsyslog

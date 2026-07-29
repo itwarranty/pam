@@ -1,0 +1,12 @@
+# SSH PAM — fail2ban jail (optional; requires auth log visibility on host).
+# Rocky 9: point logpath at forwarded container auth or journal — see Whitepaper §Tier 2.
+
+[gateway-ssh]
+enabled = true
+port = {{ pam_ssh_port }}
+filter = gateway-ssh
+logpath = {{ pam_fail2ban_logpath | default('/var/log/secure') }}
+maxretry = {{ pam_fail2ban_maxretry }}
+bantime = {{ pam_fail2ban_bantime }}
+findtime = 600
+banaction = firewallcmd-rich-rules

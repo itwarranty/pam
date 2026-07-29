@@ -22,21 +22,21 @@ ensure_lab_keys() {
 }
 
 ensure_fido_lab_keys() {
-  [[ "${BASTION_FIDO_LAB:-0}" == "1" ]] || return 0
+  [[ "${PAM_FIDO_LAB:-0}" == "1" ]] || return 0
   if [[ -f lab/keys/engineer-fido.lab ]]; then
     echo "[dev-up] FIDO lab key engineer-fido.lab already present"
     return 0
   fi
   echo "[dev-up] Generating FIDO sk key lab/keys/engineer-fido.lab (verify-required) ..."
   if ssh-keygen -t ed25519-sk -O verify-required -f lab/keys/engineer-fido.lab -N "" -C "engineer-fido@example.com" 2>/dev/null; then
-    echo "[dev-up] FIDO lab key OK — enable bastion_fido_lab_enabled for deploy"
+    echo "[dev-up] FIDO lab key OK — enable pam_fido_lab_enabled for deploy"
   else
     echo "[dev-up] SKIP FIDO key: no sk/FIDO support on this host."
     echo "[dev-up] See docs/FIDO-Onboarding.md — use Mac Touch ID or YubiKey manually."
   fi
 }
 
-INSTANCE="${LIMA_INSTANCE_NAME:-bastion-prod}"
+INSTANCE="${LIMA_INSTANCE_NAME:-pam-prod}"
 
 ensure_lima() {
   chmod +x tests/*.sh 2>/dev/null || true
@@ -49,11 +49,11 @@ ensure_lima() {
 }
 
 ensure_image() {
-  if limactl shell "${INSTANCE}" -- test -f /tmp/trusted_upstream_packages/bastion_image.tar 2>/dev/null; then
+  if limactl shell "${INSTANCE}" -- test -f /tmp/trusted_upstream_packages/pam_image.tar 2>/dev/null; then
     echo "[dev-up] Image already in Lima VM"
     return
   fi
-  if [[ -f /tmp/trusted_upstream_packages/bastion_image.tar ]]; then
+  if [[ -f /tmp/trusted_upstream_packages/pam_image.tar ]]; then
     echo "[dev-up] Syncing image to Lima ..."
     ./tests/sync-artifacts.sh
     return
@@ -83,7 +83,7 @@ root = Path(sys.argv[1])
 script = root / "scripts" / "lib" / "parse-lab-operators.py"
 ops = json.loads(subprocess.check_output([sys.executable, str(script), str(root / "group_vars" / "dev")], text=True))
 hints = {
-    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/bastion-doctor.sh NAME",
+    "jump": "ProxyJump (-J) — NOT direct ssh; ./scripts/pam-doctor.sh NAME",
     "gateway": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
     "shell": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
     "audit": "ssh -p 2222 -i lab/keys/NAME.lab NAME@127.0.0.1",
@@ -94,8 +94,8 @@ for o in sorted(ops, key=lambda x: x["name"]):
     print(f"{o['name']}\t{acc}\t{hint}")
 PY
   echo ""
-  echo "TOTP: ./scripts/bastion-doctor.sh <operator>  (live 6-digit code)"
-  echo "Pre-login banner on bastion reminds: jump → use -J"
+  echo "TOTP: ./scripts/pam-doctor.sh <operator>  (live 6-digit code)"
+  echo "Pre-login banner on the gateway reminds: jump → use -J"
   echo ""
 }
 
@@ -107,8 +107,8 @@ ensure_image
 ansible-galaxy collection install -r requirements.yml
 
 EXTRA_ARGS=()
-if [[ "${BASTION_FIDO_LAB:-0}" == "1" ]]; then
-  EXTRA_ARGS+=(-e bastion_fido_lab_enabled=true)
+if [[ "${PAM_FIDO_LAB:-0}" == "1" ]]; then
+  EXTRA_ARGS+=(-e pam_fido_lab_enabled=true)
 fi
 
 echo "[dev-up] Deploying (dev operators from group_vars/dev/) ..."

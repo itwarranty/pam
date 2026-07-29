@@ -10,26 +10,26 @@
 | 2 | TOTP (`pam_google_authenticator`) | контейнер шлюз |
 | 3 (opt.) | SSH user cert, окно JIT (`valid_until`) | offline CA |
 
-**Не реализуется:** WebAuthn в PAM, `mt-ssh`/`tsh`, IdP на шлюз (Tier 4 OIDC — отдельный opt-in).
+**Не реализуется:** WebAuthn в PAM, custom SSH-клиент / `tsh`, IdP на шлюзе (Tier 4 OIDC — отдельный opt-in).
 
 ## 1. Генерация ключа (оператор)
 
 ```bash
 ssh-keygen -t ed25519-sk -O verify-required \
   -C "engineer1@example.com" \
-  -f ~/.ssh/bastion-fido
+  -f ~/.ssh/gateway-fido
 ```
 
 - **macOS:** Touch ID / Secure Enclave при каждом `ssh`.
 - **Linux/Windows:** YubiKey или platform sk; OpenSSH **≥ 8.4** для `ed25519-sk`.
 - Без `-O verify-required` ключ слабее — CSO требует verify.
 
-Опционально ECDSA-sk: только если CSO включил `bastion_fido_ecdsa_sk_allowed: true`.
+Опционально ECDSA-sk: только если CSO включил `pam_fido_ecdsa_sk_allowed: true`.
 
 ## 2. Регистрация в Ansible
 
 ```yaml
-bastion_operators:
+pam_operators:
   - name: engineer1
     access: gateway
     pubkey: "{{ lookup('file', playbook_dir + '/vault/keys/engineer1-fido.pub') }}"
@@ -41,41 +41,41 @@ bastion_operators:
 Prod profile (`group_vars/prod.yml.example`):
 
 ```yaml
-bastion_require_fido_pubkey: true
-bastion_mfa_mode: fido_totp
+pam_require_fido_pubkey: true
+pam_mfa_mode: fido_totp
 ```
 
 ## 3. JIT + сертификат (opt.)
 
 ```bash
-export BASTION_USER_CA_KEY=/secure/user-ca
+export PAM_USER_CA_KEY=/secure/user-ca
 export OPERATOR_NAME=engineer1
-export SK_PUBKEY_PATH=~/.ssh/bastion-fido.pub
+export SK_PUBKEY_PATH=~/.ssh/gateway-fido.pub
 export VALID_UNTIL=2026-06-01T20:00:00Z
 ./scripts/sign-operator-cert-jit.sh.example
 ```
 
-Срок cert ≤ `bastion_cert_max_validity_hours` (72h по умолчанию) или явное JIT-окно.
+Срок cert ≤ `pam_cert_max_validity_hours` (72h по умолчанию) или явное JIT-окно.
 
 ## 4. Режимы MFA
 
-| `bastion_mfa_mode` | Поведение |
+| `pam_mfa_mode` | Поведение |
 |:---|:---|
 | `totp` | v1.0: любой pubkey/cert + TOTP |
 | `fido_totp` | **Prod:** FIDO-sk + TOTP (рекомендуется) |
-| `fido_only` | Только FIDO-sk, **без TOTP** — только с `bastion_fido_only_waiver: true` + CSO review |
+| `fido_only` | Только FIDO-sk, **без TOTP** — только с `pam_fido_only_waiver: true` + CSO review |
 
 ## 5. Pilot rollout (CSO)
 
-1. **Lab:** `bastion_require_fido_pubkey: false` — legacy `.lab` keys работают.
-2. **Pilot:** 1–2 оператора с sk + `bastion_mfa_mode: fido_totp`, остальные в `bastion_fido_waiver_operators`.
-3. **Prod:** `bastion_require_fido_pubkey: true`, waivers пусты.
-4. **Verify:** `bastion-compliance-verify.sh` с `BASTION_REQUIRE_FIDO_PUBKEY=1`.
+1. **Lab:** `pam_require_fido_pubkey: false` — legacy `.lab` keys работают.
+2. **Pilot:** 1–2 оператора с sk + `pam_mfa_mode: fido_totp`, остальные в `pam_fido_waiver_operators`.
+3. **Prod:** `pam_require_fido_pubkey: true`, waivers пусты.
+4. **Verify:** `pam-compliance-verify.sh` с `PAM_REQUIRE_FIDO_PUBKEY=1`.
 
 ## 6. Lab с FIDO (optional)
 
 ```bash
-BASTION_FIDO_LAB=1 ./scripts/dev-up.sh
+PAM_FIDO_LAB=1 ./scripts/dev-up.sh
 ssh -p 2222 -i lab/keys/engineer-fido.lab engineer-fido@127.0.0.1
 # TOTP: FIDOLABFIDOLABFIDOLABFIDOLABFIDO (fido_lab.yml)
 ```
@@ -85,7 +85,7 @@ ssh -p 2222 -i lab/keys/engineer-fido.lab engineer-fido@127.0.0.1
 ## 7. Waivers (migration)
 
 ```yaml
-bastion_fido_waiver_operators:
+pam_fido_waiver_operators:
   - legacy-contractor-01
 ```
 

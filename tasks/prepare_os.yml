@@ -23,22 +23,22 @@
 
 - name: Создание бесправного пользователя для Rootless контейнеров
   ansible.builtin.user:
-    name: "{{ bastion_user }}"
+    name: "{{ pam_user }}"
     shell: /bin/bash
     create_home: true
-    home: "{{ bastion_home }}"
+    home: "{{ pam_home }}"
     state: present
 
-- name: Получение UID bastion-пользователя
+- name: Получение UID gateway-пользователя
   ansible.builtin.getent:
     database: passwd
-    key: "{{ bastion_user }}"
+    key: "{{ pam_user }}"
 
 - name: Настройка лимитов subordinate UID/GID для Rootless Podman
   ansible.builtin.lineinfile:
     path: "{{ item }}"
-    line: "{{ bastion_user }}:100000:65536"
-    regexp: "^{{ bastion_user }}:"
+    line: "{{ pam_user }}:100000:65536"
+    regexp: "^{{ pam_user }}:"
     create: true
     mode: "0644"
   loop:
@@ -46,32 +46,32 @@
     - /etc/subgid
 
 - name: Включение Linger для работы контейнеров пользователя в фоне
-  ansible.builtin.command: "loginctl enable-linger {{ bastion_user }}"
+  ansible.builtin.command: "loginctl enable-linger {{ pam_user }}"
   args:
-    creates: "/var/lib/systemd/linger/{{ bastion_user }}"
+    creates: "/var/lib/systemd/linger/{{ pam_user }}"
 
-- name: Создание директории логов сессий (владелец bastion — rootless Podman + SELinux)
+- name: Создание директории логов сессий (владелец gateway — rootless Podman + SELinux)
   ansible.builtin.file:
     path: "{{ audit_log_dir }}"
     state: directory
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
-    mode: "{{ bastion_audit_log_dir_mode | default('0750') }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "{{ pam_audit_log_dir_mode | default('0750') }}"
 
-- name: Shared bastion syslog file (container operators append)
+- name: Shared gateway syslog file (container operators append)
   ansible.builtin.file:
-    path: "{{ audit_log_dir }}/bastion.syslog"
+    path: "{{ audit_log_dir }}/gateway.syslog"
     state: touch
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
-    mode: "{{ bastion_audit_log_file_mode | default('0666') }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "{{ pam_audit_log_file_mode | default('0666') }}"
 
-# Append-only (+a) — на *.log при создании (bastion-shell-wrapper / entrypoint), не на каталог.
+# Append-only (+a) — на *.log при создании (pam-shell-wrapper / entrypoint), не на каталог.
 
 - name: Правила auditd для SSH и записи логов сессий
   ansible.builtin.template:
-    src: auditd-bastion.rules.j2
-    dest: /etc/audit/rules.d/bastion.rules
+    src: auditd-pam.rules.j2
+    dest: /etc/audit/rules.d/gateway.rules
     owner: root
     group: root
     mode: "0640"
@@ -79,8 +79,8 @@
 
 - name: Открытие порта шлюза в firewalld
   ansible.posix.firewalld:
-    port: "{{ bastion_ssh_port }}/tcp"
+    port: "{{ pam_ssh_port }}/tcp"
     permanent: true
     state: enabled
     immediate: true
-  when: bastion_allowed_source_cidrs | default([]) | length == 0
+  when: pam_allowed_source_cidrs | default([]) | length == 0

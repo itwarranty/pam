@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parse bastion_operators_* lists from group_vars/dev/*.yml (stdlib only)."""
+"""Parse pam_operators_* lists from group_vars/dev/*.yml (stdlib only)."""
 from __future__ import annotations
 
 import json
@@ -10,7 +10,7 @@ from pathlib import Path
 OPERATOR_START = re.compile(r"^\s+-\s+name:\s*(\S+)\s*$")
 FIELD = re.compile(r"^\s+(mfa_secret|access|email|incident_id):\s*\"?([^\"#\n]+?)\"?\s*$")
 PERMIT_ITEM = re.compile(r"^\s+-\s+\"?([^\"#\n]+?)\"?\s*$")
-LIST_START = re.compile(r"^bastion_operators_\w+:\s*$")
+LIST_START = re.compile(r"^pam_operators_\w+:\s*$")
 
 
 def parse_file(path: Path) -> list[dict]:

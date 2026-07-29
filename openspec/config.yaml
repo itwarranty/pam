@@ -11,7 +11,7 @@ context: |
   Tier 2 Free (complete): v0.5.0
   Tier 3 Gateway (complete): v0.6.0
   Tier 4 SSH PAM complete (complete): v1.0.0 — openspec/specs/
-  Tier 5 FIDO-Anchor MFA (complete): v1.1.0 — openspec/specs/bastion-fido-anchor-mfa/
+  Tier 5 FIDO-Anchor MFA (complete): v1.1.0 — openspec/specs/pam-fido-anchor-mfa/
   Key paths: tasks/, templates/, group_vars/, lab/ca/, lab/certs/
   CSO Policy Gate: tasks/preflight_cso.yml
   Language: specs in English (SHALL/WHEN/THEN); docs may be Russian.

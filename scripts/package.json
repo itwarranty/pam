@@ -1,7 +1,7 @@
 {
-  "name": "bastion-admin-scripts",
+  "name": "gateway-admin-scripts",
   "private": true,
-  "description": "Admin tooling for bastion (QR onboarding)",
+  "description": "Admin tooling for gateway (QR onboarding)",
   "dependencies": {
     "qrcode": "^1.5.4"
   }

@@ -20,11 +20,11 @@ errors = []
 for op in operators:
     access = op.get("access", "jump")
     name = op.get("name", "?")
-    approved = op.get("bastion_jump_approved", False)
+    approved = op.get("pam_jump_approved", False)
 
     if jump_risk and access == "jump" and not approved:
         errors.append(
-            f"Operator {name} (jump): bastion_jump_approved required (connect-audit only)"
+            f"Operator {name} (jump): pam_jump_approved required (connect-audit only)"
         )
 
     if not prod_require:
@@ -40,7 +40,7 @@ for op in operators:
             continue
         if access == "jump" and not approved:
             errors.append(
-                f"Operator {name}: jump on prod target {entry} — use gateway or bastion_jump_approved"
+                f"Operator {name}: jump on prod target {entry} — use gateway or pam_jump_approved"
             )
         elif access != "gateway" and access != "jump":
             errors.append(

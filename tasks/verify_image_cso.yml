@@ -5,21 +5,21 @@
       - podman
       - image
       - inspect
-      - "{{ bastion_image_name }}:{{ bastion_image_tag }}"
+      - "{{ pam_image_name }}:{{ pam_image_tag }}"
       - --format
       - json
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
-  register: bastion_image_inspect
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
+  register: pam_image_inspect
   changed_when: false
 
 - name: "[CSO] Образ должен быть собран с MFA_STRICT=1"
   ansible.builtin.assert:
     that:
-      - (bastion_image_inspect.stdout | from_json)[0].Config.Labels['bastion.mfa.strict'] | default('') | string == bastion_required_image_mfa_strict
+      - (pam_image_inspect.stdout | from_json)[0].Config.Labels['pam.mfa.strict'] | default('') | string == pam_required_image_mfa_strict
     fail_msg: >
-      Образ {{ bastion_image_name }}:{{ bastion_image_tag }} не прошёл CSO-верификацию.
-      OCI-label bastion.mfa.strict должен быть '{{ bastion_required_image_mfa_strict }}'.
+      Образ {{ pam_image_name }}:{{ pam_image_tag }} не прошёл CSO-верификацию.
+      OCI-label pam.mfa.strict должен быть '{{ pam_required_image_mfa_strict }}'.
       Пересоберите: ./trusted_download.sh

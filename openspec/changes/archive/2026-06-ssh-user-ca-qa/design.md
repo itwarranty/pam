@@ -1,11 +1,11 @@
 ## Context
 
-SSH PAM runs OpenSSH in a Rootless Podman container on Rocky Linux 9. Operators are provisioned via Ansible (`bastion_operators`) into mounted home directories. Authentication is `publickey + keyboard-interactive (TOTP)`.
+SSH PAM runs OpenSSH in a Rootless Podman container on Rocky Linux 9. Operators are provisioned via Ansible (`pam_operators`) into mounted home directories. Authentication is `publickey + keyboard-interactive (TOTP)`.
 
-Lab (`group_vars/local_lima.yml`) uses raw ed25519 pubkeys with comments `*@example.com`. QA will add org SSH User CA so operators present short-lived **user certificates** signed by `example.com` User CA private key (held offline/HSM, never on bastion).
+Lab (`group_vars/local_lima.yml`) uses raw ed25519 pubkeys with comments `*@example.com`. QA will add org SSH User CA so operators present short-lived **user certificates** signed by `example.com` User CA private key (held offline/HSM, never on the gateway).
 
 Implementation hooks already exist:
-- `bastion_trusted_user_ca_file` → copies CA `.pub`, mounts into container, sets `TrustedUserCAKeys`.
+- `pam_trusted_user_ca_file` → copies CA `.pub`, mounts into container, sets `TrustedUserCAKeys`.
 - `operator.certificate` → written to `authorized_keys` via `templates/authorized_keys.j2`.
 - Jump operators retain `restrict,port-forwarding,permitopen=...` in authorized_keys.
 
@@ -24,9 +24,9 @@ Implementation hooks already exist:
 
 ## Decisions
 
-### D1: CA public key only on bastion
+### D1: CA public key only on the gateway
 
-**Decision:** Only `user-ca.pub` is deployed to gateway; private CA never touches bastion host or container.
+**Decision:** Only `user-ca.pub` is deployed to gateway; private CA never touches gateway host or container.
 
 **Rationale:** Standard SSH CA model; aligns with CSO supply-chain and key custody.
 
@@ -63,7 +63,7 @@ Implementation hooks already exist:
 
 ## Rollback
 
-1. Remove or comment `bastion_trusted_user_ca_file`.
+1. Remove or comment `pam_trusted_user_ca_file`.
 2. Switch operators from `certificate` to `pubkey` in group vars.
 3. Re-run `ansible-playbook site.yml`.
 
@@ -88,10 +88,10 @@ No container image rebuild required.
 Create `group_vars/qa.yml`:
 
 ```yaml
-bastion_lab_domain: example.com
-bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/user-ca.pub"
+pam_lab_domain: example.com
+pam_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/user-ca.pub"
 
-bastion_operators:
+pam_operators:
   - name: engineer-jump
     email: engineer-jump@example.com
     certificate: "{{ lookup('file', playbook_dir + '/lab/certs/engineer-jump-cert.pub') }}"
@@ -106,11 +106,11 @@ Create `inventory/qa.yml`:
 ```yaml
 all:
   children:
-    bastion_servers:
+    pam_servers:
       children:
         qa:
           hosts:
-            bastion-qa.example.com:
+            gateway-qa.example.com:
               ansible_host: 10.0.0.50
               ansible_user: ansible
 ```

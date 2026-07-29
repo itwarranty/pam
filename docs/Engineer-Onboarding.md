@@ -16,8 +16,8 @@
 ```bash
 cd pam
 
-# Полный цикл: ключ + YAML + bastion (одна команда)
-./scripts/test-repo-key.sh create tester-01 --bastion --apply
+# Полный цикл: ключ + YAML + gateway (одна команда)
+./scripts/test-repo-key.sh create tester-01 --pam --apply
 
 # Отзыв: GitHub + YAML + purge на шлюзе + restart контейнера
 ./scripts/test-repo-key.sh revoke tester-01 --apply
@@ -29,7 +29,7 @@ cd pam
 ./scripts/test-repo-key.sh onboarding tester-01
 ```
 
-Передать тестировщику каталог **`~/.bastion/test-access/<name>/`**:
+Передать тестировщику каталог **`~/.itwarranty-pam/test-access/<name>/`**:
 
 | Файл | Назначение |
 |:---|:---|
@@ -39,7 +39,7 @@ cd pam
 
 **Declarative sync:** `group_vars/dev/test_operators.yml` → Ansible удаляет операторов вне списка, перезапускает контейнер.
 
-Только Git: `./scripts/test-repo-key.sh create tester-01` (без `--bastion`).
+Только Git: `./scripts/test-repo-key.sh create tester-01` (без `--pam`).
 
 ### Read-only по GitHub-аккаунту (без отдельного ключа)
 
@@ -101,7 +101,7 @@ brew install lima podman ansible
 Скрипт выполняет:
 
 1. `lab/keys/*.lab` (jump, shell, gateway, audit, break-glass — при отсутствии)
-2. Lima VM `bastion-prod` (`./tests/start-lima.sh`)
+2. Lima VM `pam-prod` (`./tests/start-lima.sh`)
 3. Сборку/синхронизацию образа (`trusted_download.sh`, `tests/sync-artifacts.sh`)
 4. `ansible-playbook -i inventory/local-lima.yml site.yml`
 
@@ -114,7 +114,7 @@ brew install lima podman ansible
 | `group_vars/dev/audit_lab.yml`, `break_glass_lab.yml` | audit / break-glass |
 | `group_vars/dev/operators_merge.yml` | Слияние всех lab-операторов |
 | `group_vars/local_lima.yml` | Путь к tar на Lima |
-| `inventory/local-lima.yml` | Host `bastion-lima` через Lima SSH |
+| `inventory/local-lima.yml` | Host `pam-lima` через Lima SSH |
 
 ### 5. Проверка SSH к шлюз-контейнеру
 
@@ -128,7 +128,7 @@ TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 
 **Jump:** прямой shell отклонён (`restrict,port-forwarding`).  
 **Gateway:** интерактив на mock target; лог `gateway_*` на хосте.  
-**Shell:** PTY + лог в `/var/log/bastion_sessions/`.
+**Shell:** PTY + лог в `/var/log/pam_sessions/`.
 
 ### 6. Сценарии для отчёта
 
@@ -143,19 +143,19 @@ TOTP: otpauth URI в комментариях `group_vars/dev/lab.yml`.
 | Обновить repo | `git pull` |
 | Новая фича | `git checkout -b feature/...` → PR в `main` |
 | Синтаксис playbook | `ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml` |
-| Lab doctor (роль, TOTP, команда) | `./scripts/bastion-doctor.sh engineer-jump` |
-| Lab-образ с nullok (только dev) | `BASTION_LAB_MODE=1 MFA_STRICT=0 ./trusted_download.sh` |
+| Lab doctor (роль, TOTP, команда) | `./scripts/pam-doctor.sh engineer-jump` |
+| Lab-образ с nullok (только dev) | `PAM_LAB_MODE=1 MFA_STRICT=0 ./trusted_download.sh` |
 | Пересборка после Tier 2/3/4 scripts | `./trusted_download.sh` (wrapper, gateway, pty-inspector) → redeploy |
 
 ## Tier 4 (v1.0 GA)
 
 | CLI | Назначение |
 | :--- | :--- |
-| `bastion-session-search` | Поиск сессий в JSONL |
-| `bastion-session-watch` | Live moderation gateway log |
-| `bastion-ha-promote.sh` | Failover standby → primary |
+| `pam-session-search` | Поиск сессий в JSONL |
+| `pam-session-watch` | Live moderation gateway log |
+| `pam-ha-promote.sh` | Failover standby → primary |
 
-OpenSpec: `openspec/changes/archive/2026-06-bastion-free-tier4-ssh-pam-complete/`
+OpenSpec: `openspec/changes/archive/2026-06-pam-free-tier4-ssh-pam-complete/`
 
 Prod profile: `group_vars/prod.yml.example`
 
@@ -166,22 +166,22 @@ Prod-деплой (`inventory/hosts.yml` + Vault + Rocky 9) — только п�
 | Действие | Команда / документ |
 | :--- | :--- |
 | Onboarding | [FIDO-Onboarding.md](./FIDO-Onboarding.md) |
-| Lab FIDO operator | `BASTION_FIDO_LAB=1 ./scripts/dev-up.sh` |
+| Lab FIDO operator | `PAM_FIDO_LAB=1 ./scripts/dev-up.sh` |
 | Preflight check | `python3 scripts/preflight-fido-key.py < test/fixtures/fido-pubkey.txt` |
 | JIT cert (sk) | `scripts/sign-operator-cert-jit.sh.example` |
-| Prod vars | `bastion_require_fido_pubkey: true`, `bastion_mfa_mode: fido_totp` |
+| Prod vars | `pam_require_fido_pubkey: true`, `pam_mfa_mode: fido_totp` |
 
-Dev lab по умолчанию: `bastion_require_fido_pubkey: false` — `.lab` keys без изменений.
+Dev lab по умолчанию: `pam_require_fido_pubkey: false` — `.lab` keys без изменений.
 
 ---
 
 ## Troubleshooting
 
 - Инциденты и four-eyes: [Troubleshooting-Workflow.md](./Troubleshooting-Workflow.md)
-- Command denylist: см. Workflow §5.4; проверьте `bastion_shell_command_policy_enabled` и mount `/etc/bastion/command_denylist`
-- Break-glass: см. Workflow §5.5; preflight требует `incident_id`, `valid_until`, окно ≤ `bastion_break_glass_max_hours`
-- Lima VM: `tests/README.md`, `limactl shell bastion-prod`
-- Preflight fail: проверьте Rocky 9, Enforcing, whitelist, `bastion_operators`
+- Command denylist: см. Workflow §5.4; проверьте `pam_shell_command_policy_enabled` и mount `/etc/ssh-pam/command_denylist`
+- Break-glass: см. Workflow §5.5; preflight требует `incident_id`, `valid_until`, окно ≤ `pam_break_glass_max_hours`
+- Lima VM: `tests/README.md`, `limactl shell pam-prod`
+- Preflight fail: проверьте Rocky 9, Enforcing, whitelist, `pam_operators`
 
 ---
 

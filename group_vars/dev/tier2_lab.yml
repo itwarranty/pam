@@ -1,5 +1,5 @@
 ---
 # Dev: Tier 2 lab overrides (break-glass gate, command policy on)
-bastion_break_glass_enabled: true
-bastion_shell_command_policy_enabled: true
-bastion_break_glass_max_hours: 999999
+pam_break_glass_enabled: true
+pam_shell_command_policy_enabled: true
+pam_break_glass_max_hours: 999999

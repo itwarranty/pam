@@ -1,8 +1,8 @@
 ---
-# JIT access windows: filter bastion_operators → bastion_operators_active (purge-only v1).
+# JIT access windows: filter pam_operators → pam_operators_active (purge-only v1).
 - name: JIT — epoch на хосте шлюза
   ansible.builtin.command: date +%s
-  register: bastion_jit_now_cmd
+  register: pam_jit_now_cmd
   changed_when: false
 
 - name: JIT — классификация операторов по valid_from / valid_until
@@ -38,22 +38,22 @@
     print(json.dumps({"active": active, "revoked": revoked, "reasons": reasons}))
     PY
   environment:
-    OPS: "{{ bastion_operators | to_json }}"
-  register: bastion_jit_filter
+    OPS: "{{ pam_operators | to_json }}"
+  register: pam_jit_filter
   changed_when: false
 
 - name: JIT — эффективный список операторов
   ansible.builtin.set_fact:
-    bastion_operators_active: "{{ (bastion_jit_filter.stdout | from_json).active }}"
-    bastion_jit_revoked_names: "{{ (bastion_jit_filter.stdout | from_json).revoked }}"
-    bastion_jit_revoke_reasons: "{{ (bastion_jit_filter.stdout | from_json).reasons }}"
-    bastion_operators_effective: "{{ (bastion_jit_filter.stdout | from_json).active }}"
+    pam_operators_active: "{{ (pam_jit_filter.stdout | from_json).active }}"
+    pam_jit_revoked_names: "{{ (pam_jit_filter.stdout | from_json).revoked }}"
+    pam_jit_revoke_reasons: "{{ (pam_jit_filter.stdout | from_json).reasons }}"
+    pam_operators_effective: "{{ (pam_jit_filter.stdout | from_json).active }}"
 
 - name: JIT — отозванные по окну доступа
   ansible.builtin.debug:
     msg: >-
-      JIT purge: {{ item }} ({{ bastion_jit_revoke_reasons[item] }})
-  loop: "{{ bastion_jit_revoked_names }}"
+      JIT purge: {{ item }} ({{ pam_jit_revoke_reasons[item] }})
+  loop: "{{ pam_jit_revoked_names }}"
   loop_control:
     label: "{{ item }}"
-  when: bastion_jit_revoked_names | length > 0
+  when: pam_jit_revoked_names | length > 0

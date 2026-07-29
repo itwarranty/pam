@@ -18,11 +18,11 @@ Completed changes moved here after specs merged to `openspec/specs/`.
 
 | Archive | Release | Notes |
 | :--- | :--- | :--- |
-| [2026-06-bastion-free-tier1-cso](./2026-06-bastion-free-tier1-cso/) | v0.2.0–v0.4.0 | Tier 1 Free Phases A–C — **все пункты tasks.md [x]** |
-| [2026-06-bastion-free-tier2-cso](./2026-06-bastion-free-tier2-cso/) | v0.5.0 | Tier 2 Free Phases A–E — **все пункты tasks.md [x]** |
-| [2026-06-bastion-ssh-gateway-tier3](./2026-06-bastion-ssh-gateway-tier3/) | v0.6.0 | Tier 3 SSH Gateway — **все пункты tasks.md [x]** |
-| [2026-06-bastion-free-tier4-ssh-pam-complete](./2026-06-bastion-free-tier4-ssh-pam-complete/) | v1.0.0 | Tier 4 SSH PAM GA — **§10 org gate [ ]** |
-| [2026-06-bastion-fido-anchor-mfa](./2026-06-bastion-fido-anchor-mfa/) | v1.1.0 | Tier 5 FIDO — **§9 acceptance [ ]** |
+| [2026-06-pam-free-tier1-cso](./2026-06-pam-free-tier1-cso/) | v0.2.0–v0.4.0 | Tier 1 Free Phases A–C — **все пункты tasks.md [x]** |
+| [2026-06-pam-free-tier2-cso](./2026-06-pam-free-tier2-cso/) | v0.5.0 | Tier 2 Free Phases A–E — **все пункты tasks.md [x]** |
+| [2026-06-pam-ssh-gateway-tier3](./2026-06-pam-ssh-gateway-tier3/) | v0.6.0 | Tier 3 SSH Gateway — **все пункты tasks.md [x]** |
+| [2026-06-pam-free-tier4-ssh-pam-complete](./2026-06-pam-free-tier4-ssh-pam-complete/) | v1.0.0 | Tier 4 SSH PAM GA — **§10 org gate [ ]** |
+| [2026-06-pam-fido-anchor-mfa](./2026-06-pam-fido-anchor-mfa/) | v1.1.0 | Tier 5 FIDO — **§9 acceptance [ ]** |
 | [2026-06-ssh-user-ca-qa](./2026-06-ssh-user-ca-qa/) | v0.4.0 (templates) | Live PKI QA — **§3–5, 6.2 ещё [ ]** (нужен org CA) |
 
 ## Статус «всё реализовано?»
@@ -37,6 +37,6 @@ Completed changes moved here after specs merged to `openspec/specs/`.
 | Opt-in: JIT timer, SIEM, WORM | ✅ (выкл. по умолчанию) | клиент включает в group_vars |
 | SSH User CA **policy** + signing example | ✅ | — |
 | SSH User CA **live QA** на Rocky 9 | templates only | CA pubkey, deploy, acceptance |
-| Prod GA certificates | preflight + SOP | `bastion_ssh_user_ca_qa_complete: true` после sign-off |
+| Prod GA certificates | preflight + SOP | `pam_ssh_user_ca_qa_complete: true` после sign-off |
 
 Active specifications: `openspec/specs/*/spec.md`

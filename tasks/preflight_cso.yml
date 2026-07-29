@@ -2,11 +2,11 @@
 - name: "[CSO] Rocky Linux 9.x — единственная поддерживаемая ОС хоста"
   ansible.builtin.assert:
     that:
-      - ansible_facts['distribution'] == bastion_required_os
-      - ansible_facts['distribution_major_version'] == bastion_required_os_major
+      - ansible_facts['distribution'] == pam_required_os
+      - ansible_facts['distribution_major_version'] == pam_required_os_major
     fail_msg: >
-      SSH PAM поддерживается только на {{ bastion_required_os }}
-      {{ bastion_required_os_major }}.x (Enterprise LTS).
+      SSH PAM поддерживается только на {{ pam_required_os }}
+      {{ pam_required_os_major }}.x (Enterprise LTS).
       Обнаружено: {{ ansible_facts['distribution'] }}
       {{ ansible_facts['distribution_version'] }}.
       Другие дистрибутивы не проходят ИБ-аудит и блокируются политикой CSO.
@@ -14,16 +14,16 @@
 - name: "[CSO] Архитектура x86_64"
   ansible.builtin.assert:
     that:
-      - ansible_facts['architecture'] == bastion_required_arch
+      - ansible_facts['architecture'] == pam_required_arch
     fail_msg: >
-      Поддерживается только {{ bastion_required_arch }}.
+      Поддерживается только {{ pam_required_arch }}.
       Обнаружено: {{ ansible_facts['architecture'] }}.
 
 - name: "[CSO] SELinux Enforcing обязателен"
   ansible.builtin.command: getenforce
   register: selinux_state
   changed_when: false
-  when: bastion_selinux_enforcing | bool
+  when: pam_selinux_enforcing | bool
 
 - name: "[CSO] Проверка режима SELinux"
   ansible.builtin.assert:
@@ -32,7 +32,7 @@
     fail_msg: >
       SELinux должен быть в режиме Enforcing (текущий: {{ selinux_state.stdout }}).
       Permissive/Disabled не допускаются — нарушается MAC-изоляция контейнера (:Z).
-  when: bastion_selinux_enforcing | bool
+  when: pam_selinux_enforcing | bool
 
 - name: "[CSO] Только Rootless Podman"
   ansible.builtin.assert:
@@ -45,42 +45,42 @@
 - name: "[CSO] Whitelist PermitOpen обязателен"
   ansible.builtin.assert:
     that:
-      - bastion_permitted_targets | length > 0
+      - pam_permitted_targets | length > 0
     fail_msg: >
-      bastion_permitted_targets пуст. Jump-host без whitelist не разворачивается —
+      pam_permitted_targets пуст. Jump-host без whitelist не разворачивается —
       это создаёт неконтролируемый транзитный доступ.
   when:
     - not (is_commercial_pam | bool)
-    - bastion_allow_tcp_forwarding | bool
+    - pam_allow_tcp_forwarding | bool
 
 - name: "[CSO] Strict MFA обязателен"
   ansible.builtin.assert:
     that:
-      - bastion_mfa_enforce | bool
+      - pam_mfa_enforce | bool
     fail_msg: >
-      bastion_mfa_enforce=false запрещён политикой CSO.
+      pam_mfa_enforce=false запрещён политикой CSO.
       Образ должен быть собран с MFA_STRICT=1 (./trusted_download.sh).
 
 - name: "[CSO] Command policy v2 обязателен при включённом denylist"
   ansible.builtin.assert:
     that:
-      - bastion_gateway_command_policy_v2_enabled | default(true) | bool
-      - bastion_shell_command_policy_v2_enabled | default(true) | bool
+      - pam_gateway_command_policy_v2_enabled | default(true) | bool
+      - pam_shell_command_policy_v2_enabled | default(true) | bool
     fail_msg: >
-      bastion_command_policy_v2_required=true: gateway/shell policy v2 MUST be enabled.
-      v1 (remote bash --rcfile на target) — только migration с bastion_command_policy_v2_required: false
+      pam_command_policy_v2_required=true: gateway/shell policy v2 MUST be enabled.
+      v1 (remote bash --rcfile на target) — только migration с pam_command_policy_v2_required: false
       и formal risk acceptance.
   when:
-    - bastion_command_policy_v2_required | default(true) | bool
-    - bastion_shell_command_policy_enabled | default(true) | bool
+    - pam_command_policy_v2_required | default(true) | bool
+    - pam_shell_command_policy_enabled | default(true) | bool
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] Операторы должны быть определены до деплоя"
   ansible.builtin.assert:
     that:
-      - bastion_operators | length > 0
+      - pam_operators | length > 0
     fail_msg: >
-      bastion_operators пуст. Шлюз без явного списка операторов не разворачивается.
+      pam_operators пуст. Шлюз без явного списка операторов не разворачивается.
   when: not (is_commercial_pam | bool)
 
 - name: "[CSO] Source IP обязателен для каждого оператора (strict mode)"
@@ -88,36 +88,36 @@
     that:
       - item.allowed_sources | default([]) | length > 0
     fail_msg: >
-      bastion_require_source_ip=true: оператор «{{ item.name }}» не имеет allowed_sources.
-      Задайте CIDR/IP в bastion_operators или отключите strict mode.
-  loop: "{{ bastion_operators }}"
+      pam_require_source_ip=true: оператор «{{ item.name }}» не имеет allowed_sources.
+      Задайте CIDR/IP в pam_operators или отключите strict mode.
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - bastion_require_source_ip | default(false) | bool
+    - pam_require_source_ip | default(false) | bool
     - not (is_commercial_pam | bool)
 
-- name: "[CSO] SIEM forward требует bastion_siem_server"
+- name: "[CSO] SIEM forward требует pam_siem_server"
   ansible.builtin.assert:
     that:
-      - bastion_siem_server | default('') | length > 0
+      - pam_siem_server | default('') | length > 0
     fail_msg: >
-      bastion_siem_forward_enabled=true, но bastion_siem_server пуст.
-  when: bastion_siem_forward_enabled | default(false) | bool
+      pam_siem_forward_enabled=true, но pam_siem_server пуст.
+  when: pam_siem_forward_enabled | default(false) | bool
 
 - name: "[CSO] Prod: raw pubkey без certificate запрещён"
   ansible.builtin.assert:
     that:
       - item.certificate | default('') | length > 0
     fail_msg: >
-      bastion_allow_raw_pubkey_prod=false: оператор «{{ item.name }}» использует raw pubkey.
-      Подпишите SSH user certificate (≤ {{ bastion_cert_max_validity_hours }}h) или задайте
-      bastion_allow_raw_pubkey_prod=true с formal CSO waiver.
-  loop: "{{ bastion_operators }}"
+      pam_allow_raw_pubkey_prod=false: оператор «{{ item.name }}» использует raw pubkey.
+      Подпишите SSH user certificate (≤ {{ pam_cert_max_validity_hours }}h) или задайте
+      pam_allow_raw_pubkey_prod=true с formal CSO waiver.
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - not (bastion_allow_raw_pubkey_prod | default(false) | bool)
+    - not (pam_allow_raw_pubkey_prod | default(false) | bool)
     - not (is_commercial_pam | bool)
     - item.pubkey | default('') | length > 0
     - item.certificate | default('') | length == 0
@@ -125,12 +125,12 @@
 - name: "[CSO] SSH User CA prod: QA sign-off рекомендуется"
   ansible.builtin.debug:
     msg: >
-      ВНИМАНИЕ: bastion_ssh_user_ca_qa_complete=false — prod certificate mode не прошёл QA
+      ВНИМАНИЕ: pam_ssh_user_ca_qa_complete=false — prod certificate mode не прошёл QA
       (openspec/changes/archive/2026-06-ssh-user-ca-qa). Raw pubkey waiver активен только
-      при bastion_allow_raw_pubkey_prod=true.
+      при pam_allow_raw_pubkey_prod=true.
   when:
-    - not (bastion_ssh_user_ca_qa_complete | default(false) | bool)
-    - not (bastion_allow_raw_pubkey_prod | default(false) | bool)
+    - not (pam_ssh_user_ca_qa_complete | default(false) | bool)
+    - not (pam_allow_raw_pubkey_prod | default(false) | bool)
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] Допустимые значения access (jump|shell|audit|gateway)"
@@ -140,7 +140,7 @@
     fail_msg: >
       Оператор «{{ item.name }}»: access={{ item.access | default('jump') }} недопустим.
       Разрешены: jump, shell, audit, gateway.
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when: not (is_commercial_pam | bool)
@@ -151,7 +151,7 @@
       - item.access | default('jump') != 'gateway'
     fail_msg: >
       Оператор «{{ item.name }}» с access: gateway не поддерживается при is_commercial_pam=true.
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when: is_commercial_pam | bool
@@ -162,7 +162,7 @@
       - item.access | default('jump') != 'audit'
     fail_msg: >
       Оператор «{{ item.name }}» с access: audit не поддерживается при is_commercial_pam=true.
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when: is_commercial_pam | bool
@@ -172,13 +172,13 @@
     that:
       - not (item.break_glass | default(false) | bool)
     fail_msg: >
-      Оператор «{{ item.name }}»: break_glass=true, но bastion_break_glass_enabled=false.
+      Оператор «{{ item.name }}»: break_glass=true, но pam_break_glass_enabled=false.
       Включите gate в group_vars или уберите break_glass.
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - not (bastion_break_glass_enabled | default(false) | bool)
+    - not (pam_break_glass_enabled | default(false) | bool)
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] Break-glass требует incident_id и valid_until"
@@ -188,7 +188,7 @@
       - item.valid_until | default('') | length > 0
     fail_msg: >
       Оператор «{{ item.name }}» (break_glass): обязательны incident_id и valid_until.
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
@@ -219,23 +219,23 @@
     PY
   environment:
     OP: "{{ item | to_json }}"
-    MAX_H: "{{ bastion_break_glass_max_hours | string }}"
+    MAX_H: "{{ pam_break_glass_max_hours | string }}"
   changed_when: false
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
     - item.break_glass | default(false) | bool
     - not (is_commercial_pam | bool)
 
-- name: "[CSO] Индекс bastion_targets host:port"
+- name: "[CSO] Индекс pam_targets host:port"
   ansible.builtin.set_fact:
-    bastion_target_host_ports: >-
+    pam_target_host_ports: >-
       {{
-        bastion_target_host_ports | default([])
+        pam_target_host_ports | default([])
         + [target_item.host ~ ':' ~ (target_item.port | default(22) | string)]
       }}
-  loop: "{{ bastion_targets | default([]) }}"
+  loop: "{{ pam_targets | default([]) }}"
   loop_control:
     loop_var: target_item
     label: "{{ target_item.id }}"
@@ -244,17 +244,17 @@
 - name: "[CSO] Gateway operator permit_open resolves to gateway_targets"
   ansible.builtin.assert:
     that:
-      - permit_entry in bastion_target_host_ports
+      - permit_entry in pam_target_host_ports
     fail_msg: >
       Оператор «{{ item.0.name }}» (gateway): permit_open «{{ permit_entry }}»
-      не найден в bastion_targets.
+      не найден в pam_targets.
   vars:
     permit_entry: "{{ item.1 }}"
   loop: >-
     {{
       query(
         'subelements',
-        bastion_operators | selectattr('access', 'equalto', 'gateway') | list,
+        pam_operators | selectattr('access', 'equalto', 'gateway') | list,
         'permit_open',
         skip_missing=True
       )
@@ -263,7 +263,7 @@
     label: "{{ item.0.name }}:{{ item.1 }}"
   when:
     - not (is_commercial_pam | bool)
-    - bastion_targets | default([]) | length > 0
+    - pam_targets | default([]) | length > 0
 
 - name: "[CSO] Gateway operator requires permit_open"
   ansible.builtin.assert:
@@ -271,7 +271,7 @@
       - item.permit_open | default([]) | length > 0
     fail_msg: >
       Оператор «{{ item.name }}» (gateway): permit_open обязателен.
-  loop: "{{ bastion_operators | selectattr('access', 'equalto', 'gateway') | list }}"
+  loop: "{{ pam_operators | selectattr('access', 'equalto', 'gateway') | list }}"
   loop_control:
     label: "{{ item.name }}"
   when: not (is_commercial_pam | bool)
@@ -280,7 +280,7 @@
   ansible.builtin.stat:
     path: "{{ item.identity_file }}"
   register: target_key_stat
-  loop: "{{ bastion_targets | default([]) }}"
+  loop: "{{ pam_targets | default([]) }}"
   loop_control:
     label: "{{ item.id }}"
   when: not (is_commercial_pam | bool)
@@ -290,8 +290,8 @@
     that:
       - target_key_stat.results[idx].stat.exists
     fail_msg: >
-      bastion_targets «{{ item.id }}»: identity_file не найден: {{ item.identity_file }}
-  loop: "{{ bastion_targets | default([]) }}"
+      pam_targets «{{ item.id }}»: identity_file не найден: {{ item.identity_file }}
+  loop: "{{ pam_targets | default([]) }}"
   loop_control:
     label: "{{ item.id }}"
     index_var: idx
@@ -300,50 +300,50 @@
 - name: "[CSO] Target host_key_fingerprint missing (warn)"
   ansible.builtin.debug:
     msg: >
-      ВНИМАНИЕ: bastion_targets «{{ item.id }}» без host_key_fingerprint —
+      ВНИМАНИЕ: pam_targets «{{ item.id }}» без host_key_fingerprint —
       MITM risk. Задайте fingerprint или lab mode только в dev.
-  loop: "{{ bastion_targets | default([]) }}"
+  loop: "{{ pam_targets | default([]) }}"
   loop_control:
     label: "{{ item.id }}"
   when:
     - not (is_commercial_pam | bool)
-    - not (bastion_gateway_lab_mode | default(false) | bool)
+    - not (pam_gateway_lab_mode | default(false) | bool)
     - item.host_key_fingerprint | default('') | length == 0
 
 - name: "[CSO] Jump/gateway prod policy check"
   ansible.builtin.script:
     cmd: "{{ playbook_dir }}/scripts/preflight-jump-gateway.py"
   environment:
-    OPERATORS: "{{ bastion_operators | to_json }}"
-    TARGETS: "{{ bastion_targets | default([]) | to_json }}"
-    PROD_REQUIRE_GATEWAY: "{{ bastion_prod_require_gateway | default(false) | ternary('true', 'false') }}"
-    PROD_TAGS: "{{ bastion_prod_target_tags | default(['prod']) | to_json }}"
-    JUMP_RISK: "{{ bastion_jump_risk_acceptance_required | default(false) | ternary('true', 'false') }}"
+    OPERATORS: "{{ pam_operators | to_json }}"
+    TARGETS: "{{ pam_targets | default([]) | to_json }}"
+    PROD_REQUIRE_GATEWAY: "{{ pam_prod_require_gateway | default(false) | ternary('true', 'false') }}"
+    PROD_TAGS: "{{ pam_prod_target_tags | default(['prod']) | to_json }}"
+    JUMP_RISK: "{{ pam_jump_risk_acceptance_required | default(false) | ternary('true', 'false') }}"
   changed_when: false
   when:
     - not (is_commercial_pam | bool)
-    - bastion_prod_require_gateway | default(false) | bool
-      or bastion_jump_risk_acceptance_required | default(false) | bool
+    - pam_prod_require_gateway | default(false) | bool
+      or pam_jump_risk_acceptance_required | default(false) | bool
 
 - name: "[CSO] Target vault_path vs identity_file mutually exclusive"
   ansible.builtin.assert:
     that:
       - not (item.identity_file | default('') | length > 0 and item.vault_secret_path | default('') | length > 0)
     fail_msg: >
-      bastion_targets «{{ item.id }}»: задайте identity_file ИЛИ vault_secret_path, не оба.
-  loop: "{{ bastion_targets | default([]) }}"
+      pam_targets «{{ item.id }}»: задайте identity_file ИЛИ vault_secret_path, не оба.
+  loop: "{{ pam_targets | default([]) }}"
   loop_control:
     label: "{{ item.id }}"
   when: not (is_commercial_pam | bool)
 
-- name: "[CSO] Vault enabled requires bastion_vault_addr"
+- name: "[CSO] Vault enabled requires pam_vault_addr"
   ansible.builtin.assert:
     that:
-      - bastion_vault_addr | default('') | length > 0
-      - bastion_vault_token | default('') | length > 0
-    fail_msg: "bastion_vault_enabled=true: задайте bastion_vault_addr и bastion_vault_token (Vault)."
+      - pam_vault_addr | default('') | length > 0
+      - pam_vault_token | default('') | length > 0
+    fail_msg: "pam_vault_enabled=true: задайте pam_vault_addr и pam_vault_token (Vault)."
   when:
-    - bastion_vault_enabled | default(false) | bool
+    - pam_vault_enabled | default(false) | bool
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] OIDC cert policy requires operator certificate"
@@ -351,12 +351,12 @@
     that:
       - item.certificate | default('') | length > 0
     fail_msg: >
-      bastion_oidc_cert_policy_enabled: оператор «{{ item.name }}» должен использовать certificate.
-  loop: "{{ bastion_operators }}"
+      pam_oidc_cert_policy_enabled: оператор «{{ item.name }}» должен использовать certificate.
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - bastion_oidc_cert_policy_enabled | default(false) | bool
+    - pam_oidc_cert_policy_enabled | default(false) | bool
     - not (is_commercial_pam | bool)
     - item.pubkey | default('') | length > 0
     - item.certificate | default('') | length == 0

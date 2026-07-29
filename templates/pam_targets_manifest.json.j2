@@ -1,0 +1,14 @@
+{
+  "targets": [
+{% for target in pam_targets | default([]) %}
+    {
+      "id": "{{ target.id }}",
+      "host": "{{ target.host }}",
+      "port": {{ target.port | default(22) }},
+      "account": "{{ target.account }}",
+      "host_port": "{{ target.host }}:{{ target.port | default(22) }}",
+      "tags": {{ target.tags | default([]) | to_json }}
+    }{% if not loop.last %},{% endif %}
+{% endfor %}
+  ]
+}

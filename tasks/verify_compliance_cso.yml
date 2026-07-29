@@ -1,31 +1,31 @@
 ---
-# Post-deploy compliance verify (tag: verify_compliance). Mirrors scripts/bastion-compliance-verify.sh.
-- name: "[Verify] UID bastion-пользователя"
+# Post-deploy compliance verify (tag: verify_compliance). Mirrors scripts/pam-compliance-verify.sh.
+- name: "[Verify] UID gateway-пользователя"
   ansible.builtin.getent:
     database: passwd
-    key: "{{ bastion_user }}"
+    key: "{{ pam_user }}"
   tags: [verify_compliance]
 
 - name: "[Verify] Rocky Linux 9.x"
   ansible.builtin.assert:
     that:
-      - ansible_facts['distribution'] == bastion_required_os
-      - ansible_facts['distribution_major_version'] == bastion_required_os_major
-    fail_msg: "FAIL:os — expected {{ bastion_required_os }} {{ bastion_required_os_major }}.x"
+      - ansible_facts['distribution'] == pam_required_os
+      - ansible_facts['distribution_major_version'] == pam_required_os_major
+    fail_msg: "FAIL:os — expected {{ pam_required_os }} {{ pam_required_os_major }}.x"
   tags: [verify_compliance]
 
 - name: "[Verify] Architecture x86_64"
   ansible.builtin.assert:
     that:
-      - ansible_facts['architecture'] == bastion_required_arch
-    fail_msg: "FAIL:arch — expected {{ bastion_required_arch }}"
+      - ansible_facts['architecture'] == pam_required_arch
+    fail_msg: "FAIL:arch — expected {{ pam_required_arch }}"
   tags: [verify_compliance]
 
 - name: "[Verify] SELinux Enforcing"
   ansible.builtin.command: getenforce
   register: verify_selinux
   changed_when: false
-  when: bastion_selinux_enforcing | bool
+  when: pam_selinux_enforcing | bool
   tags: [verify_compliance]
 
 - name: "[Verify] SELinux mode"
@@ -33,17 +33,17 @@
     that:
       - verify_selinux.stdout == 'Enforcing'
     fail_msg: "FAIL:selinux — {{ verify_selinux.stdout }}"
-  when: bastion_selinux_enforcing | bool
+  when: pam_selinux_enforcing | bool
   tags: [verify_compliance]
 
-- name: "[Verify] ssh_bastion container running"
-  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' ssh_bastion
+- name: "[Verify] ssh_pam container running"
+  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' ssh_pam
   register: verify_container_running
   changed_when: false
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
@@ -51,50 +51,50 @@
   ansible.builtin.assert:
     that:
       - verify_container_running.stdout == 'true'
-    fail_msg: "FAIL:container — ssh_bastion not running"
+    fail_msg: "FAIL:container — ssh_pam not running"
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
 - name: "[Verify] Image MFA strict label"
   ansible.builtin.command: >-
-    podman image inspect {{ bastion_image_name }}:{{ bastion_image_tag }}
-    --format '{{ "{{" }} index .Config.Labels "bastion.mfa.strict" {{ "}}" }}'
+    podman image inspect {{ pam_image_name }}:{{ pam_image_tag }}
+    --format '{{ "{{" }} index .Config.Labels "pam.mfa.strict" {{ "}}" }}'
   register: verify_mfa_label
   changed_when: false
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   when:
     - not (is_commercial_pam | bool)
-    - bastion_mfa_enforce | bool
+    - pam_mfa_enforce | bool
   tags: [verify_compliance]
 
 - name: "[Verify] MFA label value"
   ansible.builtin.assert:
     that:
-      - verify_mfa_label.stdout == bastion_required_image_mfa_strict
-    fail_msg: "FAIL:mfa_label — expected {{ bastion_required_image_mfa_strict }}, got {{ verify_mfa_label.stdout }}"
+      - verify_mfa_label.stdout == pam_required_image_mfa_strict
+    fail_msg: "FAIL:mfa_label — expected {{ pam_required_image_mfa_strict }}, got {{ verify_mfa_label.stdout }}"
   when:
     - not (is_commercial_pam | bool)
-    - bastion_mfa_enforce | bool
+    - pam_mfa_enforce | bool
   tags: [verify_compliance]
 
 - name: "[Verify] Whitelist PermitOpen non-empty"
   ansible.builtin.assert:
     that:
-      - bastion_permitted_targets | length > 0
-    fail_msg: "FAIL:whitelist — bastion_permitted_targets is empty"
+      - pam_permitted_targets | length > 0
+    fail_msg: "FAIL:whitelist — pam_permitted_targets is empty"
   when:
     - not (is_commercial_pam | bool)
-    - bastion_allow_tcp_forwarding | bool
+    - pam_allow_tcp_forwarding | bool
   tags: [verify_compliance]
 
 - name: "[Verify] Declared operator names"
   ansible.builtin.set_fact:
-    bastion_operator_names: >-
+    pam_operator_names: >-
       {{
-        (bastion_operators_effective | default(bastion_operators))
+        (pam_operators_effective | default(pam_operators))
         | map(attribute='name')
         | list
       }}
@@ -104,9 +104,9 @@
 - name: "[Verify] Orphan container /home users"
   ansible.builtin.shell: |
     set -e
-    allowed=" {{ bastion_operator_names | join(' ') }} "
+    allowed=" {{ pam_operator_names | join(' ') }} "
     orphans=""
-    for u in $(podman exec ssh_bastion sh -c 'ls -1 /home 2>/dev/null || true'); do
+    for u in $(podman exec ssh_pam sh -c 'ls -1 /home 2>/dev/null || true'); do
       case "${allowed}" in
         *" ${u} "*) ;;
         *) orphans="${orphans} ${u}" ;;
@@ -117,9 +117,9 @@
   changed_when: false
   failed_when: false
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
@@ -170,27 +170,27 @@
     that:
       - verify_session_log_dir.stat.exists
       - verify_session_log_dir.stat.isdir
-      - verify_session_log_dir.stat.pw_name == bastion_user
-      - verify_session_log_dir.stat.mode == (bastion_audit_log_dir_mode | default('0750'))
+      - verify_session_log_dir.stat.pw_name == pam_user
+      - verify_session_log_dir.stat.mode == (pam_audit_log_dir_mode | default('0750'))
     fail_msg: >-
-      FAIL:session_log_dir — expected {{ audit_log_dir }} dir {{ bastion_audit_log_dir_mode | default('0750') }} owner {{ bastion_user }}
+      FAIL:session_log_dir — expected {{ audit_log_dir }} dir {{ pam_audit_log_dir_mode | default('0750') }} owner {{ pam_user }}
   tags: [verify_compliance]
 
 - name: "[Verify] Gateway SSH port open in firewalld"
-  ansible.builtin.command: firewall-cmd --query-port={{ bastion_ssh_port }}/tcp
+  ansible.builtin.command: firewall-cmd --query-port={{ pam_ssh_port }}/tcp
   register: verify_fw_port
   changed_when: false
   failed_when: false
-  when: bastion_allowed_source_cidrs | default([]) | length == 0
+  when: pam_allowed_source_cidrs | default([]) | length == 0
   tags: [verify_compliance]
 
 - name: "[Verify] Firewalld port or rich rules"
   ansible.builtin.assert:
     that:
       - >-
-        (bastion_allowed_source_cidrs | default([]) | length > 0)
+        (pam_allowed_source_cidrs | default([]) | length > 0)
         or (verify_fw_port.stdout == 'yes')
-    fail_msg: "FAIL:firewall_port — {{ bastion_ssh_port }}/tcp not allowed"
+    fail_msg: "FAIL:firewall_port — {{ pam_ssh_port }}/tcp not allowed"
   when: not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
@@ -200,8 +200,8 @@
   changed_when: false
   failed_when: false
   when:
-    - bastion_ssh_rate_limit_enabled | default(false) | bool
-    - bastion_ssh_rate_limit_method | default('firewalld') == 'firewalld'
+    - pam_ssh_rate_limit_enabled | default(false) | bool
+    - pam_ssh_rate_limit_method | default('firewalld') == 'firewalld'
   tags: [verify_compliance]
 
 - name: "[Verify] SSH rate limit firewalld state"
@@ -210,8 +210,8 @@
       - verify_rate_limit_fw.rc == 0
     fail_msg: "FAIL:rate_limit — firewalld limit rule not found"
   when:
-    - bastion_ssh_rate_limit_enabled | default(false) | bool
-    - bastion_ssh_rate_limit_method | default('firewalld') == 'firewalld'
+    - pam_ssh_rate_limit_enabled | default(false) | bool
+    - pam_ssh_rate_limit_method | default('firewalld') == 'firewalld'
   tags: [verify_compliance]
 
 - name: "[Verify] SSH rate limit (fail2ban)"
@@ -220,8 +220,8 @@
   register: verify_fail2ban
   check_mode: true
   when:
-    - bastion_ssh_rate_limit_enabled | default(false) | bool
-    - bastion_ssh_rate_limit_method == 'fail2ban'
+    - pam_ssh_rate_limit_enabled | default(false) | bool
+    - pam_ssh_rate_limit_method == 'fail2ban'
   tags: [verify_compliance]
 
 - name: "[Verify] fail2ban active"
@@ -230,15 +230,15 @@
       - verify_fail2ban.status.ActiveState == 'active'
     fail_msg: "FAIL:rate_limit — fail2ban not active"
   when:
-    - bastion_ssh_rate_limit_enabled | default(false) | bool
-    - bastion_ssh_rate_limit_method == 'fail2ban'
+    - pam_ssh_rate_limit_enabled | default(false) | bool
+    - pam_ssh_rate_limit_method == 'fail2ban'
   tags: [verify_compliance]
 
 - name: "[Verify] Gateway targets provisioned"
   ansible.builtin.stat:
-    path: "{{ bastion_targets_home }}/manifest.json"
+    path: "{{ pam_targets_home }}/manifest.json"
   register: verify_gateway_manifest
-  when: bastion_targets | default([]) | length > 0
+  when: pam_targets | default([]) | length > 0
   tags: [verify_compliance]
 
 - name: "[Verify] Gateway manifest exists"
@@ -246,53 +246,53 @@
     that:
       - verify_gateway_manifest.stat.exists
     fail_msg: "FAIL:gateway_targets — manifest.json missing"
-  when: bastion_targets | default([]) | length > 0
+  when: pam_targets | default([]) | length > 0
   tags: [verify_compliance]
 
 - name: "[Verify] Command policy v2 runtime (gateway)"
-  ansible.builtin.command: podman exec ssh_bastion test -f /run/bastion/policy_v2_enabled
+  ansible.builtin.command: podman exec ssh_pam test -f /run/ssh-pam/policy_v2_enabled
   register: verify_policy_v2_gateway
   changed_when: false
   failed_when: false
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   when:
-    - bastion_command_policy_v2_required | default(true) | bool
-    - bastion_shell_command_policy_enabled | default(true) | bool
-    - bastion_gateway_command_policy_v2_enabled | default(true) | bool
+    - pam_command_policy_v2_required | default(true) | bool
+    - pam_shell_command_policy_enabled | default(true) | bool
+    - pam_gateway_command_policy_v2_enabled | default(true) | bool
     - not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
 - name: "[Verify] Command policy v2 runtime (shell)"
-  ansible.builtin.command: podman exec ssh_bastion test -f /run/bastion/shell_policy_v2_enabled
+  ansible.builtin.command: podman exec ssh_pam test -f /run/ssh-pam/shell_policy_v2_enabled
   register: verify_policy_v2_shell
   changed_when: false
   failed_when: false
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   when:
-    - bastion_command_policy_v2_required | default(true) | bool
-    - bastion_shell_command_policy_enabled | default(true) | bool
-    - bastion_shell_command_policy_v2_enabled | default(true) | bool
+    - pam_command_policy_v2_required | default(true) | bool
+    - pam_shell_command_policy_enabled | default(true) | bool
+    - pam_shell_command_policy_v2_enabled | default(true) | bool
     - not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
 - name: "[Verify] PTY inspector in image"
-  ansible.builtin.command: podman exec ssh_bastion test -f /usr/local/bin/bastion-pty-inspector.py
+  ansible.builtin.command: podman exec ssh_pam test -f /usr/local/bin/pam-pty-inspector.py
   register: verify_pty_inspector
   changed_when: false
   failed_when: false
   become: true
-  become_user: "{{ bastion_user }}"
+  become_user: "{{ pam_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   when:
-    - bastion_command_policy_v2_required | default(true) | bool
-    - bastion_shell_command_policy_enabled | default(true) | bool
+    - pam_command_policy_v2_required | default(true) | bool
+    - pam_shell_command_policy_enabled | default(true) | bool
     - not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
@@ -308,8 +308,8 @@
       shell rc={{ verify_policy_v2_shell.rc | default('skip') }},
       inspector rc={{ verify_pty_inspector.rc | default('skip') }})
   when:
-    - bastion_command_policy_v2_required | default(true) | bool
-    - bastion_shell_command_policy_enabled | default(true) | bool
+    - pam_command_policy_v2_required | default(true) | bool
+    - pam_shell_command_policy_enabled | default(true) | bool
     - not (is_commercial_pam | bool)
   tags: [verify_compliance]
 
@@ -317,13 +317,13 @@
   ansible.builtin.slurp:
     src: "{{ operators_home }}/{{ item.name }}/.ssh/authorized_keys"
   register: verify_fido_authorized_keys
-  loop: "{{ bastion_operators_effective | default(bastion_operators) }}"
+  loop: "{{ pam_operators_effective | default(pam_operators) }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - bastion_require_fido_pubkey | default(false) | bool
+    - pam_require_fido_pubkey | default(false) | bool
     - not (is_commercial_pam | bool)
-    - item.name not in (bastion_fido_waiver_operators | default([]))
+    - item.name not in (pam_fido_waiver_operators | default([]))
   tags: [verify_compliance]
 
 - name: "[Verify] FIDO-sk key material"
@@ -336,13 +336,13 @@
     test -n "$line"
     python3 "{{ playbook_dir }}/scripts/preflight-fido-key.py" "$line"
   environment:
-    BASTION_FIDO_ECDSA_SK_ALLOWED: "{{ bastion_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
+    PAM_FIDO_ECDSA_SK_ALLOWED: "{{ pam_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
   changed_when: false
   loop: "{{ verify_fido_authorized_keys.results | default([]) }}"
   loop_control:
     label: "{{ item.item.name }}"
   when:
-    - bastion_require_fido_pubkey | default(false) | bool
+    - pam_require_fido_pubkey | default(false) | bool
     - not (is_commercial_pam | bool)
     - item.content is defined
     - not (item.skipped | default(false))
@@ -352,5 +352,5 @@
   ansible.builtin.debug:
     msg: >-
       PASS: all compliance checks OK (Rocky 9, SELinux, container, MFA label, whitelist,
-      auditd, firewalld, session logs{% if bastion_command_policy_v2_required | default(true) and bastion_shell_command_policy_enabled | default(true) %}, command policy v2{% endif %}{% if bastion_require_fido_pubkey | default(false) %}, FIDO-sk operators{% endif %})
+      auditd, firewalld, session logs{% if pam_command_policy_v2_required | default(true) and pam_shell_command_policy_enabled | default(true) %}, command policy v2{% endif %}{% if pam_require_fido_pubkey | default(false) %}, FIDO-sk operators{% endif %})
   tags: [verify_compliance]

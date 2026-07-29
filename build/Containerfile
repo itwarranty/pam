@@ -5,12 +5,12 @@ FROM docker.io/library/alpine:3.19
 
 ARG MFA_STRICT=1
 
-LABEL org.opencontainers.image.title="SSH PAM Secure"
-LABEL org.opencontainers.image.vendor="White Label"
+LABEL org.opencontainers.image.title="ITWarranty SSH PAM"
+LABEL org.opencontainers.image.vendor="ITWarranty"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
-LABEL bastion.mfa.strict="${MFA_STRICT}"
+LABEL pam.mfa.strict="${MFA_STRICT}"
 
-# python3 — load-bearing for command policy v2 (bastion-pty-inspector.py); CSO prod policy.
+# python3 — load-bearing for command policy v2 (pam-pty-inspector.py); CSO prod policy.
 RUN apk add --no-cache \
       openssh \
       openssh-keygen \
@@ -22,33 +22,33 @@ RUN apk add --no-cache \
       util-linux \
       shadow \
       e2fsprogs \
-    && mkdir -p /var/empty/sshd /var/log/bastion_sessions \
+    && mkdir -p /var/empty/sshd /var/log/pam_sessions \
     && ssh-keygen -A
 
-COPY build/files/bastion-shell-wrapper.sh /usr/local/bin/bastion-shell-wrapper.sh
-COPY build/files/bastion-entrypoint.sh /usr/local/bin/bastion-entrypoint.sh
-COPY build/files/bastion-command-policy.sh /usr/local/bin/bastion-command-policy.sh
-COPY build/files/bastion-command-policy-rc.sh /usr/local/bin/bastion-command-policy-rc.sh
-COPY build/files/bastion-audit-shell-wrapper.sh /usr/local/bin/bastion-audit-shell-wrapper.sh
-COPY build/files/bastion-audit-shell.sh /usr/local/bin/bastion-audit-shell.sh
-COPY build/files/bastion-ssh-gateway-wrapper.sh /usr/local/bin/bastion-ssh-gateway-wrapper.sh
-COPY build/files/bastion-ssh-gateway.sh /usr/local/bin/bastion-ssh-gateway.sh
-COPY build/files/bastion-ssh-gateway-exec.sh /usr/local/bin/bastion-ssh-gateway-exec.sh
-COPY build/files/bastion-session-ctl-internal.sh /usr/local/bin/bastion-session-ctl-internal.sh
-COPY build/files/bastion-pty-inspector.py /usr/local/bin/bastion-pty-inspector.py
-COPY build/files/bastion-pty-inspector.sh /usr/local/bin/bastion-pty-inspector.sh
-COPY build/files/bastion-jump-help-wrapper.sh /usr/local/bin/bastion-jump-help-wrapper.sh
-COPY build/files/bastion-syslog.sh /usr/local/bin/bastion-syslog.sh
+COPY build/files/pam-shell-wrapper.sh /usr/local/bin/pam-shell-wrapper.sh
+COPY build/files/pam-entrypoint.sh /usr/local/bin/pam-entrypoint.sh
+COPY build/files/pam-command-policy.sh /usr/local/bin/pam-command-policy.sh
+COPY build/files/pam-command-policy-rc.sh /usr/local/bin/pam-command-policy-rc.sh
+COPY build/files/pam-audit-shell-wrapper.sh /usr/local/bin/pam-audit-shell-wrapper.sh
+COPY build/files/pam-audit-shell.sh /usr/local/bin/pam-audit-shell.sh
+COPY build/files/pam-ssh-gateway-wrapper.sh /usr/local/bin/pam-ssh-gateway-wrapper.sh
+COPY build/files/pam-ssh-gateway.sh /usr/local/bin/pam-ssh-gateway.sh
+COPY build/files/pam-ssh-gateway-exec.sh /usr/local/bin/pam-ssh-gateway-exec.sh
+COPY build/files/pam-session-ctl-internal.sh /usr/local/bin/pam-session-ctl-internal.sh
+COPY build/files/pam-pty-inspector.py /usr/local/bin/pam-pty-inspector.py
+COPY build/files/pam-pty-inspector.sh /usr/local/bin/pam-pty-inspector.sh
+COPY build/files/pam-jump-help-wrapper.sh /usr/local/bin/pam-jump-help-wrapper.sh
+COPY build/files/pam-syslog.sh /usr/local/bin/pam-syslog.sh
 
-RUN mkdir -p /run/bastion/sessions \
-    && chmod 0755 /usr/local/bin/bastion-shell-wrapper.sh /usr/local/bin/bastion-entrypoint.sh \
-    /usr/local/bin/bastion-command-policy.sh /usr/local/bin/bastion-command-policy-rc.sh \
-    /usr/local/bin/bastion-audit-shell-wrapper.sh /usr/local/bin/bastion-audit-shell.sh \
-    /usr/local/bin/bastion-ssh-gateway-wrapper.sh /usr/local/bin/bastion-ssh-gateway.sh \
-    /usr/local/bin/bastion-ssh-gateway-exec.sh /usr/local/bin/bastion-session-ctl-internal.sh \
-    /usr/local/bin/bastion-pty-inspector.py /usr/local/bin/bastion-pty-inspector.sh \
-    /usr/local/bin/bastion-jump-help-wrapper.sh /usr/local/bin/bastion-syslog.sh \
-    && ln -sf /usr/local/bin/bastion-session-ctl-internal.sh /usr/local/bin/bastion-session-ctl-internal \
+RUN mkdir -p /run/ssh-pam/sessions \
+    && chmod 0755 /usr/local/bin/pam-shell-wrapper.sh /usr/local/bin/pam-entrypoint.sh \
+    /usr/local/bin/pam-command-policy.sh /usr/local/bin/pam-command-policy-rc.sh \
+    /usr/local/bin/pam-audit-shell-wrapper.sh /usr/local/bin/pam-audit-shell.sh \
+    /usr/local/bin/pam-ssh-gateway-wrapper.sh /usr/local/bin/pam-ssh-gateway.sh \
+    /usr/local/bin/pam-ssh-gateway-exec.sh /usr/local/bin/pam-session-ctl-internal.sh \
+    /usr/local/bin/pam-pty-inspector.py /usr/local/bin/pam-pty-inspector.sh \
+    /usr/local/bin/pam-jump-help-wrapper.sh /usr/local/bin/pam-syslog.sh \
+    && ln -sf /usr/local/bin/pam-session-ctl-internal.sh /usr/local/bin/pam-session-ctl-internal \
     && if [ "${MFA_STRICT}" = "1" ]; then \
          printf '%s\n' '#%PAM-1.0' \
            'auth required pam_google_authenticator.so' \
@@ -67,4 +67,4 @@ RUN mkdir -p /run/bastion/sessions \
 
 EXPOSE 2222
 
-ENTRYPOINT ["/usr/local/bin/bastion-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/pam-entrypoint.sh"]

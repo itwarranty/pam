@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Read-only доступ к bastion через GitHub (не deploy keys).
+# Read-only доступ к gateway через GitHub (не deploy keys).
 # Инженер использует свой SSH-ключ в https://github.com/settings/ssh-keys
 # Вы выдаёте/отзываете доступ к репозиторию (permission=pull).
 #
-#   ./scripts/repo-access.sh grant ivanov    # Read на repo (team bastion-readers)
+#   ./scripts/repo-access.sh grant ivanov    # Read на repo (team gateway-readers)
 #   ./scripts/repo-access.sh revoke ivanov
 #   ./scripts/repo-access.sh list
 #
@@ -12,12 +12,12 @@
 #
 # Переменные:
 #   GITHUB_REPO=itwarranty/pam
-#   READERS_TEAM=bastion-readers
+#   READERS_TEAM=gateway-readers
 
 set -euo pipefail
 
 GITHUB_REPO="${GITHUB_REPO:-itwarranty/pam}"
-READERS_TEAM="${READERS_TEAM:-bastion-readers}"
+READERS_TEAM="${READERS_TEAM:-gateway-readers}"
 OWNER="${GITHUB_REPO%%/*}"
 REPO="${GITHUB_REPO#*/}"
 
@@ -192,7 +192,7 @@ cmd_list() {
     echo "Team ${READERS_TEAM}: (ещё не создан — создастся при первом grant)"
   fi
   echo
-  echo "Team bastion-engineers (Write):"
+  echo "Team gateway-engineers (Write):"
   gh api "orgs/${OWNER}/teams/pam-engineers/members" \
     --paginate \
     --jq '.[] | "  \(.login)"' 2>/dev/null || echo "  (team не найден)"

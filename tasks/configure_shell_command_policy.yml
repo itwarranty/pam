@@ -2,28 +2,28 @@
 # Shell command denylist — render on host, mount RO into container.
 - name: Каталог command policy на хосте
   ansible.builtin.file:
-    path: "{{ bastion_home }}/command_policy"
+    path: "{{ pam_home }}/command_policy"
     state: directory
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0750"
     setype: container_file_t
-  when: bastion_shell_command_policy_enabled | default(true) | bool
+  when: pam_shell_command_policy_enabled | default(true) | bool
 
 - name: Denylist для shell-роли
   ansible.builtin.template:
     src: command_denylist.j2
-    dest: "{{ bastion_home }}/command_policy/command_denylist"
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    dest: "{{ pam_home }}/command_policy/command_denylist"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0640"
     setype: container_file_t
-  when: bastion_shell_command_policy_enabled | default(true) | bool
-  notify: Restart ssh gateway container
+  when: pam_shell_command_policy_enabled | default(true) | bool
+  notify: Restart ssh pam container
 
 - name: Удаление denylist при отключённой policy
   ansible.builtin.file:
-    path: "{{ bastion_home }}/command_policy/command_denylist"
+    path: "{{ pam_home }}/command_policy/command_denylist"
     state: absent
-  when: not (bastion_shell_command_policy_enabled | default(true) | bool)
-  notify: Restart ssh gateway container
+  when: not (pam_shell_command_policy_enabled | default(true) | bool)
+  notify: Restart ssh pam container

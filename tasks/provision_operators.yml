@@ -9,21 +9,21 @@
   ansible.builtin.file:
     path: "{{ operators_home }}"
     state: directory
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0750"
     setype: container_file_t
 
 - name: Provisioning домашних каталогов и ключей операторов
   ansible.builtin.include_tasks: tasks/provision_operator_item.yml
-  loop: "{{ bastion_operators_effective | default(bastion_operators) }}"
+  loop: "{{ pam_operators_effective | default(pam_operators) }}"
   loop_control:
     loop_var: operator
     label: "{{ operator.name }}"
 
 - name: Каталог для выдачи MFA-секретов инженерам (контроллер Ansible)
   ansible.builtin.file:
-    path: "{{ bastion_mfa_secrets_output_dir }}/{{ inventory_hostname }}"
+    path: "{{ pam_mfa_secrets_output_dir }}/{{ inventory_hostname }}"
     state: directory
     mode: "0700"
   delegate_to: localhost
@@ -32,15 +32,15 @@
 
 - name: Сохранение MFA-секретов для onboarding (контроллер Ansible)
   ansible.builtin.copy:
-    dest: "{{ bastion_mfa_secrets_output_dir }}/{{ inventory_hostname }}/{{ operator.name }}.mfa.txt"
+    dest: "{{ pam_mfa_secrets_output_dir }}/{{ inventory_hostname }}/{{ operator.name }}.mfa.txt"
     mode: "0600"
     content: |
-      SSH PAM MFA — {{ operator.email | default(operator.name ~ '@' ~ (bastion_lab_domain | default('example.com'))) }}
+      SSH PAM MFA — {{ operator.email | default(operator.name ~ '@' ~ (pam_lab_domain | default('example.com'))) }}
       Secret (base32): {{ operator_mfa_secret }}
-      otpauth://totp/{{ bastion_totp_issuer | replace(' ', '%20') }}:{{ (operator.email | default(operator.name ~ '@' ~ (bastion_lab_domain | default('example.com')))) | urlencode }}?secret={{ operator_mfa_secret }}&issuer={{ bastion_totp_issuer | replace(' ', '+') }}+Lab
+      otpauth://totp/{{ pam_totp_issuer | replace(' ', '%20') }}:{{ (operator.email | default(operator.name ~ '@' ~ (pam_lab_domain | default('example.com')))) | urlencode }}?secret={{ operator_mfa_secret }}&issuer={{ pam_totp_issuer | replace(' ', '+') }}+Lab
   vars:
     operator_mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"
-  loop: "{{ bastion_operators_effective | default(bastion_operators) }}"
+  loop: "{{ pam_operators_effective | default(pam_operators) }}"
   loop_control:
     loop_var: operator
     label: "{{ operator.name }}"

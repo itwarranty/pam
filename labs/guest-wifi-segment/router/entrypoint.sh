@@ -30,11 +30,11 @@ iptables -t nat -A POSTROUTING -s 10.1.13.0/24 -o "${CORP_IF}" -j MASQUERADE 2>/
 iptables -A FORWARD -i "${GUEST_IF}" -o "${CORP_IF}" -j DROP
 iptables -A FORWARD -i "${CORP_IF}" -o "${GUEST_IF}" -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# Guest → DMZ (bastion SSH) — типичный вход инженера с guest Wi‑Fi
+# Guest → DMZ (gateway SSH) — типичный вход инженера с guest Wi‑Fi
 iptables -A FORWARD -i "${GUEST_IF}" -o "${DMZ_IF}" -p tcp --dport 2222 -j ACCEPT
 iptables -A FORWARD -i "${DMZ_IF}" -o "${GUEST_IF}" -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# DMZ (bastion) → corp targets — контролируемый jump/gateway
+# DMZ (gateway) → corp targets — контролируемый jump/gateway
 iptables -A FORWARD -i "${DMZ_IF}" -o "${CORP_IF}" -j ACCEPT
 iptables -A FORWARD -i "${CORP_IF}" -o "${DMZ_IF}" -m state --state ESTABLISHED,RELATED -j ACCEPT
 

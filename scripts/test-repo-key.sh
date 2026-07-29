@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 # Единый тестовый SSH-ключ: GitHub (read) + SSH PAM (оператор).
 #
-#   ./scripts/test-repo-key.sh create tester-01 --bastion --apply
+#   ./scripts/test-repo-key.sh create tester-01 --pam --apply
 #   ./scripts/test-repo-key.sh revoke tester-01 --apply
 #   ./scripts/test-repo-key.sh apply-dev
 #
 # Переменные:
-#   GITHUB_REPO, TEST_ACCESS_BASE, ANSIBLE_INVENTORY, BASTION_SSH_HOST, BASTION_SSH_PORT
+#   GITHUB_REPO, TEST_ACCESS_BASE, ANSIBLE_INVENTORY, PAM_SSH_HOST, PAM_SSH_PORT
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GITHUB_REPO="${GITHUB_REPO:-itwarranty/pam}"
-TEST_ACCESS_BASE="${TEST_ACCESS_BASE:-${HOME}/.bastion/test-access}"
+TEST_ACCESS_BASE="${TEST_ACCESS_BASE:-${HOME}/.itwarranty-pam/test-access}"
 TEST_OPERATORS_YML="${ROOT}/group_vars/dev/test_operators.yml"
 LEGACY_KEYS_DIR="${ROOT}/keys/test"
-KEY_TITLE_PREFIX="bastion-test"
-BASTION_SSH_HOST="${BASTION_SSH_HOST:-127.0.0.1}"
-BASTION_SSH_PORT="${BASTION_SSH_PORT:-2222}"
-BASTION_TEST_PERMIT_OPEN="${BASTION_TEST_PERMIT_OPEN:-10.0.1.10:22}"
+KEY_TITLE_PREFIX="gateway-test"
+PAM_SSH_HOST="${PAM_SSH_HOST:-127.0.0.1}"
+PAM_SSH_PORT="${PAM_SSH_PORT:-2222}"
+PAM_TEST_PERMIT_OPEN="${PAM_TEST_PERMIT_OPEN:-10.0.1.10:22}"
 ANSIBLE_INVENTORY="${ANSIBLE_INVENTORY:-${ROOT}/inventory/local-lima.yml}"
 OWNER="${GITHUB_REPO%%/*}"
 REPO="${GITHUB_REPO#*/}"
@@ -112,7 +112,7 @@ pubkey_file_for() {
   local pub
   pub="$(user_pub_key "${name}")"
   [[ -f "${pub}" ]] && printf '%s' "${pub}" && return 0
-  # legacy (до ~/.bastion/test-access)
+  # legacy (до ~/.itwarranty-pam/test-access)
   pub="${LEGACY_KEYS_DIR}/${name}.key.pub"
   [[ -f "${pub}" ]] && printf '%s' "${pub}" && return 0
   pub="${LEGACY_KEYS_DIR}/${name}.pub"
@@ -124,11 +124,11 @@ registry_file() {
   printf '%s/meta.yml' "$(user_dir "$1")"
 }
 
-bastion_registered() {
+pam_registered() {
   [[ -f "$(registry_file "$1")" ]]
 }
 
-register_bastion_operator() {
+register_pam_operator() {
   local name="$1"
   local access="${2:-jump}"
   local pub_file
@@ -161,7 +161,7 @@ EOF
   printf '%s' "${mfa}"
 }
 
-unregister_bastion_operator() {
+unregister_pam_operator() {
   local name="$1"
   local reg
   reg="$(registry_file "${name}")"
@@ -184,9 +184,9 @@ sync_test_operators_yml() {
 
   {
     echo "---"
-    echo "# AUTO: scripts/test-repo-key.sh --bastion (не редактировать)"
-    echo "# Pubkey: ~/.bastion/test-access/<name>/ (admin HOME при ansible-playbook)"
-    echo "bastion_operators_test:"
+    echo "# AUTO: scripts/test-repo-key.sh --pam (не редактировать)"
+    echo "# Pubkey: ~/.itwarranty-pam/test-access/<name>/ (admin HOME при ansible-playbook)"
+    echo "pam_operators_test:"
     if [[ ${#names[@]} -eq 0 ]]; then
       echo "  []"
     else
@@ -199,11 +199,11 @@ sync_test_operators_yml() {
         cat <<YAML
   - name: ${name}
     email: ${email}
-    pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.bastion/test-access/${name}/${name}.key.pub') }}"
+    pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.itwarranty-pam/test-access/${name}/${name}.key.pub') }}"
     mfa_secret: ${mfa}
     access: ${access}
     permit_open:
-      - "${BASTION_TEST_PERMIT_OPEN}"
+      - "${PAM_TEST_PERMIT_OPEN}"
 YAML
       done
     fi
@@ -215,9 +215,9 @@ otpauth_uri_for() {
   local name="$1"
   local mfa="$2"
   printf 'otpauth://totp/%s:%s@example.com?secret=%s&issuer=%s+Test' \
-    "$(python3 -c "import urllib.parse; print(urllib.parse.quote('${BASTION_TOTP_ISSUER:-SSH PAM}'))")" \
+    "$(python3 -c "import urllib.parse; print(urllib.parse.quote('${PAM_TOTP_ISSUER:-SSH PAM}'))")" \
     "${name}" "${mfa}" \
-    "$(python3 -c "import urllib.parse; print(urllib.parse.quote('${BASTION_TOTP_ISSUER:-SSH PAM}'))")"
+    "$(python3 -c "import urllib.parse; print(urllib.parse.quote('${PAM_TOTP_ISSUER:-SSH PAM}'))")"
 }
 
 generate_totp_qr() {
@@ -273,15 +273,15 @@ HDR
 ================================================================================
 HDR2
     cat <<CFG
-Host github.com-bastion-test
+Host github.com-gateway-test
   HostName github.com
   User git
   IdentityFile ~/.ssh/${name}.key
   IdentitiesOnly yes
 
-Host bastion-test
-  HostName ${BASTION_SSH_HOST}
-  Port ${BASTION_SSH_PORT}
+Host gateway-test
+  HostName ${PAM_SSH_HOST}
+  Port ${PAM_SSH_PORT}
   User ${name}
   IdentityFile ~/.ssh/${name}.key
   IdentitiesOnly yes
@@ -292,7 +292,7 @@ CFG
 3. GIT (read-only)
 ================================================================================
 HDR3
-    echo "  git clone git@github.com-bastion-test:${GITHUB_REPO}.git"
+    echo "  git clone git@github.com-gateway-test:${GITHUB_REPO}.git"
     echo ""
   } >"${onboarding}"
 
@@ -317,15 +317,15 @@ HDR4
       cat "${qr_ascii}"
       cat <<HDR5
 
-При ssh bastion-test введите 6 цифр из приложения (к вам не обращаться).
+При ssh gateway-test введите 6 цифр из приложения (к вам не обращаться).
 
 ================================================================================
-5. BASTION SSH
+5. PAM SSH
 ================================================================================
-  ssh bastion-test
+  ssh gateway-test
 
 Access: ${access}
-Admin: create/revoke с --apply применяет bastion автоматически.
+Admin: create/revoke с --apply применяет gateway автоматически.
   ./scripts/test-repo-key.sh apply-dev
 
 HDR5
@@ -334,9 +334,9 @@ HDR5
     cat >>"${onboarding}" <<'HDR6'
 
 ================================================================================
-4. BASTION
+4. PAM
 ================================================================================
-Не включён. Admin: ./scripts/test-repo-key.sh bastion-enable NAME
+Не включён. Admin: ./scripts/test-repo-key.sh gateway-enable NAME
 
 HDR6
   fi
@@ -403,33 +403,33 @@ Private key (один файл на Git + gateway):
 
 ~/.ssh/config:
 
-  Host github.com-bastion-test
+  Host github.com-gateway-test
     HostName github.com
     User git
     IdentityFile ${priv}
     IdentitiesOnly yes
 
-  Host bastion-test
-    HostName ${BASTION_SSH_HOST}
-    Port ${BASTION_SSH_PORT}
+  Host gateway-test
+    HostName ${PAM_SSH_HOST}
+    Port ${PAM_SSH_PORT}
     User ${name}
     IdentityFile ${priv}
     IdentitiesOnly yes
 
 Git:
-  git clone git@github.com-bastion-test:${GITHUB_REPO}.git
+  git clone git@github.com-gateway-test:${GITHUB_REPO}.git
 
 EOF
 
   if [[ -n "${mfa}" ]]; then
     cat <<EOF
 Gateway (тот же ключ + TOTP):
-  ssh bastion-test
+  ssh gateway-test
 
   TOTP secret (Google Authenticator): ${mfa}
   otpauth://totp/SSH%20PAM:${name}@example.com?secret=${mfa}&issuer=SSH+PAM+Test
 
-  Dev: после create --bastion выполните redeploy:
+  Dev: после create --pam выполните redeploy:
   ansible-playbook -i inventory/local-lima.yml site.yml
 
 EOF
@@ -472,14 +472,14 @@ cmd_migrate_legacy() {
 cmd_create() {
   local name=""
   local force=false
-  local bastion=false
+  local gateway=false
   local access="jump"
   APPLY_DEV=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --force) force=true ;;
-      --bastion) bastion=true ;;
+      --pam) gateway=true ;;
       --apply) APPLY_DEV=true ;;
       --access)
         shift
@@ -487,18 +487,18 @@ cmd_create() {
         ;;
       -*) die "Неизвестный аргумент: $1" ;;
       *)
-        [[ -z "${name}" ]] || die "usage: $0 create <name> [--bastion] [--access jump|shell] [--force]"
+        [[ -z "${name}" ]] || die "usage: $0 create <name> [--pam] [--access jump|shell] [--force]"
         name="$1"
         ;;
     esac
     shift
   done
-  [[ -n "${name}" ]] || die "usage: $0 create <name> [--bastion] [--access jump|shell] [--force]"
+  [[ -n "${name}" ]] || die "usage: $0 create <name> [--pam] [--access jump|shell] [--force]"
   sanitize_name "${name}"
   require_gh
 
   if [[ -n "$(find_key_id_by_name "${name}")" ]]; then
-    die "Ключ уже на GitHub: $(key_title "${name}") (revoke или bastion-enable)"
+    die "Ключ уже на GitHub: $(key_title "${name}") (revoke или gateway-enable)"
   fi
 
   ensure_user_dir "${name}"
@@ -526,8 +526,8 @@ cmd_create() {
   chmod 600 "${priv}" "${pub}"
 
   local mfa=""
-  if [[ "${bastion}" == true ]]; then
-    mfa="$(register_bastion_operator "${name}" "${access}")"
+  if [[ "${gateway}" == true ]]; then
+    mfa="$(register_pam_operator "${name}" "${access}")"
   fi
 
   print_usage_instructions "${name}" "${mfa}" "${access}"
@@ -548,8 +548,8 @@ cmd_onboarding() {
   log "Готово: $(user_dir "${name}")/${name}.onboarding.txt"
 }
 
-cmd_bastion_enable() {
-  local name="${1:?usage: $0 bastion-enable <name> [--access jump|shell] [--apply]}"
+cmd_pam_enable() {
+  local name="${1:?usage: $0 gateway-enable <name> [--access jump|shell] [--apply]}"
   local access="jump"
   APPLY_DEV=false
   shift || true
@@ -568,7 +568,7 @@ cmd_bastion_enable() {
   pubkey_file_for "${name}" >/dev/null || die "Нет pubkey для ${name} — сначала create"
 
   local mfa
-  mfa="$(register_bastion_operator "${name}" "${access}")"
+  mfa="$(register_pam_operator "${name}" "${access}")"
   print_usage_instructions "${name}" "${mfa}" "${access}"
   maybe_apply_dev
 }
@@ -662,7 +662,7 @@ cmd_revoke() {
   fi
 
   if [[ -n "${local_name}" ]]; then
-    unregister_bastion_operator "${local_name}"
+    unregister_pam_operator "${local_name}"
     remove_user_data "${local_name}"
   fi
 
@@ -677,8 +677,8 @@ Usage: $0 <command> [args]
 Единый SSH-ключ: GitHub read + (опционально) SSH PAM operator.
 
 Commands:
-  create <name> [--bastion] [--access jump|shell] [--force] [--apply]
-  bastion-enable <name> [--access jump|shell] [--apply]
+  create <name> [--pam] [--access jump|shell] [--force] [--apply]
+  gateway-enable <name> [--access jump|shell] [--apply]
   onboarding <name>
   migrate <name>
   apply-dev                              Применить test_operators на dev (ansible)
@@ -686,10 +686,10 @@ Commands:
   list
   revoke <name|key-id> [--apply]
 
-Файлы: ${TEST_ACCESS_BASE}/<name>/  (default: ~/.bastion/test-access/)
+Файлы: ${TEST_ACCESS_BASE}/<name>/  (default: ~/.itwarranty-pam/test-access/)
 
 Пример (полный цикл):
-  $0 create tester-01 --bastion --apply
+  $0 create tester-01 --pam --apply
   $0 revoke tester-01 --apply
 
 Org: Deploy keys → Enabled
@@ -702,7 +702,7 @@ main() {
   shift || true
   case "${cmd}" in
     create)         cmd_create "$@" ;;
-    bastion-enable) cmd_bastion_enable "$@" ;;
+    gateway-enable) cmd_pam_enable "$@" ;;
     onboarding)     cmd_onboarding "$@" ;;
     migrate)        cmd_migrate_legacy "$@" ;;
     apply-dev)      cmd_apply_dev ;;

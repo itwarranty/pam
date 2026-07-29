@@ -10,7 +10,7 @@ Prod-parity VM (Rocky Linux 9, SELinux Enforcing) + lab-операторы из 
 
 ```bash
 ./trusted_download.sh
-./tests/start-lima.sh              # Lima instance: bastion-prod
+./tests/start-lima.sh              # Lima instance: pam-prod
 ./tests/sync-artifacts.sh          # при необходимости
 ansible-galaxy collection install -r requirements.yml
 ansible-playbook -i inventory/local-lima.yml site.yml

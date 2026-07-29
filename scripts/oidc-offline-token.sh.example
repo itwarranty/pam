@@ -2,11 +2,11 @@
 # Example: obtain OIDC refresh token on admin workstation (one-time export to secure store).
 set -euo pipefail
 
-: "${BASTION_OIDC_ISSUER:?}"
-: "${BASTION_OIDC_CLIENT_ID:?}"
+: "${PAM_OIDC_ISSUER:?}"
+: "${PAM_OIDC_CLIENT_ID:?}"
 
 echo "Open in browser (device flow placeholder — adapt to your IdP):"
-echo "  ${BASTION_OIDC_ISSUER}/protocol/openid-connect/auth?client_id=${BASTION_OIDC_CLIENT_ID}&response_type=code&scope=openid%20profile%20groups"
+echo "  ${PAM_OIDC_ISSUER}/protocol/openid-connect/auth?client_id=${PAM_OIDC_CLIENT_ID}&response_type=code&scope=openid%20profile%20groups"
 echo ""
-echo "After auth, exchange code for tokens and store BASTION_OIDC_REFRESH_TOKEN in Vault."
-echo "Air Gap: export refresh token once via approved enclave; bastion never calls IdP."
+echo "After auth, exchange code for tokens and store PAM_OIDC_REFRESH_TOKEN in Vault."
+echo "Air Gap: export refresh token once via approved enclave; gateway never calls IdP."

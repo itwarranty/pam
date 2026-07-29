@@ -1,16 +1,17 @@
 ---
 # Слияние lab + test + JIT + Tier 2 + Tier 3 lab операторов
-bastion_operators: >-
+pam_operators: >-
   {{
-    bastion_operators_lab
-    + (bastion_operators_test | default([]))
-    + (bastion_operators_jit_lab | default([]))
-    + (bastion_operators_audit_lab | default([]))
-    + (bastion_operators_break_glass_lab | default([]))
-    + (bastion_operators_gateway_lab | default([]))
+    pam_operators_lab
+    + (pam_operators_test | default([]))
+    + (pam_operators_jit_lab | default([]))
+    + (pam_operators_audit_lab | default([]))
+    + (pam_operators_break_glass_lab | default([]))
+    + (pam_operators_gateway_lab | default([]))
+    + (pam_operators_dr_service_lab | default([]))
     + (
-        bastion_operators_fido_lab | default([])
-        if (bastion_fido_lab_enabled | default(false) | bool)
+        pam_operators_fido_lab | default([])
+        if (pam_fido_lab_enabled | default(false) | bool)
         else []
       )
   }}

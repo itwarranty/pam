@@ -4,13 +4,13 @@
 
 all:
   children:
-    bastion_servers:
+    pam_servers:
       children:
         dev:
           children:
             local_lima:
               hosts:
-                bastion-lima:
-                  ansible_host: lima-bastion-prod
+                pam-lima:
+                  ansible_host: lima-pam-prod
                   ansible_user: "{{ lookup('env', 'USER') | lower }}"
-                  ansible_ssh_common_args: "-F {{ lookup('env', 'HOME') }}/.lima/bastion-prod/ssh.config -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+                  ansible_ssh_common_args: "-F {{ lookup('env', 'HOME') }}/.lima/pam-prod/ssh.config -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"

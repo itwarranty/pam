@@ -11,9 +11,9 @@
       Для is_commercial_pam=true задайте commercial_pam_api_url
       и commercial_pam_api_token (рекомендуется Ansible Vault).
 
-- name: Регистрация bastion-хоста в PAM заказчика
+- name: Регистрация gateway-хоста в PAM заказчика
   ansible.builtin.uri:
-    url: "{{ commercial_pam_api_url }}/bastions/register"
+    url: "{{ commercial_pam_api_url }}/gateways/register"
     method: POST
     headers:
       Authorization: "Bearer {{ commercial_pam_api_token }}"
@@ -22,7 +22,7 @@
     body:
       hostname: "{{ inventory_hostname }}"
       address: "{{ ansible_host | default(inventory_hostname) }}"
-      ssh_port: "{{ bastion_ssh_port }}"
+      ssh_port: "{{ pam_ssh_port }}"
     status_code: [200, 201, 409]
   register: commercial_pam_register
   changed_when: commercial_pam_register.status in [200, 201]

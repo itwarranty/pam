@@ -2,13 +2,13 @@
 # QA SSH User CA — copy to group_vars/qa.yml when PKI access granted.
 # Deploy: ansible-playbook -i inventory/qa.yml site.yml
 
-bastion_lab_domain: example.com
-bastion_allow_raw_pubkey_prod: true
-bastion_ssh_user_ca_qa_complete: false
+pam_lab_domain: example.com
+pam_allow_raw_pubkey_prod: true
+pam_ssh_user_ca_qa_complete: false
 
-bastion_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/user-ca.pub"
+pam_trusted_user_ca_file: "{{ playbook_dir }}/lab/ca/user-ca.pub"
 
-bastion_operators:
+pam_operators:
   - name: engineer-jump
     email: engineer-jump@example.com
     certificate: "{{ lookup('file', playbook_dir + '/lab/certs/engineer-jump-cert.pub') }}"

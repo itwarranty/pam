@@ -1,6 +1,6 @@
-# SSH PAM — обзор для заказчика
+# ITWarranty SSH PAM — обзор для заказчика
 
-**SSH PAM** — white-label **SSH-only PAM**: запись сессий на target, credential broking, MFA (FIDO + TOTP), JIT, session kill, SIEM/JSONL — Security-as-a-Code.
+**ITWarranty SSH PAM** — open-source **SSH-only PAM**: запись сессий на target, credential broking, MFA (FIDO + TOTP), JIT, session kill, SIEM/JSONL — Security-as-a-Code.
 
 **Текущий релиз:** [v1.1.0](https://github.com/itwarranty/pam/releases/tag/v1.1.0) (Tier 5 FIDO-Anchor MFA).
 
@@ -12,11 +12,11 @@
 
 | Вопрос аудитора | Ответ |
 |:---|:---|
-| **Кто**? | operator в `.meta`, `sessions.jsonl`, `bastion-session-search` |
+| **Кто**? | operator в `.meta`, `sessions.jsonl`, `pam-session-search` |
 | **Когда**? | UTC в sidecar и JSONL |
 | **Куда**? | `TARGET`, `TARGET_HOST` (gateway) |
 | **Что** делал? | PTY log `gateway_*.log` + `sha256sum -c` |
-| **Как отозвать**? | `bastion_operators` + `jit_purge`; `bastion-session-ctl kill` |
+| **Как отозвать**? | `pam_operators` + `jit_purge`; `pam-session-ctl kill` |
 | **MFA**? | FIDO-sk на ноутбуке + offline TOTP на шлюз (prod) |
 
 ---
@@ -27,7 +27,7 @@
 |:---|:---|:---:|
 | `jump` | ProxyJump, automation | ❌ connect-audit |
 | **`gateway`** | **Prod интерактив** | ✅ |
-| `shell` | Gateway / four-eyes | ✅ (bastion) |
+| `shell` | Gateway / four-eyes | ✅ (gateway) |
 | `audit` | Аудитор + live watch | read-only |
 
 ---
@@ -36,10 +36,10 @@
 
 1. Rocky Linux 9.x, SELinux Enforcing, Rootless Podman.
 2. `./trusted_download.sh` → Air Gap → `ansible-playbook site.yml`.
-3. `bastion_targets[]` + Vault keys; `bastion_operators[]` с `access: gateway`.
-4. Prod MFA: `bastion_require_fido_pubkey: true`, `bastion_mfa_mode: fido_totp` — см. [FIDO Onboarding](./FIDO-Onboarding.md).
-5. `./scripts/bastion-compliance-verify.sh` exit 0.
-6. `bastion-session-search --operator X --since 7d`.
+3. `pam_targets[]` + Vault keys; `pam_operators[]` с `access: gateway`.
+4. Prod MFA: `pam_require_fido_pubkey: true`, `pam_mfa_mode: fido_totp` — см. [FIDO Onboarding](./FIDO-Onboarding.md).
+5. `./scripts/pam-compliance-verify.sh` exit 0.
+6. `pam-session-search --operator X --since 7d`.
 
 Детали: [Whitepaper](./Whitepaper.md) · SoW: [SoW-SSH-Access.md](./SoW-SSH-Access.md) · Сравнение: [Battlecard](./Battlecard-SKDPU-SSH.md)
 

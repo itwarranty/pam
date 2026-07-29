@@ -4,8 +4,8 @@
 |:---|:---|:---|
 | Запись сессии на target | ✅ | ✅ gateway PTY log + hash |
 | Credential broking | ✅ | ✅ Ansible Vault / HashiCorp |
-| Live moderation | ✅ | ✅ `bastion-session-watch` |
-| Session kill | ✅ | ✅ `bastion-session-ctl` |
+| Live moderation | ✅ | ✅ `pam-session-watch` |
+| Session kill | ✅ | ✅ `pam-session-ctl` |
 | MFA | ✅ | ✅ TOTP strict + **FIDO-sk (Tier 5)** |
 | FIDO2 / platform key | ✅ | ✅ `ed25519-sk` (no tsh client) |
 | Security-as-a-Code | ⚠️ | ✅ Git/Ansible |

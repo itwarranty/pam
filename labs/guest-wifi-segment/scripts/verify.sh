@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверка изоляции guest→corp и доступности bastion DMZ с guest workstation.
+# Проверка изоляции guest→corp и доступности gateway DMZ с guest workstation.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -37,16 +37,16 @@ else
   check "guest → corp target BLOCKED (${CORP_TARGET_IP})" 0
 fi
 
-# Guest → DMZ bastion SSH (via router forward :2222 — mock listens on 22 inside, map test via nc)
-if podman exec "${GUEST}" sh -c "nc -z -w 2 ${DMZ_BASTION_IP} 2222" >/dev/null 2>&1; then
-  check "guest → dmz bastion :2222 (${DMZ_BASTION_IP})" 0
+# Guest → DMZ gateway SSH (via router forward :2222 — mock listens on 22 inside, map test via nc)
+if podman exec "${GUEST}" sh -c "nc -z -w 2 ${DMZ_PAM_IP} 2222" >/dev/null 2>&1; then
+  check "guest → dmz gateway :2222 (${DMZ_PAM_IP})" 0
 else
-  check "guest → dmz bastion :2222 (${DMZ_BASTION_IP})" 1
+  check "guest → dmz gateway :2222 (${DMZ_PAM_IP})" 1
 fi
 
 # DMZ → corp (path for real gateway sessions)
-podman exec "${LAB_PREFIX}-bastion-mock" ping -c 1 -W 2 "${CORP_TARGET_IP}" >/dev/null 2>&1
-check "dmz bastion → corp target (${CORP_TARGET_IP})" $?
+podman exec "${LAB_PREFIX}-gateway-mock" ping -c 1 -W 2 "${CORP_TARGET_IP}" >/dev/null 2>&1
+check "dmz gateway → corp target (${CORP_TARGET_IP})" $?
 
 printf '\n=== Summary: %s passed, %s failed ===\n' "${PASS}" "${FAIL}"
 [[ "${FAIL}" -eq 0 ]]

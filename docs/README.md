@@ -1,8 +1,8 @@
-# Документация SSH PAM
+# Документация ITWarranty SSH PAM
 
 **Repository:** [github.com/itwarranty/pam](https://github.com/itwarranty/pam)
 
-White-label **SSH PAM** (Privileged Access Management) в модели Security-as-a-Code для Air Gap / КИИ.
+Open-source **SSH PAM** от [ITWarranty](https://github.com/itwarranty) — Privileged Access Management в модели Security-as-a-Code для Air Gap / КИИ.
 
 | Документ | Аудитория | Назначение |
 | :--- | :--- | :--- |
@@ -44,9 +44,9 @@ Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
 | Область | Пути |
 | :--- | :--- |
 | Deploy | `site.yml`, `tasks/preflight_cso.yml` |
-| Gateway / targets | `build/files/bastion-ssh-gateway-*.sh`, `tasks/provision_bastion_targets.yml` |
-| Session CLI | `scripts/bastion-session-{ctl,search,watch}.sh` |
-| Compliance | `scripts/bastion-compliance-verify.sh` |
+| Gateway / targets | `build/files/pam-ssh-gateway-*.sh`, `tasks/provision_pam_targets.yml` |
+| Session CLI | `scripts/gateway-session-{ctl,search,watch}.sh` |
+| Compliance | `scripts/pam-compliance-verify.sh` |
 | FIDO policy | `scripts/preflight-fido-key.py`, `tasks/preflight_fido_operators.yml` |
 | Policy | `group_vars/all.yml`, `templates/sshd_config.j2` |
 
@@ -55,6 +55,6 @@ Rocky Linux 9.x · x86_64 · SELinux Enforcing · Rootless Podman · firewalld
 | Путь | Содержание |
 | :--- | :--- |
 | [openspec/specs/](../openspec/specs/) | GA Tier 1–5 |
-| [archive/2026-06-bastion-fido-anchor-mfa](../openspec/changes/archive/2026-06-bastion-fido-anchor-mfa/) | История change Tier 5 |
-| [archive/2026-06-bastion-free-tier4-ssh-pam-complete](../openspec/changes/archive/2026-06-bastion-free-tier4-ssh-pam-complete/) | История change Tier 4 |
+| [archive/2026-06-pam-fido-anchor-mfa](../openspec/changes/archive/2026-06-pam-fido-anchor-mfa/) | История change Tier 5 |
+| [archive/2026-06-pam-free-tier4-ssh-pam-complete](../openspec/changes/archive/2026-06-pam-free-tier4-ssh-pam-complete/) | История change Tier 4 |
 | [archive/2026-06-ssh-user-ca-qa](../openspec/changes/archive/2026-06-ssh-user-ca-qa/) | SSH User CA QA (live PKI pending) |

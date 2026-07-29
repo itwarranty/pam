@@ -1,8 +1,8 @@
-# SSH PAM
+# ITWarranty SSH PAM
 
 **Repository:** [github.com/itwarranty/pam](https://github.com/itwarranty/pam)
 
-White-label **SSH PAM** (Privileged Access Management) для Rocky Linux 9: gateway, MFA, JIT, session recording, Security-as-a-Code (Rootless Podman, CSO Policy Gate).
+Open-source **SSH Privileged Access Management** from [ITWarranty](https://github.com/itwarranty): audited remote access for support engineers into Air Gap / Linux perimeters — gateway, MFA, JIT, session recording, Security-as-a-Code (Rootless Podman, CSO Policy Gate).
 
 ## Quick start (dev)
 
@@ -13,53 +13,53 @@ White-label **SSH PAM** (Privileged Access Management) для Rocky Linux 9: gat
 ## Admin tools
 
 ```bash
-# Тестовый доступ (Git + gateway, onboarding + QR)
-./scripts/test-repo-key.sh create <name> --bastion --apply
+# Test access (Git + gateway, onboarding + QR)
+./scripts/test-repo-key.sh create <name> --pam --apply
 ./scripts/test-repo-key.sh revoke <name> --apply      # declarative purge + restart
 ./scripts/test-repo-key.sh apply-dev
 
 # Compliance verify (Tier 1 — post-deploy)
-./scripts/bastion-compliance-verify.sh
-./scripts/bastion-doctor.sh engineer-jump   # lab: role, TOTP, ProxyJump hint
+./scripts/pam-compliance-verify.sh
+./scripts/pam-doctor.sh engineer-jump   # lab: role, TOTP, ProxyJump hint
 ansible-playbook -i inventory/local-lima.yml site.yml --tags verify_compliance
 
 # Gateway session control (Tier 3)
-bastion-session-ctl list
-ansible-playbook -i inventory/local-lima.yml site.yml --tags session_kill -e bastion_session_kill_id=<id>
+pam-session-ctl list
+ansible-playbook -i inventory/local-lima.yml site.yml --tags session_kill -e pam_session_kill_id=<id>
 
 # Session search / watch (Tier 4)
-bastion-session-search --operator engineer1 --since 7d
-bastion-session-watch <session-id>
+pam-session-search --operator engineer1 --since 7d
+pam-session-watch <session-id>
 
-# Доступ по GitHub-аккаунту
+# GitHub account access
 ./scripts/repo-access.sh grant <github_user>
 ./scripts/repo-access.sh revoke <github_user>
 ```
 
 ## Documentation
 
-| Документ | Описание |
+| Document | Description |
 | :--- | :--- |
-| [docs/README.md](docs/README.md) | Индекс документации |
-| [Engineer Onboarding](docs/Engineer-Onboarding.md) | Доступ к repo + dev-стенд |
-| [Whitepaper](docs/Whitepaper.md) | Техпаспорт для CSO |
-| [Troubleshooting Workflow](docs/Troubleshooting-Workflow.md) | Регламент инцидента |
-| [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | Пресейл demo |
-| [SSH PAM Overview](docs/SSH-PAM-Overview.md) | PAM positioning для заказчика |
+| [docs/README.md](docs/README.md) | Docs index |
+| [Engineer Onboarding](docs/Engineer-Onboarding.md) | Repo access + dev stand |
+| [Whitepaper](docs/Whitepaper.md) | CSO technical passport |
+| [Troubleshooting Workflow](docs/Troubleshooting-Workflow.md) | Incident playbook |
+| [CSO Demo Runbook](docs/CSO-Demo-Runbook.md) | Presales demo |
+| [SSH PAM Overview](docs/SSH-PAM-Overview.md) | Customer positioning |
 | [FIDO Onboarding](docs/FIDO-Onboarding.md) | FIDO-sk + TOTP (Tier 5) |
-| [Battlecard vs СКДПУ SSH](docs/Battlecard-SKDPU-SSH.md) | Пресейл сравнение |
+| [Battlecard vs СКДПУ SSH](docs/Battlecard-SKDPU-SSH.md) | Presales comparison |
 | [HA Runbook](docs/HA-Runbook.md) | Active-passive failover |
 | [OpenSpec specs](openspec/specs/) | GA specs Tier 1–5 |
 | [OpenSpec archive](openspec/changes/archive/) | Completed change history |
 
 ## Prod deploy
 
-1. Заполните `bastion_operators` в `group_vars/all.yml` (Vault).
-2. Соберите образ: `./trusted_download.sh` → перенесите tar в Air Gap.
+1. Fill `pam_operators` in `group_vars/all.yml` (Vault).
+2. Build image: `./trusted_download.sh` → copy tar into Air Gap.
 3. `ansible-galaxy collection install -r requirements.yml`
 4. `ansible-playbook -i inventory/hosts.yml site.yml`
 
-Отзыв доступа: удалите оператора из `bastion_operators` и перевыпустите плейбук (`purge_revoked_operators.yml`).
+Revoke access: remove the operator from `pam_operators` and re-run the playbook (`purge_revoked_operators.yml`).
 
 ## Releases
 
@@ -72,7 +72,9 @@ bastion-session-watch <session-id>
 | **`v1.0.0`** | **Tier 4 — SSH PAM GA:** search, policy v2, watch, Vault, OIDC examples, HA |
 | **`v1.1.0`** | **Tier 5 — FIDO-Anchor MFA:** `ed25519-sk` + TOTP, JIT sk certs |
 
-Tier 1–5 реализованы в репозитории. FIDO onboarding: [docs/FIDO-Onboarding.md](docs/FIDO-Onboarding.md).
+## Commercial
+
+Need deployment, SLA, or multi-protocol PAM? Contact [ITWarranty](https://github.com/itwarranty).
 
 ## CI
 

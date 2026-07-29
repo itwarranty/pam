@@ -7,25 +7,25 @@
 # Строгий MFA (без nullok) — по умолчанию:
 #   MFA_STRICT=1 ./trusted_download.sh
 #
-# Результат: trusted_upstream_packages/bastion_image.tar + SHA256SUMS
+# Результат: trusted_upstream_packages/pam_image.tar + SHA256SUMS
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${TRUSTED_FILES_DIR:-/tmp/trusted_upstream_packages}"
 CONTAINERFILE="${SCRIPT_DIR}/build/Containerfile"
-IMAGE_NAME="${BASTION_IMAGE_NAME:-bastion_secure}"
-IMAGE_TAG="${BASTION_IMAGE_TAG:-latest}"
+IMAGE_NAME="${PAM_IMAGE_NAME:-pam_secure}"
+IMAGE_TAG="${PAM_IMAGE_TAG:-latest}"
 IMAGE_REF="${IMAGE_NAME}:${IMAGE_TAG}"
-TAR_PATH="${OUTPUT_DIR}/bastion_image.tar"
+TAR_PATH="${OUTPUT_DIR}/pam_image.tar"
 CHECKSUMS_FILE="${OUTPUT_DIR}/SHA256SUMS"
 MFA_STRICT="${MFA_STRICT:-1}"
 
-log() { printf '[bastion] %s\n' "$*"; }
-die() { printf '[bastion] ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '[gateway] %s\n' "$*"; }
+die() { printf '[gateway] ERROR: %s\n' "$*" >&2; exit 1; }
 
-if [ "${MFA_STRICT}" != "1" ] && [ "${BASTION_LAB_MODE:-0}" != "1" ]; then
-  die "MFA_STRICT=${MFA_STRICT} запрещён политикой CSO. Prod-сборка: MFA_STRICT=1 (по умолчанию). Lab-only: BASTION_LAB_MODE=1 MFA_STRICT=0."
+if [ "${MFA_STRICT}" != "1" ] && [ "${PAM_LAB_MODE:-0}" != "1" ]; then
+  die "MFA_STRICT=${MFA_STRICT} запрещён политикой CSO. Prod-сборка: MFA_STRICT=1 (по умолчанию). Lab-only: PAM_LAB_MODE=1 MFA_STRICT=0."
 fi
 
 command -v podman >/dev/null 2>&1 || die "podman не найден. Установите Podman для сборки образа."

@@ -1,12 +1,12 @@
 ---
-# Install bastion-session-ctl on bastion host for CSO operators.
-- name: bastion-session-ctl on host
+# Install pam-session-ctl on the gateway host for CSO operators.
+- name: pam-session-ctl on host
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/scripts/bastion-session-ctl.sh"
-    dest: /usr/local/bin/bastion-session-ctl
+    src: "{{ playbook_dir }}/scripts/pam-session-ctl.sh"
+    dest: /usr/local/bin/pam-session-ctl
     owner: root
     group: root
     mode: "0755"
   when:
-    - bastion_session_ctl_enabled | default(true) | bool
-    - bastion_targets | default([]) | length > 0
+    - pam_session_ctl_enabled | default(true) | bool
+    - pam_targets | default([]) | length > 0

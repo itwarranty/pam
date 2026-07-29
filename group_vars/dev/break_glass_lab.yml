@@ -1,6 +1,6 @@
 ---
 # Tier 2 lab: break-glass operator (incident-correlated logs + JIT expiry)
-bastion_operators_break_glass_lab:
+pam_operators_break_glass_lab:
   - name: breakglass-lab
     email: breakglass-lab@example.com
     pubkey: "{{ lookup('file', lab_keys_dir + '/breakglass-lab.lab.pub') }}"

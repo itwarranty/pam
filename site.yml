@@ -1,6 +1,6 @@
 ---
 - name: "Развертывание защищенного контура доступа SSH PAM"
-  hosts: bastion_servers
+  hosts: pam_servers
   become: true
   gather_facts: true
 
@@ -9,19 +9,19 @@
       ansible.builtin.command: augenrules --load
       changed_when: true
 
-    - name: Restart ssh gateway container
+    - name: Restart ssh pam container
       ansible.builtin.shell: |
         set -e
-        podman restart ssh_bastion
-        for u in {{ bastion_revoked_operator_names | default([]) | join(' ') }}; do
+        podman restart {{ pam_container_name }}
+        for u in {{ pam_revoked_operator_names | default([]) | join(' ') }}; do
           [ -n "$u" ] || continue
-          podman exec ssh_bastion deluser -r "$u" 2>/dev/null || true
-          podman exec ssh_bastion rm -rf "/home/$u" 2>/dev/null || true
+          podman exec {{ pam_container_name }} deluser -r "$u" 2>/dev/null || true
+          podman exec {{ pam_container_name }} rm -rf "/home/$u" 2>/dev/null || true
         done
       become: true
-      become_user: "{{ bastion_user }}"
+      become_user: "{{ pam_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[bastion_user][1] }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
       changed_when: true
       when: not (is_commercial_pam | bool)
 
@@ -29,13 +29,13 @@
       ansible.builtin.service:
         name: rsyslog
         state: restarted
-      when: bastion_siem_forward_enabled | default(false) | bool
+      when: pam_siem_forward_enabled | default(false) | bool
 
     - name: Restart auditd for SIEM
       ansible.builtin.service:
         name: auditd
         state: restarted
-      when: bastion_siem_forward_enabled | default(false) | bool
+      when: pam_siem_forward_enabled | default(false) | bool
 
     - name: Reload JIT systemd timer
       ansible.builtin.systemd:
@@ -45,7 +45,7 @@
       ansible.builtin.service:
         name: fail2ban
         state: restarted
-      when: bastion_ssh_rate_limit_enabled | default(false) | bool
+      when: pam_ssh_rate_limit_enabled | default(false) | bool
 
   tasks:
     - name: "[CSO] Preflight — обязательные проверки платформы и политики"
@@ -65,7 +65,7 @@
 
         - name: Ограничение источника на firewalld (опционально)
           ansible.builtin.include_tasks: tasks/configure_source_firewall.yml
-          when: bastion_allowed_source_cidrs | default([]) | length > 0
+          when: pam_allowed_source_cidrs | default([]) | length > 0
 
         - name: SIEM syslog forward (опционально)
           ansible.builtin.include_tasks: tasks/configure_rsyslog_siem.yml
@@ -75,38 +75,38 @@
 
         - name: SSH rate limit / fail2ban (Tier 2, опционально)
           ansible.builtin.include_tasks: tasks/configure_ssh_brute_force.yml
-          when: bastion_ssh_rate_limit_enabled | default(false) | bool
+          when: pam_ssh_rate_limit_enabled | default(false) | bool
 
         - name: Gateway lab mock target (Tier 3, опционально)
           ansible.builtin.include_tasks: tasks/provision_gateway_lab_target.yml
-          when: bastion_gateway_lab_enabled | default(false) | bool
+          when: pam_gateway_lab_enabled | default(false) | bool
 
-        - name: Provisioning bastion_targets (Tier 3 gateway)
-          ansible.builtin.include_tasks: tasks/provision_bastion_targets.yml
-          when: bastion_targets | default([]) | length > 0
+        - name: Provisioning pam_targets (Tier 3 gateway)
+          ansible.builtin.include_tasks: tasks/provision_pam_targets.yml
+          when: pam_targets | default([]) | length > 0
 
         - name: HA shared audit + standby role (Tier 4, opt-in)
           ansible.builtin.include_tasks: tasks/configure_ha_shared_audit.yml
-          when: bastion_ha_enabled | default(false) | bool
+          when: pam_ha_enabled | default(false) | bool
 
         - name: Provisioning операторов (SSH-ключи + TOTP)
           ansible.builtin.include_tasks: tasks/provision_operators.yml
 
-        - name: Запуск ssh_bastion в Rootless Podman
-          ansible.builtin.include_tasks: tasks/deploy_ssh_bastion.yml
+        - name: Запуск ssh_pam в Rootless Podman
+          ansible.builtin.include_tasks: tasks/deploy_ssh_pam.yml
 
-        - name: Install bastion-session-ctl (Tier 3)
+        - name: Install pam-session-ctl (Tier 3)
           ansible.builtin.include_tasks: tasks/install_session_ctl.yml
 
         - name: Install Tier 4 CLI tools (session search, watch)
           ansible.builtin.include_tasks: tasks/install_tier4_tools.yml
           when: >
-            (bastion_session_search_enabled | default(true) | bool)
-            or (bastion_session_watch_enabled | default(true) | bool)
+            (pam_session_search_enabled | default(true) | bool)
+            or (pam_session_watch_enabled | default(true) | bool)
 
         - name: Syslog file → journald bridge (gateway lab / rootless podman)
-          ansible.builtin.include_tasks: tasks/configure_bastion_syslog_journal.yml
-          when: bastion_syslog_journal_bridge | default(false) | bool
+          ansible.builtin.include_tasks: tasks/configure_pam_syslog_journal.yml
+          when: pam_syslog_journal_bridge | default(false) | bool
 
         - name: WORM archive session logs (опционально)
           ansible.builtin.include_tasks: tasks/archive_session_logs_worm.yml
@@ -114,12 +114,19 @@
 
         - name: JIT systemd timer (valid_until auto-purge)
           ansible.builtin.include_tasks: tasks/configure_jit_timer.yml
-          when: bastion_jit_timer_enabled | default(false) | bool
+          when: pam_jit_timer_enabled | default(false) | bool
 
     - name: JIT expiry purge (standalone — tag jit_purge)
       ansible.builtin.include_tasks: tasks/jit_purge.yml
       tags: [jit_purge]
       when: not (is_commercial_pam | bool)
+
+    - name: DR JIT permit sync (standalone — tag dr_jit_sync)
+      ansible.builtin.include_tasks: tasks/dr_jit_sync.yml
+      tags: [dr_jit_sync]
+      when:
+        - not (is_commercial_pam | bool)
+        - pam_dr_enabled | default(false) | bool
 
     - name: Gateway session kill (standalone — tag session_kill)
       ansible.builtin.include_tasks: tasks/session_kill.yml

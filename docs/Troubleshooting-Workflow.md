@@ -32,21 +32,21 @@
 
 Операторы  **по умолчанию не имеют** постоянного доступа к шлюзу. Старший инженер  формирует запрос на проведение работ, в котором указывает:
 
-- перечень инженеров, привлекаемых к диагностике (строго именные учётные записи из массива `bastion_operators`);
+- перечень инженеров, привлекаемых к диагностике (строго именные учётные записи из массива `pam_operators`);
 - временное окно проведения работ (например, с 14:00 до 16:00 UTC+3);
 - список целевых `host:port` оборудования внутри КИИ/Air Gap сети (формат `PermitOpen`, без CIDR);
 - тип доступа каждого инженера:
   - **`access: gateway`** — **prod:** интерактив на Linux-target через шлюз, PTY-лог на инфраструктуре Заказчика;
   - `access: jump` — ProxyJump / automation (connect-audit, без PTY на target);
   - `access: shell` — работа на шлюз, сценарий «четырёх глаз»;
-  - `access: audit` — чтение логов, live moderation (`bastion-session-watch`).
+  - `access: audit` — чтение логов, live moderation (`pam-session-watch`).
 
 ### 1.3 Одобрение ИБ-директором (CSO) Заказчика
 
 CSO или уполномоченный офицер безопасности Заказчика сверяет запрос с регламентом:
 
-- проверяет, что запрашиваемые инженеры зафиксированы в политике деплоя (`bastion_operators`);
-- подтверждает актуальность whitelist (`bastion_permitted_targets` / персональные `permit_open`);
+- проверяет, что запрашиваемые инженеры зафиксированы в политике деплоя (`pam_operators`);
+- подтверждает актуальность whitelist (`pam_permitted_targets` / персональные `permit_open`);
 - санкционирует применение обновлённой конфигурации Ansible и перевыпуск плейбука:
 
 ```bash
@@ -64,35 +64,35 @@ ansible-playbook site.yml
 Инженер инициирует SSH на порт шлюза (по умолчанию `2222`):
 
 ```bash
-ssh -p 2222 -i ~/.ssh/bastion-fido engineer_support@gateway.client.internal
+ssh -p 2222 -i ~/.ssh/gateway-fido engineer_support@gateway.client.internal
 ```
 
 **Prod (Tier 5, рекомендуется):** перед сетевым подключением — **user verification** на ноутбуке (`ed25519-sk -O verify-required`, Touch ID / YubiKey). См. [FIDO Onboarding](./FIDO-Onboarding.md).
 
 **Цепочка проверок:**
 
-1. **firewalld** пропускает `bastion_ssh_port`.
-2. **Rootless Podman** — контейнер `ssh_bastion`.
+1. **firewalld** пропускает `pam_ssh_port`.
+2. **Rootless Podman** — контейнер `ssh_pam`.
 3. **sshd** сверяет FIDO-sk pubkey или SSH user certificate (`TrustedUserCAKeys`):
-   - конфиг оператора: `{{ bastion_home }}/operators/<operator>/` (RO mount);
+   - конфиг оператора: `{{ pam_home }}/operators/<operator>/` (RO mount);
    - в контейнере: `authorized_keys`, `.google_authenticator`.
 
 **Jump:** `restrict,port-forwarding,permitopen` — прямой shell заблокирован.
 
 ### 2.2 Проверка второго фактора (Offline TOTP)
 
-При `bastion_mfa_mode: fido_totp` или `totp` (default prod) SSH запрашивает TOTP:
+При `pam_mfa_mode: fido_totp` или `totp` (default prod) SSH запрашивает TOTP:
 
 ```text
 Verification code:
 ```
 
-**PAM** (`pam_google_authenticator.so`) — локально, Air Gap. Исключение: `fido_only` + CSO waiver (`bastion_fido_only_waiver: true`) — только FIDO-sk, без TOTP prompt.
+**PAM** (`pam_google_authenticator.so`) — локально, Air Gap. Исключение: `fido_only` + CSO waiver (`pam_fido_only_waiver: true`) — только FIDO-sk, без TOTP prompt.
 
 | Результат | Действие |
 | :--- | :--- |
 | Верно | ForceCommand по роли `access` |
-| Неверно | Отказ; auditd `bastion_ssh_connect` |
+| Неверно | Отказ; auditd `pam_ssh_connect` |
 
 ---
 
@@ -100,7 +100,7 @@ Verification code:
 
 > **Применимость:** данный этап обязателен для инцидентов с `access: shell`. Для чистого ProxyJump (`access: jump`) используется сценарий из п. 4.1 без shared tmux.
 
-После успешной авторизации инженер  попадает во внутренний shell шлюза через `ForceCommand` → `bastion-shell-wrapper.sh`. Назначенный **ИБ-модератор** Заказчика (`client_moderator`, роль `access: shell`) уже находится на шлюзе под своей учётной записью.
+После успешной авторизации инженер  попадает во внутренний shell шлюза через `ForceCommand` → `pam-shell-wrapper.sh`. Назначенный **ИБ-модератор** Заказчика (`client_moderator`, роль `access: shell`) уже находится на шлюзе под своей учётной записью.
 
 ### 3.1 Сборка консольного моста (двойной контроль)
 
@@ -123,17 +123,17 @@ tmux -S /var/run/shared_tmux/bridge_INC-2026-8942 attach-session -t INC-2026-894
 
 ### 3.2 Фиксация атомарного аудиторского следа (At-Birth Protection)
 
-При открытии TTY `bastion-shell-wrapper.sh` перехватывает сессию и запускает `script`:
+При открытии TTY `pam-shell-wrapper.sh` перехватывает сессию и запускает `script`:
 
 ```bash
 exec script -q -f -c "/bin/bash --login" \
-  "/var/log/bastion_sessions/session_engineer_support_20260615_143022.log"
+  "/var/log/pam_sessions/session_engineer_support_20260615_143022.log"
 ```
 
-**На хосте** (volume `/var/log/bastion_sessions`, владелец `bastion`, mode `0750`):
+**На хосте** (volume `/var/log/pam_sessions`, владелец `gateway`, mode `0750`):
 
-- на каждый новый `.log` — атрибут `chattr +a` (append-only) в `bastion-shell-wrapper.sh` и при старте entrypoint;
-- **auditd** регистрирует операции записи (`bastion_session_logs`).
+- на каждый новый `.log` — атрибут `chattr +a` (append-only) в `pam-shell-wrapper.sh` и при старте entrypoint;
+- **auditd** регистрирует операции записи (`pam_session_logs`).
 
 ---
 
@@ -174,17 +174,17 @@ exec script -q -f -c "/bin/bash --login" \
 [Сессия инженера detached] → [команда не исполнена на целевой ОС]
 ```
 
-Модератор документирует инцидент в тикете. При систематических нарушениях — эскалация CSO и отзыв доступа через обновление `bastion_operators`.
+Модератор документирует инцидент в тикете. При систематических нарушениях — эскалация CSO и отзыв доступа через обновление `pam_operators`.
 
 ### 4.4 Kill-switch (экстренная остановка)
 
 При компрометации или подозрительной активности администратор Заказчика:
 
 ```bash
-sudo -u bastion podman stop ssh_bastion
+sudo -u pam podman stop ssh_pam
 ```
 
-Активные SSH-сессии разрываются. Логи в `/var/log/bastion_sessions/` **сохраняются** на хосте.
+Активные SSH-сессии разрываются. Логи в `/var/log/pam_sessions/` **сохраняются** на хосте.
 
 ---
 
@@ -204,8 +204,8 @@ sudo -u bastion podman stop ssh_bastion
 
 **A. Автоматический путь (рекомендуется):**
 
-1. Задать `valid_until` в `bastion_operators` (ISO8601 с timezone).
-2. Включить timer: `bastion_jit_timer_enabled: true` **или** периодически:
+1. Задать `valid_until` в `pam_operators` (ISO8601 с timezone).
+2. Включить timer: `pam_jit_timer_enabled: true` **или** периодически:
    ```bash
    ansible-playbook site.yml --tags jit_purge
    ```
@@ -213,7 +213,7 @@ sudo -u bastion podman stop ssh_bastion
 
 **B. Ручной путь:**
 
-1. Удалить учётные записи из `bastion_operators` (prod) или dev/test YAML (lab);
+1. Удалить учётные записи из `pam_operators` (prod) или dev/test YAML (lab);
 2. `ansible-playbook site.yml`;
 3. Зафиксировать закрытие окна в ITSM.
 
@@ -222,94 +222,94 @@ sudo -u bastion podman stop ssh_bastion
 - удаляет каталоги операторов на хосте (`{{ operators_home }}/<name>/`);
 - удаляет TOTP onboarding (`generated/mfa/<host>/<name>.mfa.txt`);
 - удаляет Unix-учётки и `/home/<name>` внутри контейнера;
-- перезапускает `ssh_bastion` (handler в `site.yml`).
+- перезапускает `ssh_pam` (handler в `site.yml`).
 
-Entrypoint (`bastion-entrypoint.sh`) дополнительно удаляет учётки, отсутствующие в read-only mount `/etc/bastion/operators`, при каждом старте контейнера.
+Entrypoint (`pam-entrypoint.sh`) дополнительно удаляет учётки, отсутствующие в read-only mount `/etc/ssh-pam/operators`, при каждом старте контейнера.
 
-> **Примечание:** сузить доступ можно через `permit_open`, но `bastion_permitted_targets` не может быть пуст — preflight прервёт деплой.
+> **Примечание:** сузить доступ можно через `permit_open`, но `pam_permitted_targets` не может быть пуст — preflight прервёт деплой.
 
 ### 5.3 Формирование отчёта для CSO и SIEM
 
 1. Лог-файл сессии закрывается. **auditd** фиксирует операции записи и доступа к каталогу.
-2. **Tamper-evident sidecar** (Tier 1): при выходе из shell `bastion-shell-wrapper.sh` создаёт:
+2. **Tamper-evident sidecar** (Tier 1): при выходе из shell `pam-shell-wrapper.sh` создаёт:
    - `<session>.log.sha256` — GNU-формат для `sha256sum -c`;
    - `<session>.log.meta` — `SHA256=`, `UTC=`, `USER=`, `INCIDENT=`, `CLIENT=`.
 3. Контрольная сумма включается в тикет `INC-2026-8942`:
 
    ```bash
-   sha256sum -c /var/log/bastion_sessions/session_engineer-shell_20260615_143022.log.sha256
-   cat /var/log/bastion_sessions/session_engineer-shell_20260615_143022.log.meta
+   sha256sum -c /var/log/pam_sessions/session_engineer-shell_20260615_143022.log.sha256
+   cat /var/log/pam_sessions/session_engineer-shell_20260615_143022.log.meta
    ```
 
 4. Текстовый лог прикладывается к тикету как доказательство выполненных работ.
 5. Офицер безопасности Заказчика может воспроизвести сессию посимвольно:
 
    ```bash
-   less /var/log/bastion_sessions/session_engineer_support_20260615_143022.log
+   less /var/log/pam_sessions/session_engineer_support_20260615_143022.log
    ```
 
-6. События **auditd** (ключи `bastion_session_logs`, `bastion_ssh_connect`, `bastion_break_glass_session`) направляются в SIEM через rsyslog LOCAL6 при `bastion_siem_forward_enabled: true` (см. Whitepaper §6).
+6. События **auditd** (ключи `pam_session_logs`, `pam_ssh_connect`, `pam_break_glass_session`) направляются в SIEM через rsyslog LOCAL6 при `pam_siem_forward_enabled: true` (см. Whitepaper §6).
 
 ### 5.4 Shell command policy (Tier 2 + Tier 4 v2)
 
-При `bastion_shell_command_policy_enabled: true` опасные интерактивные команды блокируются denylist (`/etc/bastion/command_denylist`).
+При `pam_shell_command_policy_enabled: true` опасные интерактивные команды блокируются denylist (`/etc/ssh-pam/command_denylist`).
 
-**Prod (решение CSO):** enforcement только **policy v2** — PTY inspector на шлюз (`bastion-pty-inspector.py`, `python3` в образе). Denylist сканируется **до** пересылки ввода на target или в shell bash.
+**Prod (решение CSO):** enforcement только **policy v2** — PTY inspector на шлюз (`pam-pty-inspector.py`, `python3` в образе). Denylist сканируется **до** пересылки ввода на target или в shell bash.
 
-**Migration-only (v1):** remote `bash --rcfile` на target — слабее (политика за audit boundary, обход через `/bin/sh`). Допустимо только при `bastion_command_policy_v2_required: false` и formal risk acceptance.
+**Migration-only (v1):** remote `bash --rcfile` на target — слабее (политика за audit boundary, обход через `/bin/sh`). Допустимо только при `pam_command_policy_v2_required: false` и formal risk acceptance.
 
 Переменные steady-state prod:
 
 ```yaml
-bastion_shell_command_policy_enabled: true
-bastion_command_policy_v2_required: true
-bastion_gateway_command_policy_v2_enabled: true
-bastion_shell_command_policy_v2_enabled: true
+pam_shell_command_policy_enabled: true
+pam_command_policy_v2_required: true
+pam_gateway_command_policy_v2_enabled: true
+pam_shell_command_policy_v2_enabled: true
 ```
 
-1. Отказ фиксируется в syslog/journal с тегом `bastion-deny` (`policy=v2`, `MODE=gateway|shell`).
-2. Сессия **не** прерывается по умолчанию — оператор получает сообщение об отказе (`bastion_gateway_deny_kill_session` — opt-in kill).
-3. Denylist редактируется только через Ansible (`bastion_shell_command_denylist`), не вручную в контейнере.
+1. Отказ фиксируется в syslog/journal с тегом `pam-deny` (`policy=v2`, `MODE=gateway|shell`).
+2. Сессия **не** прерывается по умолчанию — оператор получает сообщение об отказе (`pam_gateway_deny_kill_session` — opt-in kill).
+3. Denylist редактируется только через Ansible (`pam_shell_command_denylist`), не вручную в контейнере.
 4. Jump-операторы (`access: jump`) не затрагиваются denylist.
 
 **Диагностика:**
 
 ```bash
-journalctl -t bastion-deny --since "1 hour ago"
-podman exec ssh_bastion cat /run/bastion/command_denylist
-podman exec ssh_bastion test -f /run/bastion/policy_v2_enabled && echo gateway-v2-ok
-podman exec ssh_bastion test -f /run/bastion/shell_policy_v2_enabled && echo shell-v2-ok
-./scripts/bastion-compliance-verify.sh  # check command_policy_v2
+journalctl -t pam-deny --since "1 hour ago"
+podman exec ssh_pam cat /run/ssh-pam/command_denylist
+podman exec ssh_pam test -f /run/ssh-pam/policy_v2_enabled && echo gateway-v2-ok
+podman exec ssh_pam test -f /run/ssh-pam/shell_policy_v2_enabled && echo shell-v2-ok
+./scripts/pam-compliance-verify.sh  # check command_policy_v2
 ./scripts/test-shell-policy-v2.sh       # non-interactive smoke (без TTY)
 ```
 
-**QA / отладка:** не запускайте `script -q -f -c "bastion-pty-inspector.sh ..."` через `podman exec` **без `-t`** — `script(1)` ждёт controlling TTY и зависает без вывода. Для smoke используйте `scripts/test-shell-policy-v2.sh` (piped stdin → inspector напрямую) или `podman exec -it`.
+**QA / отладка:** не запускайте `script -q -f -c "pam-pty-inspector.sh ..."` через `podman exec` **без `-t`** — `script(1)` ждёт controlling TTY и зависает без вывода. Для smoke используйте `scripts/test-shell-policy-v2.sh` (piped stdin → inspector напрямую) или `podman exec -it`.
 
 ### 5.5 Break-glass emergency access (Tier 2)
 
-Аварийный профиль включается только при `bastion_break_glass_enabled: true` и обязательных полях оператора:
+Аварийный профиль включается только при `pam_break_glass_enabled: true` и обязательных полях оператора:
 
 - `break_glass: true`
 - непустой `incident_id`
-- `valid_until` (и опционально `valid_from`) — окно ≤ `bastion_break_glass_max_hours` (по умолчанию 4 ч)
+- `valid_until` (и опционально `valid_from`) — окно ≤ `pam_break_glass_max_hours` (по умолчанию 4 ч)
 
 При входе:
 
-1. Shell wrapper выставляет `BASTION_BREAK_GLASS=1` и пишет syslog `bastion-break-glass`.
-2. auditd (при `bastion_break_glass_audit_enabled`) логирует ключ `bastion_break_glass_session`.
-3. Маркер `.bastion-break-glass` в каталоге оператора на хосте.
+1. Shell wrapper выставляет `PAM_BREAK_GLASS=1` и пишет syslog `pam-break-glass`.
+2. auditd (при `pam_break_glass_audit_enabled`) логирует ключ `pam_break_glass_session`.
+3. Маркер `.pam-break-glass` в каталоге оператора на хосте.
 
 **Закрытие окна:** по истечении `valid_until` — `jit_purge` удаляет оператора (как Tier 1 JIT).
 
 ### 5.6 Gateway session kill (Tier 3)
 
-Активные gateway-сессии регистрируются в `{{ bastion_runtime_dir }}/sessions/` (mount в контейнер `/run/bastion/sessions/`).
+Активные gateway-сессии регистрируются в `{{ pam_runtime_dir }}/sessions/` (mount в контейнер `/run/ssh-pam/sessions/`).
 
 ```bash
-bastion-session-ctl list
-bastion-session-ctl kill <session-id>
-bastion-session-ctl kill --operator engineer1
-ansible-playbook site.yml --tags session_kill -e bastion_session_kill_id=<id>
+pam-session-ctl list
+pam-session-ctl kill <session-id>
+pam-session-ctl kill --operator engineer1
+ansible-playbook site.yml --tags session_kill -e pam_session_kill_id=<id>
 ```
 
 **JIT purge** (`--tags jit_purge`) завершает сессии отозванных операторов до purge каталогов.
@@ -317,8 +317,8 @@ ansible-playbook site.yml --tags session_kill -e bastion_session_kill_id=<id>
 **JSONL для SIEM:**
 
 ```bash
-grep gateway_start /var/log/bastion_sessions/sessions.jsonl | tail -5
-jq -r 'select(.event=="gateway_end")' /var/log/bastion_sessions/sessions.jsonl
+grep gateway_start /var/log/pam_sessions/sessions.jsonl | tail -5
+jq -r 'select(.event=="gateway_end")' /var/log/pam_sessions/sessions.jsonl
 ```
 
 ### 5.7 Session search и live moderation (Tier 4)
@@ -326,22 +326,22 @@ jq -r 'select(.event=="gateway_end")' /var/log/bastion_sessions/sessions.jsonl
 **Поиск завершённых сессий** (JSONL + optional grep по `.log`):
 
 ```bash
-bastion-session-search --operator engineer1 --since 7d
-bastion-session-search --target prod-app-01 --json
-bastion-session-search --grep "rm -rf" --since 24h
+pam-session-search --operator engineer1 --since 7d
+pam-session-search --target prod-app-01 --json
+pam-session-search --grep "rm -rf" --since 24h
 ```
 
-Требует `jq` на хосте (Ansible `install_tier4_tools.yml` при `bastion_session_search_enabled`).
+Требует `jq` на хосте (Ansible `install_tier4_tools.yml` при `pam_session_search_enabled`).
 
 **Live moderation** (четырёх глаз на активной gateway-сессии):
 
 ```bash
-bastion-session-ctl list
-bastion-session-watch <session-id>
+pam-session-ctl list
+pam-session-watch <session-id>
 # JSONL: moderator_watch_start в sessions.jsonl
 ```
 
-Модератор: пользователь с `access: audit` или член группы `bastion_moderators` (sudo на host CLI).
+Модератор: пользователь с `access: audit` или член группы `pam_moderators` (sudo на host CLI).
 
 См. §5.4 — command policy v2 обязателен в prod; gateway и shell используют один PTY inspector.
 
@@ -353,7 +353,7 @@ bastion-session-watch <session-id>
 [1. Service Desk: тикет INC-XXXX]
               │
               v
-[2. Одобрение CSO + Ansible: bastion_operators / bastion_targets]
+[2. Одобрение CSO + Ansible: pam_operators / pam_targets]
               │
               v
 [3. Вход: SSH-ключ + Offline TOTP]
@@ -362,7 +362,7 @@ bastion-session-watch <session-id>
 [4. Gateway на target ИЛИ shell four-eyes / jump ProxyJump]
               │
               v
-[5. exit / bastion-session-ctl kill → закрытие сессии]
+[5. exit / pam-session-ctl kill → закрытие сессии]
               │
               v
 [6. JIT-отзыв + SHA-256 / JSONL → тикет + SIEM]
@@ -374,16 +374,16 @@ bastion-session-watch <session-id>
 
 | Этап регламента | Технический контроль SSH PAM | Компонент |
 | :--- | :--- | :--- |
-| 1.3 JIT whitelist | `bastion_operators`, `permit_open`, `ansible-playbook` | `group_vars/all.yml`, `site.yml` |
+| 1.3 JIT whitelist | `pam_operators`, `permit_open`, `ansible-playbook` | `group_vars/all.yml`, `site.yml` |
 | 2.1 FIDO / SSH-ключ | `ed25519-sk` + cert (opt.); preflight FIDO | `preflight_fido_operators.yml`, [FIDO Onboarding](./FIDO-Onboarding.md) |
 | 2.2 TOTP | PAM, `MFA_STRICT=1`; `fido_only` waiver | `build/Containerfile`, `sshd_config.j2` |
-| 3.2 Append-only лог | `script` + `chattr +a` на `.log`; каталог `0750` | `bastion-shell-wrapper.sh`, `bastion-entrypoint.sh`, `prepare_os.yml` |
-| 2.1 SSH User CA (опц.) | `bastion_trusted_user_ca_file`, operator `certificate` | `templates/sshd_config.j2`, `templates/authorized_keys.j2` |
+| 3.2 Append-only лог | `script` + `chattr +a` на `.log`; каталог `0750` | `pam-shell-wrapper.sh`, `pam-entrypoint.sh`, `prepare_os.yml` |
+| 2.1 SSH User CA (опц.) | `pam_trusted_user_ca_file`, operator `certificate` | `templates/sshd_config.j2`, `templates/authorized_keys.j2` |
 | 5.2 JIT-отзыв | `valid_until` + jit_filter + purge + timer | `tasks/jit_filter_operators.yml`, `tasks/jit_purge.yml` |
-| 4.3 Kill-switch | `podman stop ssh_bastion` | Runbook §7 Whitepaper |
-| 5.3 Аудит | auditd + session/gateway logs + SHA-256 + JSONL | `auditd-bastion.rules.j2`, `sessions.jsonl` |
-| Gateway (prod) | `access: gateway`, `bastion_targets`, PTY log | `bastion-ssh-gateway-wrapper.sh` |
-| Session kill / search | `bastion-session-ctl`, `bastion-session-search` | `scripts/bastion-session-*.sh` |
+| 4.3 Kill-switch | `podman stop ssh_pam` | Runbook §7 Whitepaper |
+| 5.3 Аудит | auditd + session/gateway logs + SHA-256 + JSONL | `auditd-pam.rules.j2`, `sessions.jsonl` |
+| Gateway (prod) | `access: gateway`, `pam_targets`, PTY log | `pam-ssh-gateway-wrapper.sh` |
+| Session kill / search | `pam-session-ctl`, `pam-session-search` | `scripts/gateway-session-*.sh` |
 
 ---
 
@@ -394,7 +394,7 @@ bastion-session-watch <session-id>
 | **Инженер ** | Работа строго в рамках тикета и окна доступа; соблюдение режима read-only до делегирования |
 | **ИБ-модератор Заказчика** | Контроль ввода, инициация/завершение tmux-моста, ProxyJump к внутренним системам |
 | **CSO / офицер ИБ Заказчика** | Одобрение JIT-окна, whitelist, приёмка аудиторского следа |
-| **Администратор Ansible** | Декларативное применение `bastion_operators` и отзыв прав по окончании окна |
+| **Администратор Ansible** | Декларативное применение `pam_operators` и отзыв прав по окончании окна |
 
 ---
 

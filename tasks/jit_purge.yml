@@ -1,9 +1,9 @@
 ---
 # Standalone JIT expiry purge: ansible-playbook site.yml --tags jit_purge
-- name: JIT — UID bastion-пользователя (purge)
+- name: JIT — UID gateway-пользователя (purge)
   ansible.builtin.getent:
     database: passwd
-    key: "{{ bastion_user }}"
+    key: "{{ pam_user }}"
 
 - name: JIT — фильтр окон доступа
   ansible.builtin.include_tasks: tasks/jit_filter_operators.yml

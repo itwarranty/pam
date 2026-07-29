@@ -1,0 +1,12 @@
+schema: spec-driven
+created: 2026-06-16
+
+depends_on:
+  - pam-free-tier4-ssh-pam-complete  # archived; v1.0.0
+
+target_release: v1.1.0
+
+product_positioning: |
+  SSH PAM = open-source tier of SSH PAM — full SSH PAM product.
+  FIDO-Anchor MFA strengthens phishing resistance without IdP runtime on the gateway
+  or custom SSH client (no tsh). TOTP on the gateway remains default second factor.

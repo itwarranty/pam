@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Поднять лёгкий стенд guest Wi‑Fi + corp internal + bastion DMZ (Podman, один Linux-хост).
+# Поднять лёгкий стенд guest Wi‑Fi + corp internal + gateway DMZ (Podman, один Linux-хост).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,7 +28,7 @@ net_create "${NET_GUEST}" "${GUEST_CIDR}"
 net_create "${NET_CORP}" "${CORP_CIDR}"
 net_create "${NET_DMZ}" "${DMZ_CIDR}"
 
-podman rm -f "${LAB_PREFIX}-router" "${LAB_PREFIX}-guest-pc" "${LAB_PREFIX}-target" "${LAB_PREFIX}-bastion-mock" 2>/dev/null || true
+podman rm -f "${LAB_PREFIX}-router" "${LAB_PREFIX}-guest-pc" "${LAB_PREFIX}-target" "${LAB_PREFIX}-gateway-mock" 2>/dev/null || true
 
 printf '[up] router (iptables isolation)\n'
 ROUTER_ENTRY="/tmp/${LAB_PREFIX}-router-entrypoint.sh"
@@ -55,12 +55,12 @@ podman run -d --name "${LAB_PREFIX}-target" \
   "${CLIENT_IMAGE}" sleep infinity
 podman exec "${LAB_PREFIX}-target" sh -c 'apk add --no-cache openssh openssh-client iputils >/dev/null 2>&1 && ssh-keygen -A >/dev/null 2>&1 && echo "root:lab" | chpasswd && /usr/sbin/sshd'
 
-printf '[up] bastion mock %s:2222 (placeholder; attach ssh_bastion separately)\n' "${DMZ_BASTION_IP}"
-podman run -d --name "${LAB_PREFIX}-bastion-mock" \
-  --network "${NET_DMZ}:ip=${DMZ_BASTION_IP}" \
+printf '[up] gateway mock %s:2222 (placeholder; attach ssh_pam separately)\n' "${DMZ_PAM_IP}"
+podman run -d --name "${LAB_PREFIX}-gateway-mock" \
+  --network "${NET_DMZ}:ip=${DMZ_PAM_IP}" \
   -p 12222:2222 \
   "${CLIENT_IMAGE}" sleep infinity
-podman exec "${LAB_PREFIX}-bastion-mock" sh -c 'apk add --no-cache openssh iputils >/dev/null 2>&1 && ssh-keygen -A >/dev/null 2>&1 && echo "bastion-mock:lab" | chpasswd && printf "Port 2222\nPermitRootLogin yes\nPasswordAuthentication yes\n" >> /etc/ssh/sshd_config && /usr/sbin/sshd'
+podman exec "${LAB_PREFIX}-gateway-mock" sh -c 'apk add --no-cache openssh iputils >/dev/null 2>&1 && ssh-keygen -A >/dev/null 2>&1 && echo "gateway-mock:lab" | chpasswd && printf "Port 2222\nPermitRootLogin yes\nPasswordAuthentication yes\n" >> /etc/ssh/sshd_config && /usr/sbin/sshd'
 
 # Default route на guest-pc → lab router
 podman exec "${LAB_PREFIX}-guest-pc" ip route replace default via "${GUEST_GW}"
@@ -69,7 +69,7 @@ cat <<EOF
 
 === Guest Wi‑Fi lab UP ===
 Guest PC:     podman exec -it ${LAB_PREFIX}-guest-pc sh
-Gateway mock: ssh -p 12222 bastion-mock@127.0.0.1  (password: lab, port 2222 inside)
+Gateway mock: ssh -p 12222 gateway-mock@127.0.0.1  (password: lab, port 2222 inside)
 Target (corp): ${CORP_TARGET_IP} — reachable only from DMZ, NOT from guest
 
 Verify:  ${ROOT}/scripts/verify.sh

@@ -3,10 +3,10 @@
 
 all:
   children:
-    bastion_servers:
+    pam_servers:
       children:
         qa:
           hosts:
-            bastion-qa.example.com:
+            gateway-qa.example.com:
               ansible_host: 10.0.0.50
               ansible_user: ansible

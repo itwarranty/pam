@@ -1,52 +1,52 @@
 # White label — необязательный текст баннера (пусто = без названия)
 # ssh_pam_banner_title: "Acme Secure Access"
-# bastion_totp_issuer: "Acme Secure Access"
-# bastion_cert_domain: acme.example
-# bastion_install_dir: /opt/pam
-# bastion_lab_domain: acme.example
+# pam_totp_issuer: "Acme Secure Access"
+# pam_cert_domain: acme.example
+# pam_install_dir: /opt/pam
+# pam_lab_domain: acme.example
 
 # Tier 3 Free — SSH gateway (v0.6)
-# bastion_targets:
+# pam_targets:
 #   - id: prod-app-01
 #     host: 10.0.1.10
 #     port: 22
-#     account: bastion_support
+#     account: pam_support
 #     identity_file: "{{ playbook_dir }}/vault/targets/prod-app-01_ed25519"  # Ansible Vault
 #     host_key_fingerprint: "SHA256:abcdef..."
 #     tags: [prod, linux]
-# bastion_operators:
+# pam_operators:
 #   - name: engineer1
 #     access: gateway
 #     permit_open: ["10.0.1.10:22"]
 #     incident_id: "INC-2026-8942"
-# bastion_prod_require_gateway: false
-# bastion_jump_risk_acceptance_required: false
-# bastion_gateway_lab_mode: false
+# pam_prod_require_gateway: false
+# pam_jump_risk_acceptance_required: false
+# pam_gateway_lab_mode: false
 
 # Tier 4 Free — SSH PAM GA (v1.0)
-# bastion_session_search_enabled: true
-# bastion_session_watch_enabled: true
-# bastion_command_policy_v2_required: true   # CSO prod; false = migration-only v1 path
-# bastion_gateway_command_policy_v2_enabled: true
-# bastion_shell_command_policy_v2_enabled: true
-# bastion_gateway_deny_kill_session: false
-# bastion_vault_enabled: false
-# bastion_vault_addr: "https://vault.example"
-# bastion_vault_token: ""  # Ansible Vault
-# bastion_targets vault_secret_path example:
+# pam_session_search_enabled: true
+# pam_session_watch_enabled: true
+# pam_command_policy_v2_required: true   # CSO prod; false = migration-only v1 path
+# pam_gateway_command_policy_v2_enabled: true
+# pam_shell_command_policy_v2_enabled: true
+# pam_gateway_deny_kill_session: false
+# pam_vault_enabled: false
+# pam_vault_addr: "https://vault.example"
+# pam_vault_token: ""  # Ansible Vault
+# pam_targets vault_secret_path example:
 #   - id: prod-app-01
-#     vault_secret_path: secret/data/bastion/targets/prod-app-01
+#     vault_secret_path: secret/data/gateway/targets/prod-app-01
 #     vault_secret_key: private_key
-# bastion_oidc_cert_policy_enabled: false
-# bastion_oidc_issuer: "https://idp.example"
-# bastion_ha_enabled: false
-# bastion_ha_role: primary
+# pam_oidc_cert_policy_enabled: false
+# pam_oidc_issuer: "https://idp.example"
+# pam_ha_enabled: false
+# pam_ha_role: primary
 
 # Tier 5 FIDO-Anchor MFA (v1.1)
-# bastion_require_fido_pubkey: false
-# bastion_mfa_mode: totp  # totp | fido_totp | fido_only
-# bastion_fido_only_waiver: false
-# bastion_fido_ecdsa_sk_allowed: false
-# bastion_fido_waiver_operators: []
+# pam_require_fido_pubkey: false
+# pam_mfa_mode: totp  # totp | fido_totp | fido_only
+# pam_fido_only_waiver: false
+# pam_fido_ecdsa_sk_allowed: false
+# pam_fido_waiver_operators: []
 
 # Tier 2 Free — CSO optional controls (openspec/specs/)

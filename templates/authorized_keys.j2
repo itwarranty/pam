@@ -6,7 +6,7 @@
 {%- if op.access | default('jump') == 'jump' -%}
 {%-   set _ = parts.append('restrict') -%}
 {%-   set _ = parts.append('port-forwarding') -%}
-{%-   for target in op.permit_open | default(bastion_permitted_targets) -%}
+{%-   for target in op.permit_open | default(pam_permitted_targets) -%}
 {%-     set _ = parts.append('permitopen="' + target + '"') -%}
 {%-   endfor -%}
 {%- endif -%}

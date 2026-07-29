@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SSH PAM — host-side JIT purge wrapper (copy to gateway, adjust paths).
-# Installed by Ansible as {{ bastion_jit_purge_script_path }} when bastion_jit_timer_enabled.
+# Installed by Ansible as {{ pam_jit_purge_script_path }} when pam_jit_timer_enabled.
 #
-# Prerequisites on bastion host:
-#   - ansible-playbook, repo at /opt/pam (or set BASTION_ROOT)
+# Prerequisites on the gateway host:
+#   - ansible-playbook, repo at /opt/pam (or set PAM_ROOT)
 #   - inventory/hosts.yml with prod operators
 #
 # Manual run:
@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-ROOT="${BASTION_ROOT:-/opt/pam}"
-INV="${BASTION_INVENTORY:-${ROOT}/inventory/hosts.yml}"
+ROOT="${PAM_ROOT:-/opt/pam}"
+INV="${PAM_INVENTORY:-${ROOT}/inventory/hosts.yml}"
 
 exec ansible-playbook -i "${INV}" "${ROOT}/site.yml" --tags jit_purge "$@"

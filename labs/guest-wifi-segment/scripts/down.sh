@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=/dev/null
 source "${ROOT}/topology.env"
 
-for c in router guest-pc target bastion-mock; do
+for c in router guest-pc target gateway-mock; do
   podman rm -f "${LAB_PREFIX}-${c}" 2>/dev/null || true
 done
 

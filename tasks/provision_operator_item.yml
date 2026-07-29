@@ -3,8 +3,8 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "{{ '0700' if item.endswith('.ssh') else '0750' }}"
     setype: container_file_t
   loop:
@@ -15,17 +15,19 @@
   ansible.builtin.template:
     src: authorized_keys.j2
     dest: "{{ operators_home }}/{{ operator.name }}/.ssh/authorized_keys"
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0600"
     setype: container_file_t
-  notify: Restart ssh gateway container
+  notify: Restart ssh pam container
 
 - name: "Генерация MFA-секрета для {{ operator.name }}"
   ansible.builtin.command: openssl rand -base32 20
   register: operator_mfa_generated
   changed_when: false
-  when: operator.mfa_secret | default('') | length == 0
+  when:
+    - operator.mfa_secret | default('') | length == 0
+    - not (operator.dr_service | default(false) | bool)
 
 - name: "Регистрация MFA-секрета {{ operator.name }}"
   ansible.builtin.set_fact:
@@ -35,24 +37,50 @@
       {{ operator.mfa_secret
          if (operator.mfa_secret | default('') | length > 0)
          else operator_mfa_generated.stdout }}
+  when: not (operator.dr_service | default(false) | bool)
 
 - name: "TOTP-конфигурация для {{ operator.name }}"
   ansible.builtin.template:
     src: google_authenticator.j2
     dest: "{{ operators_home }}/{{ operator.name }}/.google_authenticator"
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0600"
     setype: container_file_t
   vars:
     mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"
-  notify: Restart ssh gateway container
+  notify: Restart ssh pam container
+  when: not (operator.dr_service | default(false) | bool)
+
+- name: "DR service state dir {{ operator.name }}"
+  ansible.builtin.file:
+    path: "{{ operators_home }}/{{ operator.name }}/.dr"
+    state: directory
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "0700"
+    setype: container_file_t
+  when: operator.dr_service | default(false) | bool
+
+- name: "DR service automation key {{ operator.name }}"
+  ansible.builtin.copy:
+    src: "{{ operator.automation_key_file }}"
+    dest: "{{ operators_home }}/{{ operator.name }}/.dr/automation_key"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "0600"
+    setype: container_file_t
+  no_log: true
+  when:
+    - operator.dr_service | default(false) | bool
+    - operator.automation_key_file | default('') | length > 0
+  notify: Restart ssh pam container
 
 - name: "Break-glass marker {{ operator.name }}"
   ansible.builtin.copy:
-    dest: "{{ operators_home }}/{{ operator.name }}/.bastion-break-glass"
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    dest: "{{ operators_home }}/{{ operator.name }}/.pam-break-glass"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0600"
     setype: container_file_t
     content: |
@@ -60,21 +88,21 @@
       incident_id={{ operator.incident_id }}
       valid_until={{ operator.valid_until | default('') }}
   when: operator.break_glass | default(false) | bool
-  notify: Restart ssh gateway container
+  notify: Restart ssh pam container
 
-- name: "permit_open для gateway {{ operator.name }}"
+- name: "permit_open для gateway/jump {{ operator.name }}"
   ansible.builtin.copy:
     dest: "{{ operators_home }}/{{ operator.name }}/permit_open"
-    owner: "{{ bastion_user }}"
-    group: "{{ bastion_user }}"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
     mode: "0640"
     setype: container_file_t
     content: |
       {% for entry in operator.permit_open | default([]) %}
       {{ entry }}
       {% endfor %}
-  when: operator.access | default('jump') == 'gateway'
-  notify: Restart ssh gateway container
+  when: operator.access | default('jump') in ['gateway', 'jump']
+  notify: Restart ssh pam container
 
 - name: "SELinux: container_file_t для дерева {{ operator.name }} (Podman :Z mount)"
   ansible.builtin.command:
@@ -87,4 +115,4 @@
   register: operator_selinux_fix
   changed_when: operator_selinux_fix.rc == 0
   when: ansible_selinux.status | default('disabled') == 'enabled'
-  notify: Restart ssh gateway container
+  notify: Restart ssh pam container

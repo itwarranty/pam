@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
 # Example: exchange OIDC refresh token for operator SSH user certificate (offline signing).
-# Requires: curl, jq, ssh-keygen, org User CA key on admin workstation (never on bastion).
+# Requires: curl, jq, ssh-keygen, org User CA key on admin workstation (never on the gateway).
 set -euo pipefail
 
-: "${BASTION_USER_CA_KEY:?Set BASTION_USER_CA_KEY to CA private key path}"
-: "${BASTION_OIDC_ISSUER:?Set BASTION_OIDC_ISSUER e.g. https://idp.example.com/realms/mt}"
-: "${BASTION_OIDC_CLIENT_ID:?Set BASTION_OIDC_CLIENT_ID}"
-: "${BASTION_OIDC_REFRESH_TOKEN:?Export via oidc-offline-token.sh.example}"
+: "${PAM_USER_CA_KEY:?Set PAM_USER_CA_KEY to CA private key path}"
+: "${PAM_OIDC_ISSUER:?Set PAM_OIDC_ISSUER e.g. https://idp.example.com/realms/mt}"
+: "${PAM_OIDC_CLIENT_ID:?Set PAM_OIDC_CLIENT_ID}"
+: "${PAM_OIDC_REFRESH_TOKEN:?Export via oidc-offline-token.sh.example}"
 
-OPERATOR_NAME="${1:?operator name (matches bastion_operators[].name)}"
+OPERATOR_NAME="${1:?operator name (matches pam_operators[].name)}"
 OPERATOR_PUBKEY="${2:?path to operator public key}"
 VALID_HOURS="${3:-24}"
-REQUIRED_GROUP="${BASTION_OIDC_REQUIRED_GROUP:-bastion-operators}"
+REQUIRED_GROUP="${PAM_OIDC_REQUIRED_GROUP:-gateway-operators}"
 
-TOKEN_JSON="$(curl -sS -X POST "${BASTION_OIDC_ISSUER}/protocol/openid-connect/token" \
+TOKEN_JSON="$(curl -sS -X POST "${PAM_OIDC_ISSUER}/protocol/openid-connect/token" \
   -d "grant_type=refresh_token" \
-  -d "client_id=${BASTION_OIDC_CLIENT_ID}" \
-  -d "refresh_token=${BASTION_OIDC_REFRESH_TOKEN}")"
+  -d "client_id=${PAM_OIDC_CLIENT_ID}" \
+  -d "refresh_token=${PAM_OIDC_REFRESH_TOKEN}")"
 
 ACCESS_TOKEN="$(printf '%s' "${TOKEN_JSON}" | jq -r '.access_token // empty')"
 [[ -n "${ACCESS_TOKEN}" ]] || { echo "Token refresh failed: ${TOKEN_JSON}" >&2; exit 1; }
 
 USERINFO="$(curl -sS -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-  "${BASTION_OIDC_ISSUER}/protocol/openid-connect/userinfo")"
+  "${PAM_OIDC_ISSUER}/protocol/openid-connect/userinfo")"
 
 GROUPS="$(printf '%s' "${USERINFO}" | jq -r '.groups // [] | @sh' 2>/dev/null || echo '')"
 USERNAME="$(printf '%s' "${USERINFO}" | jq -r '.preferred_username // .sub // empty')"
@@ -34,9 +34,9 @@ fi
 
 VALID_UNTIL="$(date -u -d "+${VALID_HOURS} hours" +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v+"${VALID_HOURS}"H +%Y-%m-%dT:%M:%S)"
 
-ssh-keygen -s "${BASTION_USER_CA_KEY}" -I "${OPERATOR_NAME}@example.com" \
+ssh-keygen -s "${PAM_USER_CA_KEY}" -I "${OPERATOR_NAME}@example.com" \
   -n "${OPERATOR_NAME}" -V "-1d:${VALID_UNTIL}" \
-  -O "force-command=/usr/local/bin/bastion-ssh-gateway-wrapper.sh" \
+  -O "force-command=/usr/local/bin/pam-ssh-gateway-wrapper.sh" \
   "${OPERATOR_PUBKEY}"
 
 echo "Signed certificate written next to ${OPERATOR_PUBKEY} (.-cert.pub)"

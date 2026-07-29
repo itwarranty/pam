@@ -1,6 +1,6 @@
 # Guest Wi‑Fi segment lab (open source, low resource)
 
-Лёгкая эмуляция **гостевой Wi‑Fi** + **corp internal** + **DMZ (bastion)** на **одном Linux-сервере** с Podman.
+Лёгкая эмуляция **гостевой Wi‑Fi** + **corp internal** + **DMZ (gateway)** на **одном Linux-сервере** с Podman.
 
 Ресурсы: ~4 Alpine-контейнера, **~150–400 MiB RAM**, без VM/KVM.
 
@@ -26,7 +26,7 @@ Private `10.1.13.0/24` снаружи **не маршрутизируется**.
 Для SSH PAM на prod это значит:
 
 - `allowed_sources` для инженера с guest Wi‑Fi → **публичный egress IP** (или CIDR провайдера), **не** `10.1.13.0/24`.
-- Прямой доступ guest → internal target (`10.0.1.10`) должен быть **заблокирован** сетью; только через bastion/gateway.
+- Прямой доступ guest → internal target (`10.0.1.10`) должен быть **заблокирован** сетью; только через gateway/gateway.
 
 ---
 
@@ -42,7 +42,7 @@ Private `10.1.13.0/24` снаружи **не маршрутизируется**.
   │ .51     │               │             │
   └─────────┘          dmz │        corp │
                     10.0.2.0/24   10.0.1.0/24
-                    bastion-mock   target (ssh)
+                    gateway-mock   target (ssh)
                     :2222          10.0.1.10
 ```
 
@@ -68,13 +68,13 @@ chmod +x scripts/*.sh router/entrypoint.sh
 ./scripts/verify.sh
 
 # «Ноутбук в guest Wi‑Fi»
-podman exec -it bastion-guest-lab-guest-pc sh
+podman exec -it pam-guest-lab-guest-pc sh
 # внутри: ping 10.1.13.1; ping 10.0.1.10 (fail); nc -zv 10.0.2.10 2222 (ok)
 
 ./scripts/down.sh
 ```
 
-С хоста bastion-mock: `ssh -p 12222 bastion-mock@127.0.0.1` (password `lab`).
+С хоста gateway-mock: `ssh -p 12222 gateway-mock@127.0.0.1` (password `lab`).
 
 ---
 
@@ -85,7 +85,7 @@ podman exec -it bastion-guest-lab-guest-pc sh
 3. Подключите контейнер к DMZ lab:
 
 ```bash
-./scripts/attach-bastion.sh
+./scripts/attach-gateway.sh
 ```
 
 4. На guest-pc проверьте SSH к реальному шлюзу (ключ + TOTP lab).
@@ -93,7 +93,7 @@ podman exec -it bastion-guest-lab-guest-pc sh
 
 ```yaml
 allowed_sources:
-  - "185.6.175.156/32"   # ваш guest egress; в lab можно 10.1.13.0/24 если bastion в DMZ L2
+  - "185.6.175.156/32"   # ваш guest egress; в lab можно 10.1.13.0/24 если gateway в DMZ L2
 ```
 
 ---
@@ -119,6 +119,6 @@ allowed_sources:
 ## Ограничения
 
 - Это **L3-модель**, не эмуляция Wi‑Fi (802.11, WPA, captive portal).
-- Mock bastion/target — Alpine+sshd; для Tier 3/4 тестов подключайте `ssh_bastion`.
+- Mock gateway/target — Alpine+sshd; для Tier 3/4 тестов подключайте `ssh_pam`.
 - Rootless Podman: `--ip` и iptables в router могут не работать — используйте `sudo podman`.
 - На Lima с Mac mount репо может быть **read-only** — `up.sh` копирует router script в `/tmp` (SELinux `:Z` на mount не нужен).

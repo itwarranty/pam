@@ -2,143 +2,143 @@
 # Решения CSO — не переопределять без formal risk acceptance заказчика
 
 # Обязательная платформа (плейбук прервётся на других ОС)
-bastion_required_os: Rocky
-bastion_required_os_major: "9"
-bastion_required_arch: x86_64
-bastion_selinux_enforcing: true
+pam_required_os: Rocky
+pam_required_os_major: "9"
+pam_required_arch: x86_64
+pam_selinux_enforcing: true
 
 # Движок — только rootless Podman (Docker не поддерживается)
 container_engine: podman
 
 # MFA — только strict-образ (MFA_STRICT=1 при сборке)
-bastion_mfa_enforce: true
+pam_mfa_enforce: true
 
 # White label — необязательный текст баннера (пусто = без названия продукта)
 ssh_pam_banner_title: ""
-bastion_totp_issuer: "SSH PAM"
-bastion_cert_domain: example.com
-bastion_install_dir: /opt/pam
-bastion_lab_domain: example.com
+pam_totp_issuer: "ITWarranty"
+pam_cert_domain: example.com
+pam_install_dir: /opt/pam
+pam_lab_domain: example.com
 
 # Именование и пути
-bastion_user: bastion
-bastion_ssh_port: 2222
-bastion_home: "/home/{{ bastion_user }}"
+pam_user: pam
+pam_ssh_port: 2222
+pam_home: "/home/{{ pam_user }}"
 trusted_files_dir: /tmp/trusted_upstream_packages
-audit_log_dir: /var/log/bastion_sessions
-operators_home: "{{ bastion_home }}/operators"
+audit_log_dir: /var/log/pam_sessions
+operators_home: "{{ pam_home }}/operators"
 
 # Jump-host: whitelist обязателен (пустой список = запрет деплоя)
-bastion_allow_tcp_forwarding: true
-bastion_permitted_targets:
+pam_allow_tcp_forwarding: true
+pam_permitted_targets:
   - "10.0.1.10:22"
   - "10.0.1.11:22"
 
-bastion_mfa_secrets_output_dir: "{{ playbook_dir }}/generated/mfa"
+pam_mfa_secrets_output_dir: "{{ playbook_dir }}/generated/mfa"
 
 # Операторы prod — через Vault; dev — `group_vars/dev/` (lab keys)
-bastion_operators: []
+pam_operators: []
 
 # Tier 1 Free (v0.2): source IP, SIEM, WORM archive
-bastion_require_source_ip: false
-bastion_allowed_source_cidrs: []
-bastion_siem_forward_enabled: false
-bastion_siem_server: ""
-bastion_siem_port: 514
-bastion_siem_protocol: tcp
-bastion_worm_archive_dir: ""
-bastion_worm_archive_min_age_minutes: 5
+pam_require_source_ip: false
+pam_allowed_source_cidrs: []
+pam_siem_forward_enabled: false
+pam_siem_server: ""
+pam_siem_port: 514
+pam_siem_protocol: tcp
+pam_worm_archive_dir: ""
+pam_worm_archive_min_age_minutes: 5
 
 # Tier 1 Phase B (v0.3): JIT access windows
-bastion_jit_timer_enabled: false
-bastion_jit_timer_schedule: hourly
-bastion_jit_purge_script_path: /usr/local/bin/bastion-jit-purge.sh
-bastion_jit_playbook_command: >-
-  /usr/bin/ansible-playbook -i {{ bastion_install_dir }}/inventory/hosts.yml
-  {{ bastion_install_dir }}/site.yml --tags jit_purge
+pam_jit_timer_enabled: false
+pam_jit_timer_schedule: hourly
+pam_jit_purge_script_path: /usr/local/bin/pam-jit-purge.sh
+pam_jit_playbook_command: >-
+  /usr/bin/ansible-playbook -i {{ pam_install_dir }}/inventory/hosts.yml
+  {{ pam_install_dir }}/site.yml --tags jit_purge
 
 # Tier 1 Phase C (v0.4): SSH User CA prod policy
-bastion_allow_raw_pubkey_prod: false
-bastion_cert_max_validity_hours: 72
-bastion_ssh_user_ca_qa_complete: false
+pam_allow_raw_pubkey_prod: false
+pam_cert_max_validity_hours: 72
+pam_ssh_user_ca_qa_complete: false
 
 # Tier 2 Free (v0.5): incident logs, command policy, audit role, rate limit, break-glass
 # CSO: denylist обязателен в prod; enforcement — только v2 (PTY inspector на шлюз).
-# v1 (remote bash --rcfile на target) — migration-only; выключить v2: bastion_command_policy_v2_required: false + risk acceptance.
-bastion_shell_command_policy_enabled: true
-bastion_command_policy_v2_required: true
-bastion_shell_command_denylist:
+# v1 (remote bash --rcfile на target) — migration-only; выключить v2: pam_command_policy_v2_required: false + risk acceptance.
+pam_shell_command_policy_enabled: true
+pam_command_policy_v2_required: true
+pam_shell_command_denylist:
   - 'rm\s+-rf\s+/'
   - 'iptables\s+-F'
   - 'mkfs\.'
   - 'dd\s+if='
   - ':(){ :|:& };:'
-bastion_ssh_rate_limit_enabled: false
-bastion_ssh_rate_limit_method: firewalld
-bastion_ssh_rate_limit_rate: "30/m"
-bastion_fail2ban_maxretry: 5
-bastion_fail2ban_bantime: 3600
-bastion_fail2ban_logpath: /var/log/secure
-bastion_break_glass_enabled: false
-bastion_break_glass_max_hours: 4
-bastion_break_glass_audit_enabled: true
+pam_ssh_rate_limit_enabled: false
+pam_ssh_rate_limit_method: firewalld
+pam_ssh_rate_limit_rate: "30/m"
+pam_fail2ban_maxretry: 5
+pam_fail2ban_bantime: 3600
+pam_fail2ban_logpath: /var/log/secure
+pam_break_glass_enabled: false
+pam_break_glass_max_hours: 4
+pam_break_glass_audit_enabled: true
 
 # Tier 3 Free (v0.6): SSH gateway — target session recording + credential broking
-bastion_targets: []
-bastion_targets_home: "{{ bastion_home }}/targets"
-bastion_runtime_dir: "{{ bastion_home }}/runtime"
-bastion_gateway_lab_mode: false
-bastion_gateway_lab_enabled: false
-bastion_gateway_lab_network: bastion_net
-bastion_gateway_lab_target_image: gateway_target:latest
-bastion_require_vault_target_keys: true
-bastion_prod_require_gateway: false
-bastion_prod_target_tags: [prod]
-bastion_jump_risk_acceptance_required: false
-bastion_session_ctl_enabled: true
-bastion_kill_gateway_sessions: true
-bastion_gateway_audit_target_keys: true
+pam_targets: []
+pam_targets_home: "{{ pam_home }}/targets"
+pam_runtime_dir: "{{ pam_home }}/runtime"
+pam_gateway_lab_mode: false
+pam_gateway_lab_enabled: false
+pam_gateway_lab_network: pam_net
+pam_gateway_lab_target_image: gateway_target:latest
+pam_require_vault_target_keys: true
+pam_prod_require_gateway: false
+pam_prod_target_tags: [prod]
+pam_jump_risk_acceptance_required: false
+pam_session_ctl_enabled: true
+pam_kill_gateway_sessions: true
+pam_gateway_audit_target_keys: true
 
 # Tier 4 Free (v1.0): SSH PAM complete — search, policy v2, watch, Vault, OIDC, HA
-# python3 в образе — load-bearing для policy v2 (bastion-pty-inspector.py), не опциональный runtime.
-bastion_session_search_enabled: true
-bastion_session_watch_enabled: true
-bastion_gateway_command_policy_v2_enabled: true  # prod steady-state: true (preflight + compliance)
-bastion_shell_command_policy_v2_enabled: true   # prod steady-state: true (preflight + compliance)
-bastion_gateway_deny_kill_session: false
-bastion_vault_enabled: false
-bastion_vault_addr: ""
-bastion_vault_token: ""
-bastion_vault_namespace: ""
-bastion_vault_mount: secret
-bastion_oidc_cert_policy_enabled: false
-bastion_oidc_issuer: ""
-bastion_oidc_client_id: ""
-bastion_oidc_required_group: bastion-operators
-bastion_ha_enabled: false
-bastion_ha_role: primary
+# python3 в образе — load-bearing для policy v2 (pam-pty-inspector.py), не опциональный runtime.
+pam_session_search_enabled: true
+pam_session_watch_enabled: true
+pam_gateway_command_policy_v2_enabled: true  # prod steady-state: true (preflight + compliance)
+pam_shell_command_policy_v2_enabled: true   # prod steady-state: true (preflight + compliance)
+pam_gateway_deny_kill_session: false
+pam_vault_enabled: false
+pam_vault_addr: ""
+pam_vault_token: ""
+pam_vault_namespace: ""
+pam_vault_mount: secret
+pam_oidc_cert_policy_enabled: false
+pam_oidc_issuer: ""
+pam_oidc_client_id: ""
+pam_oidc_required_group: gateway-operators
+pam_ha_enabled: false
+pam_ha_role: primary
 
-# Tier 5 Free (v1.1): FIDO-Anchor MFA — client-side sk key + bastion TOTP
-bastion_require_fido_pubkey: false
-bastion_mfa_mode: totp
-bastion_fido_only_waiver: false
-bastion_fido_ecdsa_sk_allowed: false
-bastion_fido_waiver_operators: []
-bastion_fido_lab_enabled: false
+# Tier 5 Free (v1.1): FIDO-Anchor MFA — client-side sk key + gateway TOTP
+pam_require_fido_pubkey: false
+pam_mfa_mode: totp
+pam_fido_only_waiver: false
+pam_fido_ecdsa_sk_allowed: false
+pam_fido_waiver_operators: []
+pam_fido_lab_enabled: false
 
-# MT: DR service operator (jump + JIT permit_open — no target identity for DR daemon)
-bastion_dr_enabled: false
-bastion_dr_service_operator_name: dr-scanner
-bastion_dr_service_operators:
+# DR service operator (jump + JIT permit_open — no target identity for DR daemon)
+pam_dr_enabled: false
+pam_dr_service_operator_name: dr-scanner
+pam_dr_service_operators:
   - dr-scanner
-bastion_dr_jit_window_minutes: 15
+pam_dr_jit_window_minutes: 15
 
 # Локальный доверенный образ (Air Gap)
-bastion_container_name: ssh_bastion
-bastion_image_name: bastion_secure
-bastion_image_tag: latest
-bastion_image_tar: "{{ trusted_files_dir }}/bastion_image.tar"
-bastion_required_image_mfa_strict: "1"
+pam_container_name: ssh_pam
+pam_image_name: pam_secure
+pam_image_tag: latest
+pam_image_tar: "{{ trusted_files_dir }}/pam_image.tar"
+pam_required_image_mfa_strict: "1"
 
 # Коммерческий PAM (ветка A)
 is_commercial_pam: false

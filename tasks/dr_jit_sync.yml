@@ -1,0 +1,128 @@
+---
+# Sync dr-scanner jump permits from {{ pam_home }}/.dr/jit/grants.json (JIT windows).
+- name: DR JIT — state directory
+  ansible.builtin.file:
+    path: "{{ pam_home }}/.dr/jit"
+    state: directory
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "0700"
+
+- name: DR JIT — load grants.json
+  ansible.builtin.slurp:
+    src: "{{ pam_home }}/.dr/jit/grants.json"
+  register: dr_jit_slurp
+  failed_when: false
+
+- name: DR JIT — compute active permit_open list
+  ansible.builtin.shell: |
+    set -euo pipefail
+    python3 <<'PY'
+    import json, os
+    from datetime import datetime, timezone
+
+    raw = os.environ.get("RAW", '{"grants":[]}')
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        data = {"grants": []}
+    now = datetime.now(timezone.utc)
+    active = []
+    for grant in data.get("grants", []):
+        exp = grant.get("expires_at") or ""
+        if not exp:
+            continue
+        dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+        if dt <= now:
+            continue
+        host = grant.get("host", "")
+        port = int(grant.get("port", 22))
+        if host:
+            active.append(f"{host}:{port}")
+    print(json.dumps(sorted(set(active))))
+    PY
+  environment:
+    RAW: >-
+      {{
+        (dr_jit_slurp.content | b64decode)
+        if dr_jit_slurp.content is defined
+        else '{"grants":[]}'
+      }}
+  register: dr_jit_active_cmd
+  changed_when: false
+
+- name: DR JIT — active permits fact
+  ansible.builtin.set_fact:
+    dr_jit_permit_open: "{{ dr_jit_active_cmd.stdout | from_json }}"
+
+- name: DR JIT — resolve service operator
+  ansible.builtin.set_fact:
+    dr_scanner_operator: >-
+      {{
+        pam_operators
+        | selectattr('name', 'equalto', pam_dr_service_operator_name)
+        | list
+        | first
+      }}
+
+- name: DR JIT — fail if service operator missing
+  ansible.builtin.fail:
+    msg: >-
+      Operator '{{ pam_dr_service_operator_name }}' not in pam_operators.
+      Enable pam_dr_enabled and provision dr-scanner.
+  when: dr_scanner_operator is none or dr_scanner_operator is not defined
+
+- name: DR JIT — effective operator with JIT permits
+  ansible.builtin.set_fact:
+    dr_scanner_operator_effective: "{{ dr_scanner_operator | combine({'permit_open': dr_jit_permit_open}) }}"
+
+- name: DR JIT — operator list for sshd (JIT permit_open on dr-scanner)
+  ansible.builtin.set_fact:
+    pam_operators_jit_sshd: "{{ pam_operators_jit_sshd | default([]) + [merged] }}"
+  vars:
+    merged: >-
+      {{
+        item | combine({'permit_open': dr_jit_permit_open})
+        if item.name == pam_dr_service_operator_name
+        else item
+      }}
+  loop: "{{ pam_operators }}"
+  loop_control:
+    loop_var: item
+    label: "{{ item.name }}"
+
+- name: DR JIT — refresh sshd_config with active JIT permits
+  ansible.builtin.template:
+    src: templates/sshd_config.j2
+    dest: "{{ pam_home }}/.ssh_config/sshd_config"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "0600"
+  vars:
+    pam_operators_effective: "{{ pam_operators_jit_sshd }}"
+  notify: Restart ssh pam container
+
+- name: DR JIT — permit_open file for dr-scanner
+  ansible.builtin.copy:
+    dest: "{{ operators_home }}/{{ pam_dr_service_operator_name }}/permit_open"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "0640"
+    setype: container_file_t
+    content: |
+      {% for entry in dr_jit_permit_open %}
+      {{ entry }}
+      {% endfor %}
+  notify: Restart ssh pam container
+
+- name: DR JIT — authorized_keys for dr-scanner
+  ansible.builtin.template:
+    src: authorized_keys.j2
+    dest: "{{ operators_home }}/{{ pam_dr_service_operator_name }}/.ssh/authorized_keys"
+    owner: "{{ pam_user }}"
+    group: "{{ pam_user }}"
+    mode: "0600"
+    setype: container_file_t
+  vars:
+    operator: "{{ dr_scanner_operator_effective }}"
+  notify: Restart ssh pam container

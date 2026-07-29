@@ -1,0 +1,9 @@
+---
+# Run PAM playbooks inside Lima VM (ansible_connection: local).
+
+all:
+  children:
+    pam_servers:
+      hosts:
+        pam-lima:
+          ansible_connection: local

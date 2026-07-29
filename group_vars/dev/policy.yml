@@ -1,5 +1,5 @@
 ---
 # Dev: raw pubkeys разрешены (Phase C prod policy не применяется)
-bastion_allow_raw_pubkey_prod: true
-bastion_require_fido_pubkey: false
-bastion_mfa_mode: totp
+pam_allow_raw_pubkey_prod: true
+pam_require_fido_pubkey: false
+pam_mfa_mode: totp

@@ -15,7 +15,7 @@ CERT_LINE = re.compile(r"^-?\S+-cert-\S+@openssh\.com\s")
 
 
 def allow_ecdsa() -> bool:
-    return os.environ.get("BASTION_FIDO_ECDSA_SK_ALLOWED", "0").lower() in (
+    return os.environ.get("PAM_FIDO_ECDSA_SK_ALLOWED", "0").lower() in (
         "1",
         "true",
         "yes",

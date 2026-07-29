@@ -1,52 +1,52 @@
 ---
-- name: "[CSO] bastion_mfa_mode — допустимые значения"
+- name: "[CSO] pam_mfa_mode — допустимые значения"
   ansible.builtin.assert:
     that:
-      - bastion_mfa_mode | default('totp') in ['totp', 'fido_totp', 'fido_only']
+      - pam_mfa_mode | default('totp') in ['totp', 'fido_totp', 'fido_only']
     fail_msg: >
-      bastion_mfa_mode={{ bastion_mfa_mode | default('totp') }} недопустим.
+      pam_mfa_mode={{ pam_mfa_mode | default('totp') }} недопустим.
       Разрешены: totp, fido_totp, fido_only.
   when: not (is_commercial_pam | bool)
 
-- name: "[CSO] fido_only требует bastion_fido_only_waiver"
+- name: "[CSO] fido_only требует pam_fido_only_waiver"
   ansible.builtin.assert:
     that:
-      - bastion_fido_only_waiver | default(false) | bool
+      - pam_fido_only_waiver | default(false) | bool
     fail_msg: >
-      bastion_mfa_mode=fido_only без bastion_fido_only_waiver=true запрещён CSO.
+      pam_mfa_mode=fido_only без pam_fido_only_waiver=true запрещён CSO.
       TOTP остаётся обязательным по умолчанию (fido_totp).
   when:
-    - bastion_mfa_mode | default('totp') == 'fido_only'
+    - pam_mfa_mode | default('totp') == 'fido_only'
     - not (is_commercial_pam | bool)
 
-- name: "[CSO] fido_only требует bastion_require_fido_pubkey"
+- name: "[CSO] fido_only требует pam_require_fido_pubkey"
   ansible.builtin.assert:
     that:
-      - bastion_require_fido_pubkey | default(false) | bool
+      - pam_require_fido_pubkey | default(false) | bool
     fail_msg: >
-      bastion_mfa_mode=fido_only требует bastion_require_fido_pubkey=true.
+      pam_mfa_mode=fido_only требует pam_require_fido_pubkey=true.
   when:
-    - bastion_mfa_mode | default('totp') == 'fido_only'
+    - pam_mfa_mode | default('totp') == 'fido_only'
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] fido_only — образ MFA_STRICT всё ещё обязателен"
   ansible.builtin.assert:
     that:
-      - bastion_mfa_enforce | bool
+      - pam_mfa_enforce | bool
     fail_msg: >
-      bastion_mfa_enforce=false недопустим даже при fido_only (CSO policy).
+      pam_mfa_enforce=false недопустим даже при fido_only (CSO policy).
   when:
-    - bastion_mfa_mode | default('totp') == 'fido_only'
+    - pam_mfa_mode | default('totp') == 'fido_only'
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] FIDO migration waiver (debug)"
   ansible.builtin.debug:
     msg: >
       FIDO migration waiver: оператор «{{ item }}» может использовать non-sk ключ
-      (bastion_fido_waiver_operators).
-  loop: "{{ bastion_fido_waiver_operators | default([]) }}"
+      (pam_fido_waiver_operators).
+  loop: "{{ pam_fido_waiver_operators | default([]) }}"
   when:
-    - bastion_require_fido_pubkey | default(false) | bool
+    - pam_require_fido_pubkey | default(false) | bool
     - not (is_commercial_pam | bool)
 
 - name: "[CSO] Validate FIDO-sk operator pubkey"
@@ -56,17 +56,17 @@
       - "{{ playbook_dir }}/scripts/preflight-fido-key.py"
       - "{{ item.pubkey | trim }}"
   environment:
-    BASTION_FIDO_ECDSA_SK_ALLOWED: "{{ bastion_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
+    PAM_FIDO_ECDSA_SK_ALLOWED: "{{ pam_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
   changed_when: false
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - bastion_require_fido_pubkey | default(false) | bool
+    - pam_require_fido_pubkey | default(false) | bool
     - not (is_commercial_pam | bool)
     - item.pubkey | default('') | length > 0
     - item.certificate | default('') | length == 0
-    - item.name not in (bastion_fido_waiver_operators | default([]))
+    - item.name not in (pam_fido_waiver_operators | default([]))
 
 - name: "[CSO] Validate FIDO-backed operator certificate"
   ansible.builtin.shell: |
@@ -77,13 +77,13 @@
     python3 "{{ playbook_dir }}/scripts/preflight-fido-key.py" "$tmp"
   environment:
     CERT_LINE: "{{ item.certificate | trim }}"
-    BASTION_FIDO_ECDSA_SK_ALLOWED: "{{ bastion_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
+    PAM_FIDO_ECDSA_SK_ALLOWED: "{{ pam_fido_ecdsa_sk_allowed | default(false) | ternary('1', '0') }}"
   changed_when: false
-  loop: "{{ bastion_operators }}"
+  loop: "{{ pam_operators }}"
   loop_control:
     label: "{{ item.name }}"
   when:
-    - bastion_require_fido_pubkey | default(false) | bool
+    - pam_require_fido_pubkey | default(false) | bool
     - not (is_commercial_pam | bool)
     - item.certificate | default('') | length > 0
-    - item.name not in (bastion_fido_waiver_operators | default([]))
+    - item.name not in (pam_fido_waiver_operators | default([]))

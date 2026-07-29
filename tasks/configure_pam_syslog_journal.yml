@@ -1,0 +1,59 @@
+---
+# Import container gateway.syslog lines into host journald (journalctl -t gateway-*).
+- name: Каталог state для syslog bridge
+  ansible.builtin.file:
+    path: /var/lib/gateway
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: pam_syslog_journal_bridge | default(false) | bool
+
+- name: pam-syslog-journal-bridge on host
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/scripts/pam-syslog-journal-bridge.sh"
+    dest: /usr/local/bin/pam-syslog-journal-bridge.sh
+    mode: "0755"
+  when: pam_syslog_journal_bridge | default(false) | bool
+
+- name: systemd timer — gateway syslog → journald
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/pam-syslog-bridge.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=SSH PAM syslog file to journald bridge
+      After=network.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/pam-syslog-journal-bridge.sh
+
+      [Install]
+      WantedBy=multi-user.target
+  when: pam_syslog_journal_bridge | default(false) | bool
+
+- name: systemd timer unit — gateway syslog bridge
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/pam-syslog-bridge.timer
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Run SSH PAM syslog bridge every 10s
+
+      [Timer]
+      OnBootSec=30
+      OnUnitActiveSec=10
+      Unit=pam-syslog-bridge.service
+
+      [Install]
+      WantedBy=timers.target
+  when: pam_syslog_journal_bridge | default(false) | bool
+
+- name: Enable pam-syslog-bridge timer
+  ansible.builtin.systemd:
+    name: pam-syslog-bridge.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: pam_syslog_journal_bridge | default(false) | bool

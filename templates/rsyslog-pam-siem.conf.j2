@@ -1,0 +1,9 @@
+# SSH PAM — forward auditd gateway events (local6) to client SIEM.
+# Managed by Ansible; replace @@host with client receiver.
+{% if pam_siem_protocol | default('tcp') == 'udp' %}
+local6.*    @{{ pam_siem_server }}:{{ pam_siem_port | default(514) }}
+{% elif pam_siem_protocol | default('tcp') == 'relp' %}
+local6.*    :omrelp:{{ pam_siem_server }}:{{ pam_siem_port | default(514) }}
+{% else %}
+local6.*    @@{{ pam_siem_server }}:{{ pam_siem_port | default(514) }}
+{% endif %}

@@ -1,20 +1,20 @@
 ---
 # Install Tier 4 host CLI tools (session search, watch).
-- name: bastion-session-search on host
+- name: pam-session-search on host
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/scripts/bastion-session-search.sh"
-    dest: /usr/local/bin/bastion-session-search
+    src: "{{ playbook_dir }}/scripts/pam-session-search.sh"
+    dest: /usr/local/bin/pam-session-search
     mode: "0755"
 
-- name: bastion-session-watch on host
+- name: pam-session-watch on host
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/scripts/bastion-session-watch.sh"
-    dest: /usr/local/bin/bastion-session-watch
+    src: "{{ playbook_dir }}/scripts/pam-session-watch.sh"
+    dest: /usr/local/bin/pam-session-watch
     mode: "0755"
-  when: bastion_session_watch_enabled | default(true) | bool
+  when: pam_session_watch_enabled | default(true) | bool
 
 - name: jq for session search (Rocky 9)
   ansible.builtin.dnf:
     name: jq
     state: present
-  when: bastion_session_search_enabled | default(true) | bool
+  when: pam_session_search_enabled | default(true) | bool

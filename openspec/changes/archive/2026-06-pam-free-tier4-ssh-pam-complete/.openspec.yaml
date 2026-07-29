@@ -1,0 +1,12 @@
+schema: spec-driven
+created: 2026-06-16
+
+depends_on:
+  - pam-ssh-gateway-tier3  # archived; v0.6.0
+
+target_release: v1.0.0
+
+product_positioning: |
+  SSH PAM = open-source tier of SSH PAM — full SSH PAM product.
+  Replaces commercial PAM gateways (e.g. СКДПУ SSH) for Linux scope.
+  Tier 4 completes enterprise-class SSH PAM in Free; no separate paid feature split for SSH.

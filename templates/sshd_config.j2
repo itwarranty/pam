@@ -1,4 +1,4 @@
-Port {{ bastion_ssh_port }}
+Port {{ pam_ssh_port }}
 Protocol 2
 PasswordAuthentication no
 PubkeyAuthentication yes
@@ -12,9 +12,9 @@ PermitTunnel no
 GatewayPorts no
 
 # Jump-host: контролируемый TCP-forwarding вместо полного запрета
-AllowTcpForwarding {{ 'yes' if bastion_allow_tcp_forwarding | bool else 'no' }}
-{% if bastion_allow_tcp_forwarding | bool and bastion_permitted_targets | length > 0 %}
-{%   for target in bastion_permitted_targets %}
+AllowTcpForwarding {{ 'yes' if pam_allow_tcp_forwarding | bool else 'no' }}
+{% if pam_allow_tcp_forwarding | bool and pam_permitted_targets | length > 0 %}
+{%   for target in pam_permitted_targets %}
 PermitOpen {{ target }}
 {%   endfor %}
 {% endif %}
@@ -23,9 +23,9 @@ ClientAliveInterval 300
 ClientAliveCountMax 2
 LogLevel VERBOSE
 SyslogFacility AUTH
-Banner /etc/ssh/bastion-banner.txt
+Banner /etc/ssh/gateway-banner.txt
 
-{% if bastion_mfa_mode | default('totp') == 'fido_only' and bastion_fido_only_waiver | default(false) | bool and bastion_require_fido_pubkey | default(false) | bool %}
+{% if pam_mfa_mode | default('totp') == 'fido_only' and pam_fido_only_waiver | default(false) | bool and pam_require_fido_pubkey | default(false) | bool %}
 # MFA fido_only (CSO waiver): FIDO-sk pubkey/cert only — no TOTP prompt
 KbdInteractiveAuthentication no
 AuthenticationMethods publickey
@@ -35,33 +35,36 @@ KbdInteractiveAuthentication yes
 AuthenticationMethods publickey,keyboard-interactive
 {% endif %}
 
-{% if bastion_trusted_user_ca_file | default('') | length > 0 %}
+{% if pam_trusted_user_ca_file | default('') | length > 0 %}
 # User certificates, подписанные CA организации (например *.example.com)
 TrustedUserCAKeys /etc/ssh/trusted_user_ca.pub
 {% endif %}
 
-{% for operator in bastion_operators_effective | default(bastion_operators) %}
+{% for operator in pam_operators_effective | default(pam_operators) %}
 Match User {{ operator.name }}
 {%   if operator.break_glass | default(false) | bool %}
-    SetEnv BASTION_BREAK_GLASS=1
+    SetEnv PAM_BREAK_GLASS=1
 {%   endif %}
 {%   if operator.incident_id | default('') | length > 0 %}
-    SetEnv BASTION_INCIDENT_ID={{ operator.incident_id }}
+    SetEnv PAM_INCIDENT_ID={{ operator.incident_id }}
+{%   endif %}
+{%   if operator.name in (pam_dr_service_operators | default([])) %}
+    AuthenticationMethods publickey
 {%   endif %}
 {%   if operator.access | default('jump') == 'audit' %}
-    ForceCommand /usr/local/bin/bastion-audit-shell-wrapper.sh
+    ForceCommand /usr/local/bin/pam-audit-shell-wrapper.sh
     AllowTcpForwarding no
 {%   elif operator.access | default('jump') == 'shell' %}
-    ForceCommand /usr/local/bin/bastion-shell-wrapper.sh
+    ForceCommand /usr/local/bin/pam-shell-wrapper.sh
     AllowTcpForwarding no
 {%   elif operator.access | default('jump') == 'gateway' %}
-    ForceCommand /usr/local/bin/bastion-ssh-gateway-wrapper.sh
+    ForceCommand /usr/local/bin/pam-ssh-gateway-wrapper.sh
     AllowTcpForwarding no
 {%   else %}
     # Jump: restrict in authorized_keys; help on mistaken interactive login
     PermitTTY no
-    ForceCommand /usr/local/bin/bastion-jump-help-wrapper.sh
-    AllowTcpForwarding {{ 'local' if bastion_allow_tcp_forwarding | bool else 'no' }}
+    ForceCommand /usr/local/bin/pam-jump-help-wrapper.sh
+    AllowTcpForwarding {{ 'local' if pam_allow_tcp_forwarding | bool else 'no' }}
 {%     if operator.permit_open | default([]) | length > 0 %}
 {%       for target in operator.permit_open %}
     PermitOpen {{ target }}

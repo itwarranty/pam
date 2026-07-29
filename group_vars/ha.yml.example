@@ -1,4 +1,4 @@
 ---
-bastion_ha_enabled: true
-bastion_ha_role: primary   # primary | standby on each host
+pam_ha_enabled: true
+pam_ha_role: primary   # primary | standby on each host
 # audit_log_dir must be shared NFS/WORM mount on both nodes

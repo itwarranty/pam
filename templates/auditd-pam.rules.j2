@@ -1,0 +1,12 @@
+# SSH PAM — правила auditd на хосте (дополнение к логам внутри контейнера)
+
+-w {{ audit_log_dir }} -p wa -k pam_session_logs
+{% if pam_break_glass_audit_enabled | default(true) | bool %}
+-w {{ audit_log_dir }} -p wa -k pam_break_glass_session
+{% endif %}
+
+-a always,exit -F arch=b64 -S connect -F a2=16 -k pam_ssh_connect
+{% if pam_gateway_audit_target_keys | default(true) | bool and pam_targets | default([]) | length > 0 %}
+-w {{ pam_targets_home }} -p r -k pam_target_key_read
+{% endif %}
+-a always,exit -F arch=b32 -S connect -F a2=16 -k pam_ssh_connect

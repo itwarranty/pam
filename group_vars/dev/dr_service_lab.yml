@@ -1,0 +1,19 @@
+---
+# DR service operator — automated inventory via PAM jump (no target identity on host).
+pam_dr_enabled: true
+pam_dr_service_operator_name: dr-scanner
+pam_dr_service_operators:
+  - dr-scanner
+pam_dr_jit_window_minutes: 15
+
+pam_operators_dr_service_lab:
+  - name: dr-scanner
+    email: dr-scanner@localhost
+    pubkey: "{{ lookup('file', lab_keys_dir + '/dr-scanner.lab.pub') }}"
+    access: jump
+    dr_service: true
+    permit_open: []
+    automation_key_file: "{{ lab_keys_dir }}/dr-scanner.lab"
+    allowed_sources:
+      - "127.0.0.0/8"
+    incident_id: DR-SERVICE
