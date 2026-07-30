@@ -103,10 +103,6 @@ export PAM_SESSION_ID="${SESSION_ID}"
 export PAM_LOG_PATH="${LOG}"
 export PAM_TARGET_ID="${TARGET_ID}"
 
-# Outer PTY echo paints IDE CPR (^[[row;colR]) before the inspector can drop it.
-# Remote target ssh -tt still echoes keystrokes.
-stty -echo 2>/dev/null || true
-
 /usr/local/bin/pam-ssh-gateway.sh "${TARGET_ID}" "${SESSION_ID}" "${LOG}"
 EXIT_CODE=$?
 

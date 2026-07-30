@@ -43,9 +43,6 @@ BG_LOG=""
 
 logger -t gateway "shell session start user=${USER} log=${LOG} client=${SSH_CLIENT:-unknown} incident=${PAM_INCIDENT_ID:--}${BG_LOG}"
 
-# Avoid IDE CPR echo on the outer PTY; remote bash still echoes.
-stty -echo 2>/dev/null || true
-
 if [ -f /etc/ssh-pam/command_denylist ] || [ -f /run/ssh-pam/command_denylist ]; then
   if [ -f /run/ssh-pam/shell_policy_v2_enabled ] || [ "${PAM_SHELL_COMMAND_POLICY_V2_ENABLED:-0}" = "1" ]; then
     export PAM_DENYLIST=/run/ssh-pam/command_denylist

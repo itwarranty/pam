@@ -11,6 +11,7 @@ import struct
 import subprocess
 import sys
 import termios
+import tty
 
 
 def load_patterns(path):
@@ -33,29 +34,9 @@ def deny_match(line, patterns):
     return None
 
 
-def set_winsize(fd, row, col):
-    winsize = struct.pack("HHHH", row, col, 0, 0)
-    fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
-
-
-def disable_local_echo(fd):
-    """Prevent IDE Cursor Position Reports from being echoed as "^[[row;colR".
-
-    Cursor/VS Code inject CPR into the PTY; with ECHO on, the kernel paints them
-    before any userspace filter can drop them. Remote ssh -tt still provides echo.
-    """
-    try:
-        attrs = termios.tcgetattr(fd)
-        attrs[3] = attrs[3] & ~(
-            termios.ECHO | termios.ECHOE | termios.ECHOK | termios.ECHONL
-        )
-        termios.tcsetattr(fd, termios.TCSANOW, attrs)
-    except (termios.error, OSError):
-        pass
-
-
-# CSI final byte range (ECMA-48): drop CPR (…R) from IDE terminals.
+# Drop IDE Cursor Position Reports (Cursor/VS Code injects these into the PTY).
 _CPR_FINAL = ord("R")
+_CPR_BYTES_RE = re.compile(rb"\x1b\[\d+;\d+R")
 
 
 class StdinCsiFilter:
@@ -72,12 +53,10 @@ class StdinCsiFilter:
                 if len(self._esc) == 1:
                     continue
                 if len(self._esc) == 2:
-                    # ESC [ → CSI; any other second byte is not a CPR candidate.
                     if self._esc[1] != ord("["):
                         out.extend(self._esc)
                         self._esc.clear()
                     continue
-                # CSI parameter/intermediate bytes, then final (0x40-0x7E).
                 if 0x40 <= byte <= 0x7E:
                     if byte == _CPR_FINAL and re.fullmatch(
                         rb"\x1b\[\d+;\d+R", bytes(self._esc)
@@ -97,6 +76,36 @@ class StdinCsiFilter:
         return bytes(out)
 
 
+def sync_winsize(src_fd: int, dst_fd: int) -> None:
+    try:
+        ws = fcntl.ioctl(src_fd, termios.TIOCGWINSZ, b"\0" * 8)
+        fcntl.ioctl(dst_fd, termios.TIOCSWINSZ, ws)
+    except OSError:
+        pass
+
+
+def prepare_parent_tty(fd: int):
+    if not os.isatty(fd):
+        return None
+    saved = termios.tcgetattr(fd)
+    # Raw + no local echo: remote ssh -tt provides character echo only.
+    tty.setraw(fd, termios.TCSANOW)
+    return saved
+
+
+def restore_parent_tty(fd: int, saved) -> None:
+    if saved is None:
+        return
+    try:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+    except (termios.error, OSError):
+        pass
+
+
+def strip_cpr_output(data: bytes) -> bytes:
+    return _CPR_BYTES_RE.sub(b"", data)
+
+
 def main():
     if len(sys.argv) < 2:
         sys.stderr.write("usage: pam-pty-inspector.py COMMAND [args...]\n")
@@ -112,84 +121,134 @@ def main():
     if pid == 0:
         os.execvp(cmd[0], cmd)
 
+    stdin_fd = sys.stdin.fileno()
+    saved_tty = prepare_parent_tty(stdin_fd)
+    sync_winsize(stdin_fd, master_fd)
+    stop_loop = False
+
+    def forward_signal(signum, _frame):
+        nonlocal stop_loop
+        stop_loop = True
+        try:
+            os.kill(pid, signum)
+        except OSError:
+            pass
+
+    def on_winch(_signum, _frame):
+        sync_winsize(stdin_fd, master_fd)
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(sig, forward_signal)
+        except (OSError, ValueError):
+            pass
     try:
-        stdin_fd = sys.stdin.fileno()
-        stdin_flags = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
-        fcntl.fcntl(sys.stdin, fcntl.F_SETFL, stdin_flags | os.O_NONBLOCK)
-        disable_local_echo(stdin_fd)
+        signal.signal(signal.SIGWINCH, on_winch)
+    except (OSError, ValueError):
+        pass
+
+    try:
+        stdin_flags = fcntl.fcntl(stdin_fd, fcntl.F_GETFL)
+        fcntl.fcntl(stdin_fd, fcntl.F_SETFL, stdin_flags | os.O_NONBLOCK)
     except OSError:
         pass
 
     line_buf = b""
     csi_filter = StdinCsiFilter()
-    while True:
-        rlist = [master_fd, sys.stdin]
-        try:
-            readable, _, _ = select.select(rlist, [], [], 0.2)
-        except (OSError, ValueError):
-            break
-
-        if master_fd in readable:
-            try:
-                data = os.read(master_fd, 4096)
-            except OSError:
-                break
-            if not data:
-                break
-            os.write(sys.stdout.fileno(), data)
-
-        if sys.stdin in readable:
-            try:
-                data = os.read(sys.stdin.fileno(), 4096)
-            except OSError as exc:
-                if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
-                    continue
-                data = b""
-            if not data:
-                break
-            data = csi_filter.feed(data)
-            if not data:
-                continue
-            for byte in data:
-                if byte in (8, 127):
-                    line_buf = line_buf[:-1]
-                    os.write(master_fd, bytes([byte]))
-                    continue
-                if byte in (10, 13):
-                    line = line_buf.decode("utf-8", errors="replace")
-                    matched = deny_match(line, patterns) if patterns else None
-                    if matched:
-                        msg = f"[SSH PAM CSO] Command denied by policy (mode={mode}).\n"
-                        os.write(sys.stdout.fileno(), msg.encode())
-                        subprocess.run(
-                            [
-                                "/usr/local/bin/pam-syslog.sh",
-                                "pam-deny",
-                                f"mode={mode} user={os.environ.get('USER', 'unknown')} "
-                                f"denied pattern={matched} cmd={line!r}",
-                            ],
-                            check=False,
-                        )
-                        line_buf = b""
-                        if kill_on_deny:
-                            os.kill(pid, signal.SIGTERM)
-                            sys.exit(1)
-                        continue
-                    line_buf = b""
-                    os.write(master_fd, bytes([byte]))
-                else:
-                    line_buf += bytes([byte])
-                    os.write(master_fd, bytes([byte]))
-
-        if pid and os.waitpid(pid, os.WNOHANG)[0] == pid:
-            break
-
+    code = 0
     try:
-        _, status = os.waitpid(pid, 0)
-        sys.exit(os.WEXITSTATUS(status) if os.WIFEXITED(status) else 1)
-    except OSError:
-        sys.exit(0)
+        while not stop_loop:
+            rlist = [master_fd, stdin_fd]
+            try:
+                readable, _, _ = select.select(rlist, [], [], 0.2)
+            except InterruptedError:
+                continue
+            except OSError as exc:
+                if exc.errno == errno.EINTR:
+                    continue
+                break
+
+            if master_fd in readable:
+                try:
+                    data = os.read(master_fd, 4096)
+                except OSError:
+                    break
+                if not data:
+                    break
+                data = strip_cpr_output(data)
+                if data:
+                    os.write(sys.stdout.fileno(), data)
+
+            if stdin_fd in readable:
+                try:
+                    data = os.read(stdin_fd, 4096)
+                except OSError as exc:
+                    if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                        continue
+                    data = b""
+                if not data:
+                    break
+                data = csi_filter.feed(data)
+                if not data:
+                    continue
+                for byte in data:
+                    if byte == 0x03:
+                        # Ctrl+C in raw mode — forward to remote session, no Python traceback.
+                        line_buf = b""
+                        os.write(master_fd, b"\x03")
+                        continue
+                    if byte in (8, 127):
+                        line_buf = line_buf[:-1]
+                        os.write(master_fd, bytes([byte]))
+                        continue
+                    if byte in (10, 13):
+                        line = line_buf.decode("utf-8", errors="replace")
+                        matched = deny_match(line, patterns) if patterns else None
+                        if matched:
+                            msg = f"[SSH PAM CSO] Command denied by policy (mode={mode}).\n"
+                            os.write(sys.stdout.fileno(), msg.encode())
+                            subprocess.run(
+                                [
+                                    "/usr/local/bin/pam-syslog.sh",
+                                    "pam-deny",
+                                    f"mode={mode} user={os.environ.get('USER', 'unknown')} "
+                                    f"denied pattern={matched} cmd={line!r}",
+                                ],
+                                check=False,
+                            )
+                            line_buf = b""
+                            if kill_on_deny:
+                                os.kill(pid, signal.SIGTERM)
+                                code = 1
+                                stop_loop = True
+                                break
+                            continue
+                        line_buf = b""
+                        os.write(master_fd, bytes([byte]))
+                    else:
+                        line_buf += bytes([byte])
+                        os.write(master_fd, bytes([byte]))
+
+            if pid and os.waitpid(pid, os.WNOHANG)[0] == pid:
+                break
+
+        try:
+            _, status = os.waitpid(pid, 0)
+            if os.WIFEXITED(status):
+                code = os.WEXITSTATUS(status)
+            elif os.WIFSIGNALED(status):
+                sig = os.WTERMSIG(status)
+                code = 128 + sig if sig else 1
+        except OSError:
+            pass
+    finally:
+        restore_parent_tty(stdin_fd, saved_tty)
+
+    sys.exit(code)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(130)
