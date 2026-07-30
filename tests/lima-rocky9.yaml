@@ -25,10 +25,10 @@ disk: "20GiB"
 mountTypesUnsupported:
   - "9p"
 
+# Writable home so the repo path under ~ is usable without a nested sshfs mount
+# (nested writable mounts under a read-only ~ fail with fuse "no write access").
 mounts:
   - location: "~"
-    writable: false
-  - location: "__PAM_REPO__"
     writable: true
 
 portForwards:

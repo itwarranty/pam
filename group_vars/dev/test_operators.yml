@@ -5,7 +5,7 @@ pam_operators_test:
   - name: tester-01
     email: tester-01@example.com
     pubkey: "{{ lookup('file', lookup('env', 'HOME') ~ '/.itwarranty-pam/test-access/tester-01/tester-01.key.pub') }}"
-    mfa_secret: NSLSL4QRNUO4SDOB2AKIOR53VH366HHL
+    mfa_secret: XMY6KMB4EUVZBQB5F3C7356CHO6FTMON
     access: jump
     permit_open:
       - "10.0.1.10:22"

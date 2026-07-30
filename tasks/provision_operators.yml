@@ -44,6 +44,7 @@
   loop_control:
     loop_var: operator
     label: "{{ operator.name }}"
+  when: not (operator.dr_service | default(false) | bool)
   delegate_to: localhost
   become: false
   no_log: true

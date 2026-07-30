@@ -4,6 +4,10 @@
 pam_lab_domain: example.com
 lab_keys_dir: "{{ playbook_dir }}/lab/keys"
 
+# Default source allowlist for lab operators with from= (override in local_lima.yml).
+pam_lab_allowed_sources:
+  - "127.0.0.0/8"
+
 # TOTP lab (otpauth URI в комментариях):
 # engineer-jump: otpauth://totp/SSH%20PAM:engineer-jump@example.com?secret=WRGZUIDE6V4C5YGGDL4JIQJ23RF5JBUA&issuer=SSH+PAM+Lab
 # engineer-shell: otpauth://totp/SSH%20PAM:engineer-shell@example.com?secret=4EQHJGRNNM66OR5BEFLYABHOF6S47A3Q&issuer=SSH+PAM+Lab

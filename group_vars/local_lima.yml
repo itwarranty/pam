@@ -2,3 +2,9 @@
 # Lima-специфика поверх group_vars/dev.yml
 
 trusted_files_dir: /tmp/trusted_upstream_packages
+
+# Rootless Podman publish (pasta) presents client as 10.89.0.0/16, not 127.0.0.1.
+# Keep loopback for in-guest ssh; add pasta CIDR for Mac → Lima:2222 → container.
+pam_lab_allowed_sources:
+  - "127.0.0.0/8"
+  - "10.89.0.0/16"

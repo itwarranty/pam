@@ -31,8 +31,7 @@ pam_operators_gateway_lab:
     incident_id: INC-LAB-GW-01
     permit_open:
       - "gateway-target:22"
-    allowed_sources:
-      - "127.0.0.0/8"
+    allowed_sources: "{{ pam_lab_allowed_sources | default(['127.0.0.0/8']) }}"
 
 pam_permitted_targets:
   - "10.0.1.10:22"

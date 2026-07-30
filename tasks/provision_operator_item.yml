@@ -97,10 +97,9 @@
     group: "{{ pam_user }}"
     mode: "0640"
     setype: container_file_t
-    content: |
-      {% for entry in operator.permit_open | default([]) %}
-      {{ entry }}
-      {% endfor %}
+    # Always pass non-empty content — ansible.copy rejects an empty template body
+    # (e.g. DR service operators with permit_open: []).
+    content: "{{ (operator.permit_open | default([]) | join('\n') ~ '\n') if (operator.permit_open | default([])) else '\n' }}"
   when: operator.access | default('jump') in ['gateway', 'jump']
   notify: Restart ssh pam container
 

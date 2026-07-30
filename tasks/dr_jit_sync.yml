@@ -109,10 +109,7 @@
     group: "{{ pam_user }}"
     mode: "0640"
     setype: container_file_t
-    content: |
-      {% for entry in dr_jit_permit_open %}
-      {{ entry }}
-      {% endfor %}
+    content: "{{ (dr_jit_permit_open | default([]) | join('\n') ~ '\n') if (dr_jit_permit_open | default([])) else '\n' }}"
   notify: Restart ssh pam container
 
 - name: DR JIT — authorized_keys for dr-scanner

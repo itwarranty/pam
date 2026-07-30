@@ -6,5 +6,4 @@ pam_operators_audit_lab:
     pubkey: "{{ lookup('file', lab_keys_dir + '/engineer-audit.lab.pub') }}"
     mfa_secret: AUDITLABAUDITLABAUDITLABAUDITLABA
     access: audit
-    allowed_sources:
-      - "127.0.0.0/8"
+    allowed_sources: "{{ pam_lab_allowed_sources | default(['127.0.0.0/8']) }}"

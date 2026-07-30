@@ -14,6 +14,5 @@ pam_operators_dr_service_lab:
     dr_service: true
     permit_open: []
     automation_key_file: "{{ lab_keys_dir }}/dr-scanner.lab"
-    allowed_sources:
-      - "127.0.0.0/8"
+    allowed_sources: "{{ pam_lab_allowed_sources | default(['127.0.0.0/8']) }}"
     incident_id: DR-SERVICE
