@@ -176,6 +176,50 @@
       FAIL:session_log_dir — expected {{ audit_log_dir }} dir {{ pam_audit_log_dir_mode | default('0750') }} owner {{ pam_user }}
   tags: [verify_compliance]
 
+- name: "[Verify] Aggregate audit file gateway.syslog"
+  ansible.builtin.stat:
+    path: "{{ audit_log_dir }}/gateway.syslog"
+  register: verify_gateway_syslog
+  tags: [verify_compliance]
+
+- name: "[Verify] gateway.syslog least privilege"
+  ansible.builtin.assert:
+    that:
+      - verify_gateway_syslog.stat.exists
+      - verify_gateway_syslog.stat.pw_name == pam_user
+      - verify_gateway_syslog.stat.gr_name == pam_audit_group
+      - verify_gateway_syslog.stat.mode == (pam_audit_log_file_mode | default('0640'))
+    fail_msg: >-
+      FAIL:gateway_syslog — expected mode {{ pam_audit_log_file_mode | default('0640') }}
+      owner {{ pam_user }}:{{ pam_audit_group }},
+      got mode={{ verify_gateway_syslog.stat.mode | default('missing') }}
+      owner={{ verify_gateway_syslog.stat.pw_name | default('missing') }}:{{ verify_gateway_syslog.stat.gr_name | default('missing') }}
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Structured audit executor installed"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    podman exec {{ pam_container_name }} test -x /usr/local/bin/pam-audit-exec.py
+    podman exec {{ pam_container_name }} grep -q 'pam-audit-exec.py' /usr/local/bin/pam-audit-shell.sh
+    ! podman exec {{ pam_container_name }} grep -qE '(^|[^#]).*eval ' /usr/local/bin/pam-audit-shell.sh
+  become: true
+  become_user: "{{ pam_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
+  changed_when: false
+  when: not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
+- name: "[Verify] Moderators group configured"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ pam_moderators_group }}"
+  when:
+    - pam_session_watch_enabled | default(true) | bool
+    - not (is_commercial_pam | bool)
+  tags: [verify_compliance]
+
 - name: "[Verify] Gateway SSH port open in firewalld"
   ansible.builtin.command: firewall-cmd --query-port={{ pam_ssh_port }}/tcp
   register: verify_fw_port

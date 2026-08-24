@@ -19,10 +19,15 @@ _validate_registry() {
   reg="$1"
   [ -f "${reg}" ] || return 1
   owner="$(stat -c '%U' "${reg}" 2>/dev/null || echo unknown)"
-  [ "${owner}" = "${PAM_RUNTIME_USER}" ] || {
-    printf 'Registry ownership invalid: %s (owner=%s)\n' "${reg}" "${owner}" >&2
-    return 1
-  }
+  op="$(_read_field "${reg}" operator)"
+  case "${owner}" in
+    "${PAM_RUNTIME_USER}"|root) ;;
+    "${op}") ;;
+    *)
+      printf 'Registry ownership invalid: %s (owner=%s operator=%s)\n' "${reg}" "${owner}" "${op}" >&2
+      return 1
+      ;;
+  esac
   return 0
 }
 
@@ -38,10 +43,15 @@ _read_numeric_field() {
   sed -n "s/.*\"${field}\"[[:space:]]*:[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p" "${reg}" | head -1
 }
 
+_pgid_of() {
+  pid="$1"
+  [ -n "${pid}" ] && [ -r "/proc/${pid}/stat" ] || return 1
+  awk '{print $5}' "/proc/${pid}/stat"
+}
+
 _pgid_alive() {
   pgid="$1"
   [ -n "${pgid}" ] || return 1
-  ps -o pgid= -p "${pgid}" >/dev/null 2>&1 && return 0
   kill -0 "-${pgid}" 2>/dev/null
 }
 
@@ -108,17 +118,16 @@ _kill_one() {
   op="$(_read_field "${reg}" operator)"
 
   if [ -z "${pgid}" ] && [ -n "${pid}" ]; then
-    pgid="$(ps -o pgid= -p "${pid}" 2>/dev/null | tr -d ' ')"
+    pgid="$(_pgid_of "${pid}" | tr -d ' ')"
     [ -n "${schema}" ] || {
       printf 'Warning: legacy session registry (schema v1); using pid-derived pgid.\n' >&2
     }
   fi
 
-  proc_user=""
-  if [ -n "${pid}" ]; then
-    proc_user="$(ps -o user= -p "${pid}" 2>/dev/null | tr -d ' ')"
-    if [ -n "${proc_user}" ] && [ "${proc_user}" != "${PAM_RUNTIME_USER}" ]; then
-      printf 'Session pid owner mismatch: %s\n' "${proc_user}" >&2
+  if [ -n "${pid}" ] && [ -n "${op}" ]; then
+    proc_user="$(stat -c '%U' "/proc/${pid}" 2>/dev/null || true)"
+    if [ -n "${proc_user}" ] && [ "${proc_user}" != "${op}" ] && [ "${proc_user}" != "root" ]; then
+      printf 'Session pid owner mismatch: %s (expected %s)\n' "${proc_user}" "${op}" >&2
       return 1
     fi
   fi

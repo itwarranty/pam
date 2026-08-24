@@ -31,6 +31,19 @@ On the gateway host:
 Or Ansible:  
 `ansible-playbook -i <inventory> site.yml --tags session_kill -e pam_session_kill_id=<id>`
 
+Kill sends SIGTERM to the session **process group** (wrapper, recorder, inspector, nested SSH), not a single PID.
+
+## Live session watch (four-eyes)
+
+Read-only tail of an active gateway recording. Requires **root** or membership in `pam_moderators_group` (default `pam-moderators`).
+
+```bash
+./scripts/pam sessions list
+sudo ./scripts/pam sessions watch <session-id>
+```
+
+Unauthorized attempts are rejected and logged (`moderator_watch_deny` in JSONL). Log paths are validated under `audit_log_dir` only.
+
 ## Break-glass
 
 Only if enabled in config (`break_glass: true` + short JIT window + `incident_id`).  

@@ -10,7 +10,7 @@
 - Live watch: root/moderator authorization; safe log path under `audit_log_dir`
 - Audit logs: production `gateway.syslog` / `sessions.jsonl` mode `0640` (`pam-audit` group)
 - CI: Python unit tests for audit parser and PTY inspector
-- Command policy v1 (`bash --rcfile` on target): requires `pam_command_policy_v1_waiver: true`
+- Command policy v1 (`bash --rcfile` on target): requires `pam_command_policy_v1_waiver: true`; **removal target: v1.3.0 (2026-12-01)** — migrate to policy v2
 
 ## v1.1.1 — Usability (CLI + quickstart)
 

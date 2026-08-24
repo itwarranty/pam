@@ -289,6 +289,8 @@ incident_id: "INC-2026-8942"
 
 ### OIDC / SAML → SSH user certificates (Tier 4, opt-in)
 
+**Scope:** external IdP + offline/bridge **certificate signing** — not an OIDC/SAML runtime inside the PAM container. See [Integrations](./Integrations.md).
+
 1. IdP group `gateway-operators` (или `pam_oidc_required_group`).
 2. Offline token: `scripts/oidc-offline-token.sh.example`.
 3. Sign cert: `scripts/sign-operator-cert-oidc.sh.example` (bridge к org User CA).
@@ -300,7 +302,8 @@ incident_id: "INC-2026-8942"
 ### Ротация ключей и TOTP
 
 - **SSH-ключ:** обновить поле `pubkey` оператора, перевыпустить плейбук.
-- **TOTP:** удалить `.google_authenticator` оператора в `{{ pam_home }}/operators/<name>/`, очистить или задать новый `mfa_secret`, перевыпустить плейбук. Новый секрет — из `generated/mfa/`.
+- **TOTP (v1.2+):** повторный deploy **сохраняет** существующий `.google_authenticator`, если не задан `operator.mfa_secret` и оператор не в `pam_mfa_rotate_operators`. Явная ротация — только через `pam_mfa_rotate_operators`. Bootstrap-генерация — `pam_mfa_bootstrap_generate: true` (lab/eval only; prod fail-closed).
+- **Legacy:** удалить `.google_authenticator`, задать новый `mfa_secret`, redeploy — onboarding в `generated/mfa/`.
 
 ### Действия при инциденте
 

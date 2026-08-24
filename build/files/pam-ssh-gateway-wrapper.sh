@@ -121,7 +121,7 @@ else
   GW_PID=$!
 fi
 
-GW_PGID="$(ps -o pgid= -p "${GW_PID}" 2>/dev/null | tr -d ' ')"
+GW_PGID="$(awk '{print $5}' "/proc/${GW_PID}/stat" 2>/dev/null | tr -d ' ')"
 [ -n "${GW_PGID}" ] || GW_PGID="${GW_PID}"
 _write_registry "${SESSION_ID}" "${GW_PID}" "${GW_PGID}" "${TARGET_ID}" "${LOG}" "${UTC_START}"
 

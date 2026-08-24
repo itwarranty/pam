@@ -2,7 +2,7 @@
 
 Open-source **SSH access gateway** for support engineers: who connected, when, where, what they did — with MFA, short-lived access, and session logs.
 
-Built for Rocky Linux 9, Air Gap / regulated networks. **Apache-2.0.**
+Built for Rocky Linux 9, Air Gap / regulated networks. **Apache-2.0.** Current release: **v1.2.0** (security hardening).
 
 **Repo:** [github.com/itwarranty/pam](https://github.com/itwarranty/pam)
 
@@ -60,6 +60,7 @@ Profiles: `group_vars/profiles/{eval,pilot,prod}.yml`
 | Doc | For |
 | :--- | :--- |
 | [Runbooks](docs/Runbooks.md) | Fix “cannot login”, revoke, kill session |
+| [Integrations](docs/Integrations.md) | DR, RISK, OIDC/SAML scope |
 | [CSO Demo](docs/CSO-Demo-Runbook.md) | 10‑minute demo |
 | [Whitepaper](docs/Whitepaper.md) | Security controls |
 | [Overview](docs/SSH-PAM-Overview.md) | Customer pitch |

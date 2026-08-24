@@ -9,6 +9,7 @@ pam_gateway_command_policy_v2_enabled: true
 pam_shell_command_policy_v2_enabled: true
 pam_session_search_enabled: true
 pam_audit_log_dir_mode: "1777"
+pam_audit_log_file_mode: "0666"
 pam_runtime_sessions_dir_mode: "1777"
 pam_syslog_journal_bridge: true
 pam_container_mount_dev_log: true

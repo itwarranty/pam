@@ -77,18 +77,22 @@
 - name: Shared gateway syslog file (container operators append)
   ansible.builtin.file:
     path: "{{ audit_log_dir }}/gateway.syslog"
-    state: touch
+    state: file
     owner: "{{ pam_user }}"
     group: "{{ pam_audit_group }}"
     mode: "{{ pam_audit_log_file_mode | default('0640') }}"
+    modification_time: preserve
+    access_time: preserve
 
 - name: Session JSONL aggregate (moderation / SIEM)
   ansible.builtin.file:
     path: "{{ audit_log_dir }}/sessions.jsonl"
-    state: touch
+    state: file
     owner: "{{ pam_user }}"
     group: "{{ pam_audit_group }}"
     mode: "{{ pam_audit_log_file_mode | default('0640') }}"
+    modification_time: preserve
+    access_time: preserve
 
 # Append-only (+a) — на *.log при создании (pam-shell-wrapper / entrypoint), не на каталог.
 

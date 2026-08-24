@@ -17,3 +17,15 @@ ansible-playbook -i inventory/local-lima.yml site.yml
 ```
 
 Документация: [docs/Engineer-Onboarding.md](../docs/Engineer-Onboarding.md), [docs/CSO-Demo-Runbook.md](../docs/CSO-Demo-Runbook.md)
+
+## Security hardening acceptance (v1.2+)
+
+On the Rocky gateway host or `limactl shell pam-prod`:
+
+```bash
+./scripts/test-security-hardening.sh
+python3 -m unittest discover -s tests/unit -p 'test_*.py' -v
+./scripts/check-doc-naming.sh
+```
+
+Individual checks: `test-audit-exec-container.sh`, `test-pty-linegate.sh`, `test-session-pgid-kill.sh`, `test-session-watch-auth.sh`, `test-mfa-preserve.sh`.

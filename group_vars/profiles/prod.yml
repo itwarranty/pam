@@ -19,3 +19,6 @@ pam_prod_require_gateway: true
 pam_command_policy_v2_required: true
 pam_session_search_enabled: true
 pam_session_watch_enabled: true
+pam_audit_log_dir_mode: "0750"
+pam_audit_log_file_mode: "0640"
+pam_mfa_bootstrap_generate: false
