@@ -253,7 +253,7 @@ limactl shell pam-prod -- sudo bash -c 'cd /path/to/gateway && ./scripts/pam-com
 
 ```bash
 # Пример prod: allowed_sources в pam_operators
-grep from= /home/gateway/operators/*/.ssh/authorized_keys
+grep from= /home/pam/operators/*/.ssh/authorized_keys
 ```
 
 **Демо отказа:** задайте `allowed_sources: ["203.0.113.0/24"]` (без 127.0.0.0/8) → SSH с localhost получит `Permission denied (publickey)` до MFA.
@@ -269,7 +269,7 @@ Strict mode: `pam_require_source_ip: true` — preflight fail без `allowed_so
 ```bash
 # Lab: jit-expired-test в group_vars/dev/jit_lab.yml (valid_until 2020)
 ansible-playbook -i inventory/local-lima.yml site.yml
-limactl shell pam-prod -- sudo test ! -d /home/gateway/operators/jit-expired-test && echo OK
+limactl shell pam-prod -- sudo test ! -d /home/pam/operators/jit-expired-test && echo OK
 
 # Периодический purge на prod
 ansible-playbook site.yml --tags jit_purge

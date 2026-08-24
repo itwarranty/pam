@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.0 — Security hardening (OpenSpec 2026-08)
+
+- Audit role: strict argv executor replaces shell `eval` (`pam-audit-exec.py`)
+- Command policy v2: line-gated PTY relay — denied bytes never reach target PTY
+- Session control: registry schema v2 with `pgid`; kill uses process group TERM/KILL
+- MFA lifecycle: preserve deployed TOTP; bootstrap/rotate are explicit Ansible flags
+- Deploy: remove unconditional container `recreate`; block deploy on active sessions
+- Live watch: root/moderator authorization; safe log path under `audit_log_dir`
+- Audit logs: production `gateway.syslog` / `sessions.jsonl` mode `0640` (`pam-audit` group)
+- CI: Python unit tests for audit parser and PTY inspector
+- Command policy v1 (`bash --rcfile` on target): requires `pam_command_policy_v1_waiver: true`
+
 ## v1.1.1 — Usability (CLI + quickstart)
 
 - Unified `pam` CLI (`pam up|doctor|verify|sessions|access`)

@@ -5,7 +5,7 @@
     argv:
       - podman
       - exec
-      - ssh_pam
+      - "{{ pam_container_name }}"
       - /usr/local/bin/pam-session-ctl-internal
       - kill
       - --operator
@@ -31,7 +31,7 @@
     argv:
       - podman
       - exec
-      - ssh_pam
+      - "{{ pam_container_name }}"
       - /usr/local/bin/pam-session-ctl-internal
       - kill
       - "{{ pam_session_kill_id }}"

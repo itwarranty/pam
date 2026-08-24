@@ -27,6 +27,14 @@ pam_home: "/home/{{ pam_user }}"
 trusted_files_dir: /tmp/trusted_upstream_packages
 audit_log_dir: /var/log/pam_sessions
 operators_home: "{{ pam_home }}/operators"
+pam_audit_group: pam-audit
+pam_moderators_group: pam-moderators
+pam_audit_log_dir_mode: "0750"
+pam_audit_log_file_mode: "0640"
+pam_mfa_bootstrap_generate: false
+pam_mfa_rotate_operators: []
+pam_deploy_disrupt_active_sessions: false
+pam_command_policy_v1_waiver: false
 
 # Jump-host: whitelist обязателен (пустой список = запрет деплоя)
 pam_allow_tcp_forwarding: true

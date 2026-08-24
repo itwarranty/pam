@@ -116,6 +116,12 @@
 - name: "[CSO] Верификация immutable-образа (MFA strict label)"
   ansible.builtin.include_tasks: tasks/verify_image_cso.yml
 
+- name: "[CSO] Проверка активных сессий перед disruptive deploy"
+  ansible.builtin.include_tasks: tasks/check_active_sessions.yml
+  when:
+    - not (is_commercial_pam | bool)
+    - pam_check_active_sessions_before_deploy | default(true) | bool
+
 - name: Запуск контейнера ssh_pam (lab network)
   containers.podman.podman_container:
     name: "{{ pam_container_name }}"
@@ -128,10 +134,10 @@
       PAM_GATEWAY_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (pam_gateway_command_policy_v2_enabled | default(true) | bool) else '0' }}"
       PAM_SHELL_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (pam_shell_command_policy_v2_enabled | default(true) | bool) else '0' }}"
       PAM_GATEWAY_DENY_KILL_SESSION: "{{ '1' if (pam_gateway_deny_kill_session | default(false) | bool) else '0' }}"
+      PAM_COMMAND_POLICY_V1_WAIVER: "{{ '1' if (pam_command_policy_v1_waiver | default(false) | bool) else '0' }}"
     ports:
       - "{{ pam_ssh_port }}:{{ pam_ssh_port }}"
     volumes: "{{ pam_container_volumes }}"
-    recreate: true
   become: true
   become_user: "{{ pam_user }}"
   environment:
@@ -151,10 +157,10 @@
       PAM_GATEWAY_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (pam_gateway_command_policy_v2_enabled | default(true) | bool) else '0' }}"
       PAM_SHELL_COMMAND_POLICY_V2_ENABLED: "{{ '1' if (pam_shell_command_policy_v2_enabled | default(true) | bool) else '0' }}"
       PAM_GATEWAY_DENY_KILL_SESSION: "{{ '1' if (pam_gateway_deny_kill_session | default(false) | bool) else '0' }}"
+      PAM_COMMAND_POLICY_V1_WAIVER: "{{ '1' if (pam_command_policy_v1_waiver | default(false) | bool) else '0' }}"
     ports:
       - "{{ pam_ssh_port }}:{{ pam_ssh_port }}"
     volumes: "{{ pam_container_volumes }}"
-    recreate: true
   become: true
   become_user: "{{ pam_user }}"
   environment:

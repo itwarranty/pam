@@ -12,6 +12,7 @@ TARGETS_ROOT="${PAM_TARGETS_DIR:-/run/ssh-pam/targets-runtime}"
 PERMIT_FILE="/home/${USER}/permit_open"
 JSONL="${PAM_JSONL:-/var/log/pam_sessions/sessions.jsonl}"
 TARGETS_LIST="/tmp/.pam-gw-targets.$$"
+PAM_RUNTIME_USER="${PAM_RUNTIME_USER:-pam}"
 
 _fail() {
   /usr/local/bin/pam-syslog.sh gateway-gateway "user=${USER} error=$* client=${SSH_CLIENT:-unknown}"
@@ -60,6 +61,19 @@ _select_target() {
   sed -n "${choice}p" "${TARGETS_LIST}" | cut -f1
 }
 
+_write_registry() {
+  sid="$1"
+  gw_pid="$2"
+  gw_pgid="$3"
+  tid="$4"
+  log="$5"
+  utc="$6"
+  printf \
+    '{"schema":2,"id":"%s","operator":"%s","target_id":"%s","target_host":"%s","target_port":%s,"target_account":"%s","pid":%s,"pgid":%s,"started_at":"%s","log_path":"%s"}\n' \
+    "${sid}" "${USER}" "${tid}" "${HOST}" "${PORT}" "${ACCOUNT}" "${gw_pid}" "${gw_pgid}" "${utc}" "${log}" \
+    > "${SESSIONS_DIR}/${sid}.json"
+}
+
 SESSION_ID="$(date -u +%Y%m%d-%H%M%S)-$$"
 TARGET_ID="$(_select_target)"
 rm -f "${TARGETS_LIST}"
@@ -85,10 +99,6 @@ REG_FILE="${SESSIONS_DIR}/${SESSION_ID}.json"
 UTC_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 CLIENT="${SSH_CLIENT:-unknown}"
 
-printf '{"id":"%s","operator":"%s","target_id":"%s","target_host":"%s","target_port":%s,"target_account":"%s","pid":%s,"started_at":"%s","log_path":"%s"}\n' \
-  "${SESSION_ID}" "${USER}" "${TARGET_ID}" "${HOST}" "${PORT}" "${ACCOUNT}" "$$" "${UTC_START}" "${LOG}" \
-  > "${REG_FILE}"
-
 /usr/local/bin/pam-syslog.sh gateway-gateway \
   "session start id=${SESSION_ID} user=${USER} target=${TARGET_ID} host=${HOST}:${PORT} log=${LOG} client=${CLIENT}"
 
@@ -103,7 +113,19 @@ export PAM_SESSION_ID="${SESSION_ID}"
 export PAM_LOG_PATH="${LOG}"
 export PAM_TARGET_ID="${TARGET_ID}"
 
-/usr/local/bin/pam-ssh-gateway.sh "${TARGET_ID}" "${SESSION_ID}" "${LOG}"
+if command -v setsid >/dev/null 2>&1; then
+  setsid /usr/local/bin/pam-ssh-gateway.sh "${TARGET_ID}" "${SESSION_ID}" "${LOG}" &
+  GW_PID=$!
+else
+  /usr/local/bin/pam-ssh-gateway.sh "${TARGET_ID}" "${SESSION_ID}" "${LOG}" &
+  GW_PID=$!
+fi
+
+GW_PGID="$(ps -o pgid= -p "${GW_PID}" 2>/dev/null | tr -d ' ')"
+[ -n "${GW_PGID}" ] || GW_PGID="${GW_PID}"
+_write_registry "${SESSION_ID}" "${GW_PID}" "${GW_PGID}" "${TARGET_ID}" "${LOG}" "${UTC_START}"
+
+wait "${GW_PID}"
 EXIT_CODE=$?
 
 UTC_END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

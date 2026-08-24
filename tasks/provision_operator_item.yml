@@ -21,22 +21,65 @@
     setype: container_file_t
   notify: Restart ssh pam container
 
-- name: "Генерация MFA-секрета для {{ operator.name }}"
+- name: "Чтение существующего MFA-секрета {{ operator.name }}"
+  ansible.builtin.slurp:
+    src: "{{ operators_home }}/{{ operator.name }}/.google_authenticator"
+  register: operator_mfa_existing_file
+  failed_when: false
+  when: not (operator.dr_service | default(false) | bool)
+
+- name: "Парсинг существующего MFA-секрета {{ operator.name }}"
+  ansible.builtin.set_fact:
+    operator_mfa_existing_secret: "{{ (operator_mfa_existing_file.content | b64decode).split('\n') | first | trim }}"
+  when:
+    - not (operator.dr_service | default(false) | bool)
+    - operator_mfa_existing_file.content is defined
+    - (operator_mfa_existing_file.content | b64decode).split('\n') | first | trim | length > 0
+
+- name: "Генерация MFA-секрета для {{ operator.name }} (bootstrap/rotate only)"
   ansible.builtin.command: openssl rand -base32 20
   register: operator_mfa_generated
   changed_when: false
+  no_log: true
   when:
     - operator.mfa_secret | default('') | length == 0
     - not (operator.dr_service | default(false) | bool)
+    - >-
+      operator.name in (pam_mfa_rotate_operators | default([]))
+      or (
+        (pam_mfa_bootstrap_generate | default(false) | bool)
+        and (operator_mfa_existing_secret | default('') | length == 0)
+      )
+
+- name: "Проверка источника MFA-секрета {{ operator.name }}"
+  ansible.builtin.fail:
+    msg: >
+      Нет MFA-секрета для {{ operator.name }}: задайте operator.mfa_secret,
+      включите pam_mfa_bootstrap_generate (только lab) или сохраните существующий секрет.
+  when:
+    - not (operator.dr_service | default(false) | bool)
+    - operator.mfa_secret | default('') | length == 0
+    - operator_mfa_existing_secret | default('') | length == 0
+    - operator_mfa_generated.stdout | default('') | length == 0
+    - operator.name not in (pam_mfa_rotate_operators | default([]))
 
 - name: "Регистрация MFA-секрета {{ operator.name }}"
   ansible.builtin.set_fact:
     operator_mfa_secrets: "{{ operator_mfa_secrets | default({}) | combine({operator.name: operator_mfa_effective_secret}) }}"
   vars:
     operator_mfa_effective_secret: >-
-      {{ operator.mfa_secret
-         if (operator.mfa_secret | default('') | length > 0)
-         else operator_mfa_generated.stdout }}
+      {{
+        operator.mfa_secret
+        if (operator.mfa_secret | default('') | length > 0)
+        else (
+          operator_mfa_generated.stdout
+          if (
+            operator.name in (pam_mfa_rotate_operators | default([]))
+            or (pam_mfa_bootstrap_generate | default(false) | bool)
+          ) and (operator_mfa_generated.stdout | default('') | length > 0)
+          else operator_mfa_existing_secret | default('')
+        )
+      }}
   when: not (operator.dr_service | default(false) | bool)
 
 - name: "TOTP-конфигурация для {{ operator.name }}"
@@ -49,6 +92,7 @@
     setype: container_file_t
   vars:
     mfa_secret: "{{ operator_mfa_secrets[operator.name] }}"
+  no_log: true
   notify: Restart ssh pam container
   when: not (operator.dr_service | default(false) | bool)
 
@@ -112,6 +156,5 @@
       - container_file_t
       - "{{ operators_home }}/{{ operator.name }}"
   register: operator_selinux_fix
-  changed_when: operator_selinux_fix.rc == 0
+  changed_when: false
   when: ansible_selinux.status | default('disabled') == 'enabled'
-  notify: Restart ssh pam container

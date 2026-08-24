@@ -31,6 +31,7 @@ COPY build/files/pam-command-policy.sh /usr/local/bin/pam-command-policy.sh
 COPY build/files/pam-command-policy-rc.sh /usr/local/bin/pam-command-policy-rc.sh
 COPY build/files/pam-audit-shell-wrapper.sh /usr/local/bin/pam-audit-shell-wrapper.sh
 COPY build/files/pam-audit-shell.sh /usr/local/bin/pam-audit-shell.sh
+COPY build/files/pam-audit-exec.py /usr/local/bin/pam-audit-exec.py
 COPY build/files/pam-ssh-gateway-wrapper.sh /usr/local/bin/pam-ssh-gateway-wrapper.sh
 COPY build/files/pam-ssh-gateway.sh /usr/local/bin/pam-ssh-gateway.sh
 COPY build/files/pam-ssh-gateway-exec.sh /usr/local/bin/pam-ssh-gateway-exec.sh
@@ -43,7 +44,9 @@ COPY build/files/pam-syslog.sh /usr/local/bin/pam-syslog.sh
 RUN mkdir -p /run/ssh-pam/sessions \
     && chmod 0755 /usr/local/bin/pam-shell-wrapper.sh /usr/local/bin/pam-entrypoint.sh \
     /usr/local/bin/pam-command-policy.sh /usr/local/bin/pam-command-policy-rc.sh \
-    /usr/local/bin/pam-audit-shell-wrapper.sh /usr/local/bin/pam-audit-shell.sh \
+    /usr/local/bin/pam-audit-shell-wrapper.sh /usr/local/bin/pam-audit-shell-wrapper.sh \
+    /usr/local/bin/pam-audit-shell.sh /usr/local/bin/pam-audit-shell.sh \
+    /usr/local/bin/pam-audit-exec.py /usr/local/bin/pam-audit-exec.py \
     /usr/local/bin/pam-ssh-gateway-wrapper.sh /usr/local/bin/pam-ssh-gateway.sh \
     /usr/local/bin/pam-ssh-gateway-exec.sh /usr/local/bin/pam-session-ctl-internal.sh \
     /usr/local/bin/pam-pty-inspector.py /usr/local/bin/pam-pty-inspector.sh \

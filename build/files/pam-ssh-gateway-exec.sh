@@ -41,7 +41,7 @@ if [ -f /run/ssh-pam/policy_v2_enabled ] || [ "${PAM_GATEWAY_COMMAND_POLICY_V2_E
 fi
 
 if [ -f /run/ssh-pam/command_denylist ] || [ -f /etc/ssh-pam/command_denylist ]; then
-  if [ -f /usr/local/bin/pam-command-policy-rc.sh ]; then
+  if [ -f /usr/local/bin/pam-command-policy-rc.sh ] && [ "${PAM_COMMAND_POLICY_V1_WAIVER:-0}" = "1" ]; then
   RC_B64="$(base64 -w 0 /usr/local/bin/pam-command-policy-rc.sh 2>/dev/null \
     || base64 /usr/local/bin/pam-command-policy-rc.sh | tr -d '\n')"
   # shellcheck disable=SC2086

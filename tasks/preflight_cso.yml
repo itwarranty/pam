@@ -365,6 +365,30 @@
     - item.pubkey | default('') | length > 0
     - item.certificate | default('') | length == 0
 
+- name: "[CSO] MFA bootstrap generation запрещён в prod-профиле"
+  ansible.builtin.assert:
+    that:
+      - not (pam_mfa_bootstrap_generate | default(false) | bool)
+    fail_msg: >
+      pam_mfa_bootstrap_generate=true разрешён только в lab/eval.
+      В prod задайте operator.mfa_secret через Vault или сохраните существующий секрет.
+  when:
+    - not (is_commercial_pam | bool)
+    - pam_profile | default('') == 'prod'
+
+- name: "[CSO] Command policy v1 waiver"
+  ansible.builtin.assert:
+    that:
+      - pam_command_policy_v1_waiver | default(false) | bool
+    fail_msg: >
+      Command policy v1 (remote bash --rcfile) отключён в prod.
+      Включите v2 или задайте pam_command_policy_v1_waiver: true с formal risk acceptance.
+  when:
+    - not (is_commercial_pam | bool)
+    - pam_command_policy_v2_required | default(true) | bool
+    - not (pam_gateway_command_policy_v2_enabled | default(true) | bool)
+      or not (pam_shell_command_policy_v2_enabled | default(true) | bool)
+
 - name: "[CSO] FIDO-Anchor operator key policy (Tier 5)"
   ansible.builtin.include_tasks: preflight_fido_operators.yml
   when: not (is_commercial_pam | bool)

@@ -23,3 +23,11 @@ jobs:
 
       - name: Syntax check (dev inventory)
         run: ansible-playbook --syntax-check -i inventory/local-lima.yml site.yml
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Python unit tests
+        run: python3 -m unittest discover -s tests/unit -p 'test_*.py' -v

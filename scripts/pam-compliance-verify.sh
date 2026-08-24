@@ -177,17 +177,28 @@ check_service() {
 }
 
 check_session_log_dir() {
-  local owner mode
+  local owner mode group
   if [[ ! -d "${AUDIT_LOG_DIR}" ]]; then
     log_fail "session_log_dir — ${AUDIT_LOG_DIR} missing"
     return
   fi
   owner="$(stat -c '%U' "${AUDIT_LOG_DIR}")"
+  group="$(stat -c '%G' "${AUDIT_LOG_DIR}")"
   mode="$(stat -c '%a' "${AUDIT_LOG_DIR}")"
   if [[ "${owner}" == "${PAM_USER}" && "${mode}" == "${PAM_AUDIT_LOG_DIR_MODE:-750}" ]]; then
     log_pass "session_log_dir — ${AUDIT_LOG_DIR} ${mode} ${PAM_USER}"
   else
     log_fail "session_log_dir — expected ${PAM_AUDIT_LOG_DIR_MODE:-750} ${PAM_USER}, got ${mode} ${owner}"
+  fi
+  if [[ -f "${AUDIT_LOG_DIR}/gateway.syslog" ]]; then
+    mode="$(stat -c '%a' "${AUDIT_LOG_DIR}/gateway.syslog")"
+    owner="$(stat -c '%U' "${AUDIT_LOG_DIR}/gateway.syslog")"
+    group="$(stat -c '%G' "${AUDIT_LOG_DIR}/gateway.syslog")"
+    if [[ "${mode}" == "${PAM_AUDIT_LOG_FILE_MODE:-640}" && "${owner}" == "${PAM_USER}" ]]; then
+      log_pass "gateway_syslog — mode ${mode} owner ${owner} group ${group}"
+    else
+      log_fail "gateway_syslog — expected ${PAM_AUDIT_LOG_FILE_MODE:-640} ${PAM_USER}, got ${mode} ${owner}:${group}"
+    fi
   fi
 }
 

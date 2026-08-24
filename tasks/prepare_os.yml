@@ -50,12 +50,28 @@
   args:
     creates: "/var/lib/systemd/linger/{{ pam_user }}"
 
+- name: Создание группы чтения audit-логов
+  ansible.builtin.group:
+    name: "{{ pam_audit_group }}"
+    state: present
+
+- name: Создание группы модераторов live-watch
+  ansible.builtin.group:
+    name: "{{ pam_moderators_group }}"
+    state: present
+
+- name: Добавление пользователя PAM в группу audit
+  ansible.builtin.user:
+    name: "{{ pam_user }}"
+    groups: "{{ pam_audit_group }}"
+    append: true
+
 - name: Создание директории логов сессий (владелец gateway — rootless Podman + SELinux)
   ansible.builtin.file:
     path: "{{ audit_log_dir }}"
     state: directory
     owner: "{{ pam_user }}"
-    group: "{{ pam_user }}"
+    group: "{{ pam_audit_group }}"
     mode: "{{ pam_audit_log_dir_mode | default('0750') }}"
 
 - name: Shared gateway syslog file (container operators append)
@@ -63,8 +79,16 @@
     path: "{{ audit_log_dir }}/gateway.syslog"
     state: touch
     owner: "{{ pam_user }}"
-    group: "{{ pam_user }}"
-    mode: "{{ pam_audit_log_file_mode | default('0666') }}"
+    group: "{{ pam_audit_group }}"
+    mode: "{{ pam_audit_log_file_mode | default('0640') }}"
+
+- name: Session JSONL aggregate (moderation / SIEM)
+  ansible.builtin.file:
+    path: "{{ audit_log_dir }}/sessions.jsonl"
+    state: touch
+    owner: "{{ pam_user }}"
+    group: "{{ pam_audit_group }}"
+    mode: "{{ pam_audit_log_file_mode | default('0640') }}"
 
 # Append-only (+a) — на *.log при создании (pam-shell-wrapper / entrypoint), не на каталог.
 

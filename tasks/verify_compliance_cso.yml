@@ -37,7 +37,7 @@
   tags: [verify_compliance]
 
 - name: "[Verify] ssh_pam container running"
-  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' ssh_pam
+  ansible.builtin.command: podman inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' {{ pam_container_name }}
   register: verify_container_running
   changed_when: false
   become: true
@@ -106,7 +106,7 @@
     set -e
     allowed=" {{ pam_operator_names | join(' ') }} "
     orphans=""
-    for u in $(podman exec ssh_pam sh -c 'ls -1 /home 2>/dev/null || true'); do
+    for u in $(podman exec {{ pam_container_name }} sh -c 'ls -1 /home 2>/dev/null || true'); do
       case "${allowed}" in
         *" ${u} "*) ;;
         *) orphans="${orphans} ${u}" ;;
@@ -250,7 +250,7 @@
   tags: [verify_compliance]
 
 - name: "[Verify] Command policy v2 runtime (gateway)"
-  ansible.builtin.command: podman exec ssh_pam test -f /run/ssh-pam/policy_v2_enabled
+  ansible.builtin.command: podman exec {{ pam_container_name }} test -f /run/ssh-pam/policy_v2_enabled
   register: verify_policy_v2_gateway
   changed_when: false
   failed_when: false
@@ -266,7 +266,7 @@
   tags: [verify_compliance]
 
 - name: "[Verify] Command policy v2 runtime (shell)"
-  ansible.builtin.command: podman exec ssh_pam test -f /run/ssh-pam/shell_policy_v2_enabled
+  ansible.builtin.command: podman exec {{ pam_container_name }} test -f /run/ssh-pam/shell_policy_v2_enabled
   register: verify_policy_v2_shell
   changed_when: false
   failed_when: false
@@ -282,7 +282,7 @@
   tags: [verify_compliance]
 
 - name: "[Verify] PTY inspector in image"
-  ansible.builtin.command: podman exec ssh_pam test -f /usr/local/bin/pam-pty-inspector.py
+  ansible.builtin.command: podman exec {{ pam_container_name }} test -f /usr/local/bin/pam-pty-inspector.py
   register: verify_pty_inspector
   changed_when: false
   failed_when: false
