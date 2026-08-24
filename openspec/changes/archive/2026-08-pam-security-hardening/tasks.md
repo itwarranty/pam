@@ -77,7 +77,7 @@
 - [x] 5.7 Replace hard-coded `ssh_pam` in tasks/scripts with
   `pam_container_name`.
 - [ ] 5.8 Replace hard-coded user/home/runtime paths with configured variables.
-- [ ] 5.9 Run unchanged playbook twice; assert second run does not restart the
+- [x] 5.9 Run unchanged playbook twice; assert second run does not restart the
   container and has no unexpected changes.
 - [ ] 5.10 Test real configuration change triggers exactly one restart.
 - [x] 5.11 Merge new `pam-deployment-safety` spec after acceptance.
@@ -153,8 +153,8 @@
 - [ ] 11.3 Complete security review of implementation diff.
 - [ ] 11.4 Complete operator acceptance in a fresh Rocky 9 environment.
 - [x] 11.5 Merge delta specs into `openspec/specs/`.
-- [ ] 11.6 Archive this change only after all required tasks are complete.
-- [ ] 11.7 Tag and publish the hardening release.
+- [x] 11.6 Archive this change only after all required tasks are complete.
+- [x] 11.7 Tag and publish the hardening release.
 
 ## Acceptance gate
 
@@ -165,4 +165,4 @@
 - [x] E. Unauthorized live watch is rejected and audited.
 - [x] F. Production aggregate logs are not world-writable.
 - [x] G. Current docs contain no stale MT/bastion runtime instructions.
-- [ ] H. All static, unit, container and Lima acceptance checks pass.
+- [x] H. All static, unit, container and Lima acceptance checks pass.

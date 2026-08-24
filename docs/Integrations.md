@@ -8,7 +8,7 @@ DR is a **separate module** that talks to PAM through a documented contract:
 
 - Service operator `dr-scanner` (`pam_dr_service_operator_name`) with `access: jump` and JIT `permit_open`
 - Ansible tag `dr_jit_sync` updates DR scanner permit windows
-- PAM runtime paths use `pam_user` / `pam_home` (default `pam`, `/home/pam`) — not legacy `bastion_*` or `/home/bastion`
+- PAM runtime paths use `pam_user` / `pam_home` (default `pam`, `/home/pam`) — current product naming only
 
 DR does not ship inside the PAM container. Deploy DR on its own host/repo and point it at the PAM inventory contract your environment uses.
 

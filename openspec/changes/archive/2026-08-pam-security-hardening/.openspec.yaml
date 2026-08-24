@@ -1,0 +1,15 @@
+schema: spec-driven
+created: 2026-08-25
+
+depends_on:
+  - pam-fido-anchor-mfa  # archived; v1.1.0
+
+target_release: v1.2.0
+
+product_positioning: |
+  Security hardening release — closes gaps between OpenSpec guarantees and runtime:
+  audit argv executor, PTY line-gate policy v2, process-group session kill,
+  deterministic MFA lifecycle, session-safe Ansible deploy, watch authorization,
+  least-privilege aggregate audit logs.
+
+status: archived

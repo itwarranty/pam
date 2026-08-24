@@ -1,14 +1,30 @@
 ---
-- name: Count active gateway sessions before disruptive deploy
-  ansible.builtin.command:
-    argv:
-      - podman
-      - exec
-      - "{{ pam_container_name }}"
-      - sh
-      - -c
-      - 'ls -1 /run/ssh-pam/sessions/*.json 2>/dev/null | wc -l'
-  register: pam_active_session_count
+- name: Count live gateway sessions before disruptive deploy
+  ansible.builtin.shell: |
+    set -euo pipefail
+    podman exec {{ pam_container_name }} sh -c '
+      set -eu
+      live=0
+      ids=""
+      for f in /run/ssh-pam/sessions/*.json; do
+        [ -f "$f" ] || continue
+        sid=$(basename "$f" .json)
+        pgid=$(sed -n "s/.*\"pgid\"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p" "$f" | head -1)
+        pid=$(sed -n "s/.*\"pid\"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p" "$f" | head -1)
+        if [ -z "${pgid}" ] && [ -n "${pid}" ] && [ -r "/proc/${pid}/stat" ]; then
+          pgid=$(awk "{print \$5}" "/proc/${pid}/stat")
+        fi
+        if [ -n "${pgid}" ] && kill -0 "-${pgid}" 2>/dev/null; then
+          live=$((live + 1))
+          ids="${ids} ${sid}"
+          continue
+        fi
+        rm -f "$f" 2>/dev/null || true
+      done
+      printf "%s\n" "${live}"
+      printf "IDS:%s\n" "${ids# }"
+    '
+  register: pam_active_session_probe
   changed_when: false
   failed_when: false
   become: true
@@ -20,28 +36,26 @@
     - not (is_commercial_pam | bool)
     - pam_targets | default([]) | length > 0
 
-- name: List active session ids when override is used
-  ansible.builtin.command:
-    argv:
-      - podman
-      - exec
-      - "{{ pam_container_name }}"
-      - sh
-      - -c
-      - 'basename -a /run/ssh-pam/sessions/*.json 2>/dev/null | sed "s/\\.json$//"'
-  register: pam_active_session_ids
-  changed_when: false
-  failed_when: false
-  become: true
-  become_user: "{{ pam_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
-  when:
-    - container_engine == 'podman'
-    - not (is_commercial_pam | bool)
-    - pam_targets | default([]) | length > 0
-    - (pam_active_session_count.stdout | default('0') | trim | int) > 0
-    - pam_deploy_disrupt_active_sessions | default(false) | bool
+- name: Register live session count
+  ansible.builtin.set_fact:
+    pam_active_session_count:
+      stdout: "{{ (pam_active_session_probe.stdout_lines | first | default('0')) | trim }}"
+    pam_active_session_ids:
+      stdout_lines: >-
+        {{
+          (
+            (
+              pam_active_session_probe.stdout_lines
+              | select('match', '^IDS:')
+              | first
+              | default('IDS:')
+              | regex_replace('^IDS:', '')
+            ).split()
+          )
+          | reject('equalto', '')
+          | list
+        }}
+  when: pam_active_session_probe is defined
 
 - name: Warn about sessions affected by disruptive deploy override
   ansible.builtin.debug:
@@ -51,11 +65,12 @@
   when:
     - pam_active_session_ids is defined
     - pam_active_session_ids.stdout_lines | default([]) | length > 0
+    - pam_deploy_disrupt_active_sessions | default(false) | bool
 
-- name: Block deploy while active gateway sessions exist
+- name: Block deploy while live gateway sessions exist
   ansible.builtin.fail:
     msg: >
-      Active gateway sessions detected ({{ pam_active_session_count.stdout | trim }}).
+      Active gateway sessions detected ({{ pam_active_session_count.stdout | default('0') | trim }}).
       Wait for sessions to end or set pam_deploy_disrupt_active_sessions: true.
   when:
     - pam_active_session_count is defined

@@ -29,3 +29,9 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py' -v
 ```
 
 Individual checks: `test-audit-exec-container.sh`, `test-pty-linegate.sh`, `test-session-pgid-kill.sh`, `test-session-watch-auth.sh`, `test-mfa-preserve.sh`.
+
+Two-pass idempotence (slow, ~2× full playbook):
+
+```bash
+./scripts/test-ansible-idempotence.sh inventory/local-lima.yml
+```
