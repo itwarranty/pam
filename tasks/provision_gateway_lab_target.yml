@@ -31,6 +31,21 @@
     group: "{{ pam_user }}"
     mode: "0644"
 
+- name: Gateway lab — проверка образа mock target
+  ansible.builtin.command:
+    argv:
+      - podman
+      - image
+      - exists
+      - "{{ pam_gateway_lab_target_image }}"
+  register: gw_target_image_exists
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ pam_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
+
 - name: Gateway lab — сборка образа mock target
   ansible.builtin.command:
     argv:
@@ -47,6 +62,7 @@
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
   register: gw_target_build
   changed_when: "'Successfully tagged' in gw_target_build.stdout"
+  when: gw_target_image_exists.rc != 0
 
 - name: Gateway lab — контейнер mock target
   containers.podman.podman_container:

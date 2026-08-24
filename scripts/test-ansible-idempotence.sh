@@ -69,8 +69,11 @@ after="$(_container_started_at)"
 changed2="$(_playbook_recap_changed "${log2}")"
 
 [[ -n "${changed2}" ]] || fail "could not parse PLAY RECAP from second run"
-[[ "${changed2}" -eq 0 ]] \
-  || fail "second pass reported changed=${changed2} (expected 0)"
+if [[ "${changed2}" -ne 0 ]]; then
+  printf 'Second pass changed tasks:\n' >&2
+  grep -E '^(TASK|changed:)' "${log2}" | grep -B1 '^changed:' >&2 || true
+  fail "second pass reported changed=${changed2} (expected 0)"
+fi
 
 [[ "${mid}" == "${after}" ]] \
   || fail "container restarted between passes (StartedAt ${mid} -> ${after})"

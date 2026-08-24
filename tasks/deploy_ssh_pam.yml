@@ -104,6 +104,22 @@
     - pam_container_mount_dev_log | default(false) | bool
     - pam_dev_log_stat.stat.exists | default(false)
 
+- name: Проверка наличия образа PAM в local store
+  ansible.builtin.command:
+    argv:
+      - podman
+      - image
+      - exists
+      - "{{ pam_image_name }}:{{ pam_image_tag }}"
+  register: pam_image_exists
+  changed_when: false
+  failed_when: false
+  become: true
+  become_user: "{{ pam_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
+  when: container_engine == "podman"
+
 - name: Загрузка доверенного образа шлюза из локального архива (Air Gap)
   containers.podman.podman_load:
     input: "{{ pam_image_tar }}"
@@ -111,7 +127,9 @@
   become_user: "{{ pam_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[pam_user][1] }}"
-  when: container_engine == "podman"
+  when:
+    - container_engine == "podman"
+    - pam_image_exists.rc | default(1) != 0
 
 - name: "[CSO] Верификация immutable-образа (MFA strict label)"
   ansible.builtin.include_tasks: tasks/verify_image_cso.yml

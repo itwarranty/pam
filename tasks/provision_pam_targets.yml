@@ -96,7 +96,8 @@
       - -t
       - container_file_t
       - "{{ pam_targets_home }}"
-  changed_when: true
+  register: target_selinux_fix
+  changed_when: false
   when:
     - pam_targets | default([]) | length > 0
     - ansible_selinux.status | default('disabled') == 'enabled'
