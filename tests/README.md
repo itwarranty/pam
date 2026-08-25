@@ -28,7 +28,9 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py' -v
 ./scripts/check-doc-naming.sh
 ```
 
-Individual checks: `test-audit-exec-container.sh`, `test-pty-linegate.sh`, `test-session-pgid-kill.sh`, `test-session-watch-auth.sh`, `test-mfa-preserve.sh`, `test-mfa-rotate.sh` (optional: `SKIP_MFA_ROTATE=0`), `test-audit-log-perms.sh` (prod modes only).
+Individual checks: `test-audit-exec-container.sh`, `test-pty-linegate.sh`, `test-session-pgid-kill.sh`, `test-session-watch-auth.sh`, `test-mfa-preserve.sh`, `test-mfa-rotate.sh` (optional: `SKIP_MFA_ROTATE=0`), `test-audit-log-perms.sh`, `test-prod-audit-modes.sh`, `test-deploy-active-session-block.sh`, `test-pam-verify-json.sh`. Full playbook block: `PAM_DEPLOY_BLOCK_FULL=1 ./scripts/test-deploy-active-session-block.sh`.
+
+Static: `./scripts/check-shell.sh` (requires shellcheck).
 
 CI also runs `./scripts/check-runbook-commands.sh` and `./scripts/check-doc-naming.sh`.
 

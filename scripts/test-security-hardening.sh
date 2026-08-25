@@ -44,6 +44,24 @@ else
   printf '\n== test-audit-log-perms.sh (skipped) ==\n'
 fi
 
+if [[ "${SKIP_PROD_AUDIT:-0}" != "1" ]]; then
+  run_one "${ROOT}/scripts/test-prod-audit-modes.sh"
+else
+  printf '\n== test-prod-audit-modes.sh (skipped — set SKIP_PROD_AUDIT=0 on gateway) ==\n'
+fi
+
+if [[ "${SKIP_DEPLOY_BLOCK:-0}" != "1" ]]; then
+  run_one "${ROOT}/scripts/test-deploy-active-session-block.sh"
+else
+  printf '\n== test-deploy-active-session-block.sh (skipped) ==\n'
+fi
+
+if [[ "${SKIP_VERIFY_JSON:-0}" != "1" ]]; then
+  run_one "${ROOT}/scripts/test-pam-verify-json.sh"
+else
+  printf '\n== test-pam-verify-json.sh (skipped) ==\n'
+fi
+
 printf '\n'
 if [[ "${failures}" -gt 0 ]]; then
   printf '[FAIL] security hardening acceptance: %s check(s) failed\n' "${failures}" >&2

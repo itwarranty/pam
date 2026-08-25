@@ -37,3 +37,9 @@ jobs:
 
       - name: Runbook command check
         run: ./scripts/check-runbook-commands.sh
+
+      - name: Shell script check (shellcheck)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          ./scripts/check-shell.sh

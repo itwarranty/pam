@@ -1,0 +1,7 @@
+---
+# Prod-like audit log modes on lab stand (no Vault/FIDO prod preflight).
+# Usage: ansible-playbook -i inventory/local-lima.yml site.yml -e @group_vars/dev/prod_audit_overlay.yml
+
+pam_audit_log_dir_mode: "0750"
+pam_audit_log_file_mode: "0640"
+pam_runtime_sessions_dir_mode: "0750"

@@ -1,9 +1,12 @@
 ---
 # Run PAM playbooks inside Lima VM (ansible_connection: local).
+# Keep group hierarchy aligned with inventory/local-lima.yml so group_vars/dev/* apply.
 
 all:
   children:
     pam_servers:
-      hosts:
-        pam-lima:
-          ansible_connection: local
+      children:
+        dev:
+          hosts:
+            pam-lima:
+              ansible_connection: local
