@@ -1,5 +1,5 @@
 ---
-# Dev: Rocky 9 Lima VM. Операторы — group_vars/dev.yml (lab keys, без Vault)
+# Dev: Rocky 9 Lima VM. Операторы — group_vars/dev/ + group_vars/dev.yml (lab keys, без Vault)
 # Запуск: ./scripts/dev-up.sh
 
 all:

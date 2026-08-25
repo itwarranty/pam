@@ -69,15 +69,22 @@
   vars:
     operator_mfa_effective_secret: >-
       {{
-        operator.mfa_secret
-        if (operator.mfa_secret | default('') | length > 0)
+        operator_mfa_generated.stdout
+        if (
+          operator.name in (pam_mfa_rotate_operators | default([]))
+          and (operator_mfa_generated.stdout | default('') | length > 0)
+        )
         else (
-          operator_mfa_generated.stdout
-          if (
-            operator.name in (pam_mfa_rotate_operators | default([]))
-            or (pam_mfa_bootstrap_generate | default(false) | bool)
-          ) and (operator_mfa_generated.stdout | default('') | length > 0)
-          else operator_mfa_existing_secret | default('')
+          operator.mfa_secret
+          if (operator.mfa_secret | default('') | length > 0)
+          else (
+            operator_mfa_generated.stdout
+            if (
+              (pam_mfa_bootstrap_generate | default(false) | bool)
+              and (operator_mfa_generated.stdout | default('') | length > 0)
+            )
+            else operator_mfa_existing_secret | default('')
+          )
         )
       }}
   when: not (operator.dr_service | default(false) | bool)

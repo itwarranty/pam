@@ -41,6 +41,32 @@ class PtyInspectorTests(unittest.TestCase):
         self.assertEqual(line, "a")
         self.assertEqual(payload, b"a\n")
 
+    def test_bracketed_paste_splits_lines(self):
+        gate = self.mod.LineGate(1)
+        chunk = (
+            b"\x1b[200~ls -la\nrm -rf /\x1b[201~"
+        )
+        lines = []
+        for paste in gate.feed_paste(chunk):
+            lines.extend(paste.splitlines())
+        self.assertEqual(lines, [b"ls -la", b"rm -rf /"])
+
+    def test_bracketed_paste_denylist_per_line(self):
+        patterns = self.mod.load_patterns(str(ROOT / "tests/fixtures/denylist.txt"))
+        gate = self.mod.LineGate(1)
+        chunk = b"\x1b[200~echo ok\nrm -rf /\x1b[201~"
+        denied = []
+        allowed = []
+        for paste in gate.feed_paste(chunk):
+            for part in paste.splitlines():
+                line = part.decode("utf-8", errors="replace")
+                if self.mod.deny_match(line, patterns):
+                    denied.append(line)
+                else:
+                    allowed.append(line)
+        self.assertEqual(allowed, ["echo ok"])
+        self.assertEqual(denied, ["rm -rf /"])
+
 
 if __name__ == "__main__":
     unittest.main()

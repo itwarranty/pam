@@ -1,0 +1,4 @@
+---
+# Dev lab variables live in group_vars/dev/*.yml (merged for hosts in the dev group).
+# Entry points: lab.yml, operators_merge.yml, gateway_lab.yml, dr_service_lab.yml.
+# See docs/Engineer-Onboarding.md and inventory/local-lima.yml.

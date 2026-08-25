@@ -32,6 +32,18 @@ else
   printf '\n== test-mfa-preserve.sh (skipped) ==\n'
 fi
 
+if [[ "${SKIP_MFA_ROTATE:-1}" != "1" ]]; then
+  run_one "${ROOT}/scripts/test-mfa-rotate.sh"
+else
+  printf '\n== test-mfa-rotate.sh (skipped — set SKIP_MFA_ROTATE=0 to run) ==\n'
+fi
+
+if [[ "${SKIP_AUDIT_LOG_PERMS:-0}" != "1" ]]; then
+  run_one "${ROOT}/scripts/test-audit-log-perms.sh"
+else
+  printf '\n== test-audit-log-perms.sh (skipped) ==\n'
+fi
+
 printf '\n'
 if [[ "${failures}" -gt 0 ]]; then
   printf '[FAIL] security hardening acceptance: %s check(s) failed\n' "${failures}" >&2

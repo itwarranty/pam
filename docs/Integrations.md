@@ -30,6 +30,8 @@ The gateway container does **not** terminate OIDC/SAML browser flows. Your org I
 
 ## Related docs
 
+- [DR contract (pam_* variables)](./DR-contract.md)
+- [Migration v1.2.0](./Migration-v1.2.md)
 - [Whitepaper](./Whitepaper.md) — security controls and OIDC section
 - [DR service operator spec](../openspec/specs/pam-dr-service-operator/spec.md)
 - RISK module: `itwarranty/RISK` — `docs/PAM-integration.md`

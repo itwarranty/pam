@@ -95,6 +95,16 @@ Rocky Linux 9 — единственная утверждённая платфо
 | 33 | **MFA modes (Tier 5)** | `totp` / `fido_totp` (prod) / `fido_only` (CSO waiver only) | `pam_mfa_mode`, `templates/sshd_config.j2` |
 | 34 | **Command policy v2 mandatory** | При `pam_shell_command_policy_enabled: true` — v2 включён; v1 только migration + `pam_command_policy_v2_required: false` | `preflight_cso.yml`, `pam-compliance-verify.sh` |
 
+### Ограничения denylist (policy v2)
+
+Line-gate на PTY **не заменяет** OS-level least privilege на целевых хостах:
+
+- Denylist срабатывает на **логическую строку** ввода (включая bracketed paste); фрагментированные escape-последовательности фильтруются, но не гарантируют защиту от произвольного бинарного протокола поверх PTY.
+- Политика **не видит** команды, уже выполненные на target до подключения gateway, и не блокирует действия через другие каналы (direct SSH, out-of-band console).
+- Рекомендация CSO: сочетать v2 с **sudoers**, AppArmor/SELinux на target, минимальными учётными записями и отдельным break-glass контуром.
+
+Подробнее: [Migration v1.2](./Migration-v1.2.md), acceptance `./scripts/test-pty-linegate.sh`.
+
 ---
 
 ## 2. Модель угроз и границы доверия (Trust Boundaries)

@@ -34,3 +34,6 @@ jobs:
 
       - name: Documentation naming check
         run: ./scripts/check-doc-naming.sh
+
+      - name: Runbook command check
+        run: ./scripts/check-runbook-commands.sh

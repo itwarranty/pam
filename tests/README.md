@@ -28,7 +28,11 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py' -v
 ./scripts/check-doc-naming.sh
 ```
 
-Individual checks: `test-audit-exec-container.sh`, `test-pty-linegate.sh`, `test-session-pgid-kill.sh`, `test-session-watch-auth.sh`, `test-mfa-preserve.sh`.
+Individual checks: `test-audit-exec-container.sh`, `test-pty-linegate.sh`, `test-session-pgid-kill.sh`, `test-session-watch-auth.sh`, `test-mfa-preserve.sh`, `test-mfa-rotate.sh` (optional: `SKIP_MFA_ROTATE=0`), `test-audit-log-perms.sh` (prod modes only).
+
+CI also runs `./scripts/check-runbook-commands.sh` and `./scripts/check-doc-naming.sh`.
+
+Migration notes: [docs/Migration-v1.2.md](../docs/Migration-v1.2.md).
 
 Two-pass idempotence (slow, ~2× full playbook):
 

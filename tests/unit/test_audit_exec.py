@@ -75,6 +75,32 @@ class AuditExecTests(unittest.TestCase):
             rc = self.mod.execute_line(f"tail -f {path}")
         self.assertEqual(rc, 1)
 
+    def test_rejects_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as outside_dir:
+            outside = Path(outside_dir, "secret.log")
+            outside.write_text("secret\n", encoding="utf-8")
+            link = Path(self.tmp.name, "link.log")
+            link.symlink_to(outside)
+            with mock.patch.object(self.mod, "audit_syslog"):
+                with mock.patch.object(self.mod.subprocess, "run") as run:
+                    run.return_value.returncode = 0
+                    rc = self.mod.execute_line(f"cat {link}")
+            self.assertEqual(rc, 1)
+            run.assert_not_called()
+
+    def test_rejects_less_shell_escape_option(self):
+        path = str(Path(self.tmp.name, "sample.log"))
+        with mock.patch.object(self.mod, "audit_syslog"):
+            rc = self.mod.execute_line(f"less +!sh -i {path}")
+        self.assertEqual(rc, 1)
+
+    def test_no_write_side_effect_on_deny(self):
+        marker = Path(self.tmp.name, "marker")
+        with mock.patch.object(self.mod, "audit_syslog"):
+            rc = self.mod.execute_line("echo pwned > marker")
+        self.assertEqual(rc, 1)
+        self.assertFalse(marker.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
