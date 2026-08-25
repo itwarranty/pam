@@ -9,7 +9,7 @@ SECRET_PATH="/home/${PAM_USER}/operators/${OPERATOR}/.google_authenticator"
 fail() { printf '[FAIL] mfa-preserve: %s\n' "$*" >&2; exit 1; }
 pass() { printf '[PASS] mfa-preserve: %s\n' "$*"; }
 
-[[ -f "${SECRET_PATH}" ]] || fail "missing ${SECRET_PATH} — deploy lab first (runs on gateway host, not inside container)"
+[[ -f "${SECRET_PATH}" ]] || sudo test -f "${SECRET_PATH}" || fail "missing ${SECRET_PATH} — deploy lab first (runs on gateway host, not inside container)"
 
 before="$(sudo head -1 "${SECRET_PATH}" | tr -d '[:space:]')"
 [[ -n "${before}" ]] || fail "empty secret before deploy"

@@ -23,10 +23,14 @@
     group: "{{ pam_user }}"
     mode: "0750"
 
-- name: Gateway lab — pubkey mock target (pam_support)
+- name: Gateway lab — pubkey mock target (pam_support) + optional DR scanner
   ansible.builtin.copy:
-    src: "{{ lab_keys_dir }}/gateway-target-support.lab.pub"
     dest: "{{ pam_home }}/gateway_lab/authorized_keys"
+    content: |
+      {{ lookup('file', lab_keys_dir + '/gateway-target-support.lab.pub') }}
+      {% if pam_dr_enabled | default(false) | bool %}
+      {{ lookup('file', lab_keys_dir + '/dr-scanner.lab.pub') }}
+      {% endif %}
     owner: "{{ pam_user }}"
     group: "{{ pam_user }}"
     mode: "0644"

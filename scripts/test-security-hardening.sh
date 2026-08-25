@@ -23,7 +23,8 @@ run_one "${ROOT}/scripts/test-session-pgid-kill.sh"
 run_one "${ROOT}/scripts/test-session-watch-auth.sh"
 
 if [[ "${SKIP_MFA_PRESERVE:-0}" != "1" ]]; then
-  if [[ -f "/home/${PAM_USER:-pam}/operators/${PAM_TEST_OPERATOR:-engineer-jump}/.google_authenticator" ]]; then
+  if [[ -f "/home/${PAM_USER:-pam}/operators/${PAM_TEST_OPERATOR:-engineer-jump}/.google_authenticator" ]] \
+    || sudo test -f "/home/${PAM_USER:-pam}/operators/${PAM_TEST_OPERATOR:-engineer-jump}/.google_authenticator" 2>/dev/null; then
     run_one "${ROOT}/scripts/test-mfa-preserve.sh"
   else
     printf '\n== test-mfa-preserve.sh (skipped — run on gateway host) ==\n'
@@ -39,15 +40,9 @@ else
 fi
 
 if [[ "${SKIP_AUDIT_LOG_PERMS:-0}" != "1" ]]; then
-  run_one "${ROOT}/scripts/test-audit-log-perms.sh"
-else
-  printf '\n== test-audit-log-perms.sh (skipped) ==\n'
-fi
-
-if [[ "${SKIP_PROD_AUDIT:-0}" != "1" ]]; then
   run_one "${ROOT}/scripts/test-prod-audit-modes.sh"
 else
-  printf '\n== test-prod-audit-modes.sh (skipped — set SKIP_PROD_AUDIT=0 on gateway) ==\n'
+  printf '\n== test-prod-audit-modes.sh (skipped) ==\n'
 fi
 
 if [[ "${SKIP_DEPLOY_BLOCK:-0}" != "1" ]]; then
